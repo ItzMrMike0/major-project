@@ -13,6 +13,24 @@ let tilesHeight; // How tall each tile is
 let grassTile, clearGrassTile, waterTile, pathTile, treeTile, houseTile, mountainTile; // Tile Images
 let bottomLeft, bottomMiddle, bottomRight, middleLeft, middleMiddle, middleRight, topLeft, topMiddle, topRight; // Castle Images
 let tiles = []; // Array to store Tile object
+let imageTiles = {};
+
+function preload() {
+  // Load level
+  levelToLoad = "Assets/Levels/0.txt";
+  lines = loadStrings(levelToLoad);
+
+  // Load JSON file
+  tileJson = loadJSON("tiles.json");
+
+  // Load every image in JSON file
+  for (const tile in tileJson) {
+    imageTiles.tile = loadImage(tileJson[tile]);
+  }
+};
+
+// imageTiles["grassTile"]
+// imageTiles.grassTile
 
 class Tile {
   constructor(type, x, y, width, height) {
@@ -23,82 +41,35 @@ class Tile {
     this.height = height; // Height of the tile
   }
 
-  // Method to display a single tile
+  // // Method to display a single tile
   setImageToTile() {
-    if (this.type === "G") {
-      image(grassTile, this.x * this.width, this.y * this.height, this.width, this.height);
-    } 
-    else if (this.type === "g") {
-      image(clearGrassTile, this.x * this.width, this.y * this.height, this.width, this.height);
-    } 
-    else if (this.type === "W") {
-      image(waterTile, this.x * this.width, this.y * this.height, this.width, this.height);
-    } 
-    else if (this.type === "P") {
-      image(pathTile, this.x * this.width, this.y * this.height, this.width, this.height);
-    }
-    else if (this.type === "T") {
-      image(treeTile, this.x * this.width, this.y * this.height, this.width, this.height);
-    }
-    else if (this.type === "H") {
-      image(houseTile, this.x * this.width, this.y * this.height, this.width, this.height);
-    }
-    else if (this.type === "M") {
-      image(mountainTile, this.x * this.width, this.y * this.height, this.width, this.height);
-    }
-    else if (this.type === "7") {
-      image(topLeft, this.x * this.width, this.y * this.height, this.width, this.height);
-    }
-    else if (this.type === "8") {
-      image(topMiddle, this.x * this.width, this.y * this.height, this.width, this.height);
-    }
-    else if (this.type === "9") {
-      image(topRight, this.x * this.width, this.y * this.height, this.width, this.height);
-    }
-    else if (this.type === "4") {
-      image(middleLeft, this.x * this.width, this.y * this.height, this.width, this.height);
-    }
-    else if (this.type === "5") {
-      image(middleMiddle, this.x * this.width, this.y * this.height, this.width, this.height);
-    }
-    else if (this.type === "6") {
-      image(middleRight, this.x * this.width, this.y * this.height, this.width, this.height);
-    }
-    else if (this.type === "1") {
-      image(bottomLeft, this.x * this.width, this.y * this.height, this.width, this.height);
-    }
-    else if (this.type === "2") {
-      image(bottomMiddle, this.x * this.width, this.y * this.height, this.width, this.height);
-    }
-    else if (this.type === "3") {
-      image(bottomRight, this.x * this.width, this.y * this.height, this.width, this.height);
-    }
-  } 
-}
+    const mapping = {
+      "G": "grassTile",
+      "g": "clearGrassTile",
+      "W": "waterTile",
+      "P": "pathTile",
+      "T": "treeTile",
+      "H": "houseTile",
+      "M": "mountainTile",
+      "7": "topLeft",
+      "8": "topMiddle",
+      "9": "topRight",
+      "4": "middleLeft",
+      "5": "middleMiddle",
+      "6": "middleRight",
+      "1": "bottomLeft",
+      "2": "bottomMiddle",
+      "3": "bottomRight",
+    };
 
-function preload() {
-  // Load level
-  levelToLoad = "Assets/Levels/0.txt";
-  lines = loadStrings(levelToLoad);
-
-  // Load tile images
-  grassTile = loadImage("Assets/Tiles/grass.png");
-  clearGrassTile = loadImage("Assets/Tiles/cleargrass.png");
-  waterTile = loadImage("Assets/Tiles/water.png");
-  pathTile = loadImage("Assets/Tiles/path.png");
-  treeTile = loadImage("Assets/TIles/trees.png");
-  houseTile = loadImage("Assets/Tiles/house.png");
-  mountainTile = loadImage("Assets/Tiles/mountain.png");
-  topLeft = loadImage("Assets/Tiles/Castle/topleft.png");
-  topMiddle = loadImage("Assets/Tiles/Castle/topmiddle.png");
-  topRight = loadImage("Assets/Tiles/Castle/topright.png");
-  middleLeft = loadImage("Assets/Tiles/Castle/middleLeft.png");
-  middleMiddle = loadImage("Assets/Tiles/Castle/middleMiddle.png");
-  middleRight = loadImage("Assets/Tiles/Castle/middleRight.png");
-  bottomLeft = loadImage("Assets/Tiles/Castle/bottomleft.png");
-  bottomMiddle = loadImage("Assets/Tiles/Castle/bottommiddle.png");
-  bottomRight = loadImage("Assets/Tiles/Castle/bottomright.png");
-};
+    for (let character in mapping) {
+      if (this.type === character) {
+        image(imageTiles[mapping[character]], this.x * this.width, this.y * this.height, this.width, this.height);
+        break;
+      }
+    }
+  }
+} 
 
 function setup() {
   // 4:3 ratio

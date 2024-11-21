@@ -1,0 +1,17 @@
+{"grassTile": "Assets/Tiles/grass.png",
+"clearGrassTile": "Assets/Tiles/cleargrass.png",
+"waterTile": "Assets/Tiles/water.png",
+"pathTile": "Assets/Tiles/path.png",
+"treeTile": "Assets/Tiles/tree.png",
+"houseTile": "Assets/Tiles/house.png",
+"mountainTile": "Assets/Tiles/mountain.png",
+"topLeft": "Assets/Tiles/Castle/topleft.png",
+"topMiddle": "Assets/Tiles/Castle/topmiddle.png",
+"topRight": "Assets/Tiles/Castle/topright.png",
+"middleLeft": "Assets/Tiles/Castle/middleLeft.png",
+"middleMiddle": "Assets/Tiles/Castle/middleMiddle.png",
+"middleRight": "Assets/Tiles/Castle/middleRight.png",
+"bottomLeft": "Assets/Tiles/Castle/bottomleft.png",
+"bottomMiddle": "Assets/Tiles/Castle/bottommiddle.png",
+"bottomRight": "Assets/Tiles/Castle/bottomright.png"
+}
