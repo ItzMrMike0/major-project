@@ -39,13 +39,20 @@ class Character {
     this.speed = speed;
     this.isSelected = false; // Track if the character has been selected
   }
-  display();
+  // Display character
+  display() {
 
-  moveTo();
+  }
+  // Move character
+  moveTo() {
 
-  attack();
+  }
+
+  // Attack using character
+  attack() {
+
+  }
 }
-
 
 // Global variables
 let levelToLoad; // Text file to load
