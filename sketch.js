@@ -4,8 +4,11 @@
 // Extra for Experts:
 //
 
+// Credits
+// Tileset acquired from https://forums.serenesforest.net/topic/24982-tileset-collection/
+// Background music acquired from https://www.youtube.com/watch?v=Cx4GQH2tHYQ
 
-// Tile class definition
+// Tile class 
 class Tile {
   constructor(type, x, y, width, height) {
     this.type = type;  // Type of the tile ("G", "W", etc.)
@@ -23,6 +26,27 @@ class Tile {
   }
 }
 
+// Character class 
+class Character {
+  constructor(name, classType, x, y, hp, attack, defense, speed) {
+    this.name = name;
+    this.classType = classType;
+    this.x = x; 
+    this.y = y;
+    this.hp = hp;
+    this.attack = attack;
+    this.defense = defense;
+    this.speed = speed;
+    this.isSelected = false; // Track if the character has been selected
+  }
+  display();
+
+  moveTo();
+
+  attack();
+}
+
+
 // Global variables
 let levelToLoad; // Text file to load
 let lines; // What each line from text file says
@@ -33,6 +57,7 @@ let tilesHeight; // How tall each tile is
 let tileImages = {}; // Object to store tile images
 let tiles = []; // Array to store Tile objects
 let tilePaths; // To store the tile paths loaded from JSON
+let music = {}; // Object to store music
 
 function preload() {
   // Load level
@@ -41,6 +66,9 @@ function preload() {
 
   // Load tile paths from JSON file
   tilePaths = loadJSON("Assets/Tiles/tilesPath.json", setupTileImages);
+
+  // Load music files
+  music.backgroundMusic = loadSound("Assets/Music/backgroundMusic.weba");
 }
 
 // Callback to initialize tileImages after JSON is loaded
@@ -58,7 +86,11 @@ function setup() {
   tilesWide = lines[0].length;
   tilesWidth = width / tilesWide;
   tilesHeight = height / tilesHigh;
-  
+
+  // Loop background music
+  music.backgroundMusic.loop(true);
+  music.backgroundMusic.amp(0.1);
+
   // Create a 2D array of Tile objects
   for (let y = 0; y < tilesHigh; y++) {
     tiles.push([]);

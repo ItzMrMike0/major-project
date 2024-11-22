@@ -43,7 +43,7 @@ A Fire Emblem-style game, featuring strategic grid-based gameplay, turn-based me
   - Attack player characters within range. 🔴
 
 ### 6: Sound Effects
-- Add background music with smooth transitions (e.g., calm and battle phases). 🔴
+- Add background music with smooth transitions (e.g., calm and battle phases). 🟡
 - Include sound effects for movement, attacks, and menu interactions. 🔴
 
 ## Nice to Have List
