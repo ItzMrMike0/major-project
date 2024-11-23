@@ -1,4 +1,4 @@
-# Project Proposal: Tactical Turn-Based RPG Game
+# Project Proposal: Fire Emblem 
 A Fire Emblem-style game, featuring strategic grid-based gameplay, turn-based mechanics, and RPG elements.
 
 ## Needs to Have List
@@ -9,7 +9,7 @@ A Fire Emblem-style game, featuring strategic grid-based gameplay, turn-based me
 - Load maps using external .txt files. 🟢
 - Some tiles are impassable (e.g., walls, water). 🔴
 - Certain tiles provide bonuses (e.g., increased defense or evasion). 🔴
-- Highlight movement range and attack range tiles dynamically. 🔴
+- Highlight movement range and attack range tiles when character selected. 🔴
 
 ### 2: Turn-Based Actions
 - Swap between player turn and enemy turn. 🔴
@@ -21,12 +21,12 @@ A Fire Emblem-style game, featuring strategic grid-based gameplay, turn-based me
 - Undo move option (before confirming an action). 🔴
 
 ### 3: Characters
-- Characters with unique stats, animations, and abilities. 🔴
+- Characters with unique stats, animations, and abilities. 🟡
 - Select individual characters to view stats or perform actions. 🔴
-- Core stats include HP, attack, defense, speed, and evasion. 🔴
+- Core stats include HP, attack, defense, speed, and evasion. 🟡
 - Derived stats like critical rate or hit rate. 🔴
-- Assign classes with unique traits (e.g., archers, mages, knights). 🔴
-- Include movement, selection, and idle animations. 🔴
+- Assign classes with unique traits (e.g., archers, mages, knights). 🟡
+- Include movement, selection, and idle animations. 🟡
 
 ### 4: Battle System
 - Transition to a new scene or overlay for battle sequences. 🔴
