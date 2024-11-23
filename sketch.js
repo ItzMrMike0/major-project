@@ -28,29 +28,55 @@ class Tile {
 
 // Character class 
 class Character {
-  constructor(name, classType, x, y, hp, attack, defense, speed) {
-    this.name = name;
-    this.classType = classType;
-    this.x = x; 
-    this.y = y;
-    this.hp = hp;
-    this.attack = attack;
-    this.defense = defense;
-    this.speed = speed;
+  constructor(name, classType, x, y, hp, attack, defense, speed, width = 65, height = 65) {
+    this.name = name; // Character name
+    this.classType = classType; // Character class type
+    this.x = x; // Character x location
+    this.y = y; // Character y location
+    this.hp = hp; // Character hp stat
+    this.attack = attack; // Character attack stat
+    this.defense = defense; // Character defense stat
+    this.speed = speed; // Character speed stat
     this.isSelected = false; // Track if the character has been selected
-  }
-  // Display character
-  display() {
-
-  }
-  // Move character
-  moveTo() {
-
+    this.animation = null;  // Placeholder for the character's GIF animation
+    this.width = width;     // Width for displaying GIF (default 65)
+    this.height = height;   // Height for displaying GIF (default 65)
   }
 
-  // Attack using character
+  // Display the character on the map
+  displayOnMap() {
+    if (this.animation) {
+      // Calculate centered position for the character
+      let drawX = this.x * tilesWidth + (tilesWidth - this.width) / 2;
+      let drawY = this.y * tilesHeight + (tilesHeight - this.height) / 2;
+
+      // Adjust drawY for characters with height 70 (Cavalier) or others with height 65
+      if (this.name === "Lance") {
+        // Add 5 to shift the position down slightly
+        drawY += 5; 
+        // Ensure it doesn't overflow below the tile
+        if (drawY + this.height > this.y * tilesHeight + tilesHeight) {
+          drawY = this.y * tilesHeight + tilesHeight - this.height; 
+        }
+      } 
+      // For other characters, adjust slightly upwards
+      else {
+        drawY -= 5; 
+      }
+      // Draw the character's animation at the calculated position
+      image(this.animation, drawX, drawY, this.width, this.height);
+    }
+  }
+
+  // Move the character to a new location
+  moveTo(newX, newY) {
+    this.x = newX;
+    this.y = newY;
+  }
+
+  // Attack logic for the character
   attack() {
-
+    // Logic for attacking (can be implemented later)
   }
 }
 
@@ -65,17 +91,24 @@ let tileImages = {}; // Object to store tile images
 let tiles = []; // Array to store Tile objects
 let tilePaths; // To store the tile paths loaded from JSON
 let music = {}; // Object to store music
+let characterMapSpritePaths; // To store character paths loaded from JSON
+let characterAnimations = {}; // Object to store character animations
+let characters = []; // Array to store character instances
+
 
 function preload() {
-  // Load level
+  // Preload map information 
   levelToLoad = "Assets/Levels/0.txt";
   lines = loadStrings(levelToLoad);
 
-  // Load tile paths from JSON file
+  // Preload tile images
   tilePaths = loadJSON("Assets/Tiles/tilesPath.json", setupTileImages);
 
   // Load music files
   music.backgroundMusic = loadSound("Assets/Music/backgroundMusic.weba");
+
+  // Load character paths from JSON
+  characterMapSpritePaths = loadJSON("Assets/CharacterMapSprites/characterMapSpritesPaths.json", setupCharacterMapSpriteAnimations);
 }
 
 // Callback to initialize tileImages after JSON is loaded
@@ -86,9 +119,18 @@ function setupTileImages(data) {
   }
 }
 
+// Callback to initialize characterMapSpriteAnimations after JSON is loaded
+function setupCharacterMapSpriteAnimations(data) {
+  characterMapSpritePaths = data;
+  for (let name in characterMapSpritePaths) {
+    characterAnimations[name] = loadImage(characterMapSpritePaths[name]);
+  }
+}
+
+
 function setup() {
   // 4:3 ratio
-  createCanvas(750, 563);
+  createCanvas(1000, 750);
   tilesHigh = lines.length; 
   tilesWide = lines[0].length;
   tilesWidth = width / tilesWide;
@@ -106,6 +148,22 @@ function setup() {
       tiles[y].push(new Tile(tileType, x, y, tilesWidth, tilesHeight));
     }
   }
+
+  // Create characters
+  // Roy (Lord)
+  let roy = new Character("Roy", "Lord", 1, 14, 20, 8, 6, 5);
+  roy.animation = characterAnimations["RoyIdle"];
+  characters.push(roy);
+
+  // Bors (Knight)
+  let knight = new Character("Bors", "Knight", 2, 13, 27, 6, 8, 2);
+  knight.animation = characterAnimations["KnightIdle"];
+  characters.push(knight);
+
+  // Lance (Cavalier)
+  let cavalier = new Character("Lance", "Cavalier", 1, 11, 21, 5, 5, 8, 65, 70);  // Set height to 70 instead of 65
+  cavalier.animation = characterAnimations["CavalierIdle"];
+  characters.push(cavalier);
 }
 
 // Iterate through all tiles and display them
@@ -119,4 +177,9 @@ function display() {
 
 function draw() {
   display();
+
+  // Display all characters
+  for (let character of characters) {
+    character.displayOnMap();
+  }
 }

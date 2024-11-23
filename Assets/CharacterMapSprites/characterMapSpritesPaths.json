@@ -1,0 +1,5 @@
+{
+    "RoyIdle": "Assets/CharacterMapSprites/roy.gif",
+    "KnightIdle": "Assets/CharacterMapSprites/knight.gif",
+    "CavalierIdle": "Assets/CharacterMapSprites/cavalier.gif"
+  }
