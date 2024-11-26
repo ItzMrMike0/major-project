@@ -1,12 +1,11 @@
 // Fire Emblem 
 // Michael Yang
 // 2024-11-21
-// Extra for Experts:
-//
 
 // Credits
 // Tileset acquired from https://forums.serenesforest.net/topic/24982-tileset-collection/
 // Background music acquired from https://www.youtube.com/watch?v=Cx4GQH2tHYQ
+// A lot of sprites taken from https://github.com/Klokinator/FE-Repo/tree/main
 
 // Tile class 
 class Tile {
@@ -55,7 +54,8 @@ class Character {
         // Shift the position down slightly and ensure the feet don't go into the underneath tile
         drawY += 5;
         drawY = Math.min(drawY, this.y * tilesHeight + tilesHeight - this.height); 
-      } else {
+      } 
+      else {
         // For other characters, adjust slightly upwards
         drawY -= 5;
       }
@@ -77,6 +77,39 @@ class Character {
   }
 }
 
+// Cursor class
+class Cursor {
+  constructor(x = 2, y = 12) {
+    this.x = x;  // Horizontal position (in tile coordinates)
+    this.y = y;  // Vertical position (in tile coordinates)
+    this.width = tilesWidth;
+    this.height = tilesHeight;
+  }
+
+  // Move the cursor based on input (WASD)
+  move(direction) {
+    if (direction === 'up' && this.y > 0) {
+      this.y--;
+    }
+    if (direction === 'down' && this.y < tilesHigh - 1) {
+      this.y++;
+    }
+    if (direction === 'left' && this.x > 0) {
+      this.x--;
+    }
+    if (direction === 'right' && this.x < tilesWide - 1) {
+      this.x++;
+    }
+  }
+
+  // Render the cursor on the screen
+  render() {
+    fill(0, 255, 0, 150);  // Green color with transparency
+    noStroke();
+    rect(this.x * this.width, this.y * this.height, this.width, this.height);
+  }
+}
+
 // Global variables
 let levelToLoad; // Text file to load
 let lines; // What each line from text file says
@@ -92,7 +125,6 @@ let characterMapSpritePaths; // To store character paths loaded from JSON
 let characterAnimations = {}; // Object to store character animations
 let characters = []; // Array to store character instances
 let characterData; // Holds character data information
-
 
 function preload() {
   // Preload map information 
@@ -110,6 +142,45 @@ function preload() {
 
   // Load character data from JSON
   characterData = loadJSON("Assets/Characters/characters.json");
+}
+
+function setup() {
+  // 4:3 ratio
+  createCanvas(1000, 750);
+  tilesHigh = lines.length; 
+  tilesWide = lines[0].length;
+  tilesWidth = width / tilesWide;
+  tilesHeight = height / tilesHigh;
+
+  // Loop background music
+  music.backgroundMusic.loop(true);
+  music.backgroundMusic.amp(0.1);
+
+  // Disable right-click menu 
+  window.addEventListener('contextmenu', (e) => e.preventDefault());
+  
+  // Create a 2D array of Tile objects
+  tiles = createTiles(lines);
+
+  // Create characters from JSON
+  for (let char of characterData.characters) {
+    createCharacter(
+      char.name, 
+      char.classType,
+      char.x,
+      char.y,
+      char.hp,
+      char.attack,
+      char.defense,
+      char.speed,
+      char.animation,
+      char.width || 65,
+      char.height || 65
+    );
+  }
+  
+  // Initialize the cursor at the top-left tile
+  locationCursor = new Cursor();
 }
 
 // Initialize tileImages after JSON is loaded
@@ -147,39 +218,20 @@ function createTiles(lines) {
   return tiles;
 }
 
-function setup() {
-  // 4:3 ratio
-  createCanvas(1000, 750);
-  tilesHigh = lines.length; 
-  tilesWide = lines[0].length;
-  tilesWidth = width / tilesWide;
-  tilesHeight = height / tilesHigh;
-
-  // Loop background music
-  music.backgroundMusic.loop(true);
-  music.backgroundMusic.amp(0.1);
-
-  // Disable right-click menu 
-  window.addEventListener('contextmenu', (e) => e.preventDefault());
-  
-  // Create a 2D array of Tile objects
-  tiles = createTiles(lines);
-
-  // Create characters from JSON
-  for (let char of characterData.characters) {
-    createCharacter(
-      char.name, 
-      char.classType,
-      char.x,
-      char.y,
-      char.hp,
-      char.attack,
-      char.defense,
-      char.speed,
-      char.animation,
-      char.width || 65,
-      char.height || 65
-    );
+// Controls using keybiard
+function keyPressed() {
+  // Move cursor
+  if (key === "w") {
+    locationCursor.move("up");
+  }
+  else if (key === "a") {
+    locationCursor.move("left");
+  }
+  else if (key === "s") {
+    locationCursor.move("down");
+  }
+  else if (key === "d") {
+    locationCursor.move("right");
   }
 }
 
@@ -192,7 +244,6 @@ function displayTiles() {
   }
 }
 
-
 function draw() {
   // Display tiles
   displayTiles();
@@ -201,4 +252,7 @@ function draw() {
   for (let character of characters) {
     character.displayOnMap();
   }
+
+  // Render the cursor
+  locationCursor.render();
 }
