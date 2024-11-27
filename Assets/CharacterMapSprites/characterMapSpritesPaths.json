@@ -1,8 +1,8 @@
 {
-  "RoyIdle": "Assets/CharacterMapSprites/roy.gif",
-  "KnightIdle": "Assets/CharacterMapSprites/knight.gif",
-  "CavalierIdle": "Assets/CharacterMapSprites/cavalier.gif",
-  "ArcherIdle": "Assets/CharacterMapSprites/archer.gif",
-  "MageIdle": "Assets/CharacterMapSprites/mage.gif",
-  "EnemyFighterIdle": "Assets/CharacterMapSprites/enemyfighter.gif"
+  "RoyIdle": "Assets/CharacterMapSprites/StandingGifs/roy.gif",
+  "KnightIdle": "Assets/CharacterMapSprites/StandingGifs/knight.gif",
+  "CavalierIdle": "Assets/CharacterMapSprites/StandingGifs/cavalier.gif",
+  "ArcherIdle": "Assets/CharacterMapSprites/StandingGifs/archer.gif",
+  "MageIdle": "Assets/CharacterMapSprites/StandingGifs/mage.gif",
+  "EnemyFighterIdle": "Assets/CharacterMapSprites/StandingGifs/enemyfighter.gif"
   }

@@ -230,7 +230,6 @@ function createCharacter(name, classType, x, y, level, hp, strength, skill, spee
   characters.push(character);
 }
 
-
 // Creates 2D Grid based on the x and y from level txt file
 function createTiles(lines) {
   // Clear tiles array before creating new tiles to get rid of previous data
