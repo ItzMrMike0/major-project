@@ -28,7 +28,7 @@ class Tile {
 
 // Character class 
 class Character {
-  constructor(name, classType, x, y, level, hp, strength, skill, speed, luck, defense, resistance, width = 65, height = 65) {
+  constructor(name, classType, x, y, level, hp, strength, skill, speed, luck, defense, resistance, isEnemy, width = 65, height = 65) {
     this.name = name; // Character name
     this.classType = classType; // Character class type
     this.x = x; // Character x location
@@ -43,6 +43,7 @@ class Character {
     this.resistance = resistance; // Character resistance stat agaisnt magic attacks
     this.isSelected = false; // Track if the character has been selected
     this.animation = null; // Character's GIF animation
+    this.isEnemy = isEnemy; // Key to see if character is enemy or not
     this.width = width; // Width for displaying GIF (default 65)
     this.height = height; // Height for displaying GIF (default 65)
   }
@@ -53,6 +54,14 @@ class Character {
       // Calculate centered position for the character
       let drawX = this.x * tilesWidth + (tilesWidth - this.width) / 2;
       let drawY = this.y * tilesHeight + (tilesHeight - this.height) / 2 - 5;
+
+      // Draw a selection border if the character is selected
+      if (this.isSelected) {
+        noFill();
+        stroke(255, 255, 0); // Yellow border
+        strokeWeight(3);
+        rect(drawX, drawY, this.width, this.height);
+      }
 
       // Draw the character's animation at the calculated position
       image(this.animation, drawX, drawY, this.width, this.height);
@@ -107,7 +116,7 @@ class Cursor {
   render() {
     // Scale the cursor image vertically (Increase height by 20%)
     let scaledHeight = this.height * 1.2; 
-     // Center the image vertically
+    // Center the image vertically
     let offsetY = (scaledHeight - this.height) / 2;
 
     // Draw the cursor image
@@ -195,6 +204,7 @@ function setup() {
       char.defense,
       char.resistance,
       char.animation,
+      char.isEnemy
     );
   }
   
@@ -224,8 +234,8 @@ function setupSounds(data) {
 }
 
 // Helper function to create new characters
-function createCharacter(name, classType, x, y, level, hp, strength, skill, speed, luck, defense, resistance, animationName) {
-  let character = new Character(name, classType, x, y, level, hp, strength, skill, speed, luck, defense, resistance);
+function createCharacter(name, classType, x, y, level, hp, strength, skill, speed, luck, defense, resistance, animationName, isEnemy) {
+  let character = new Character(name, classType, x, y, level, hp, strength, skill, speed, luck, defense, resistance, isEnemy);
   character.animation = characterAnimations[animationName];
   characters.push(character);
 }
@@ -244,7 +254,7 @@ function createTiles(lines) {
   return tiles;
 }
 
-// Controls using keybiard
+
 function keyPressed() {
   // Move cursor
   if (key === "w") {
@@ -258,6 +268,22 @@ function keyPressed() {
   }
   else if (key === "d") {
     locationCursor.move("right");
+  }
+  // Select 
+  else if (key === "j") {
+    // Check if there's an allied character at the cursor's location
+    for (let character of characters) {
+      if (character.x === locationCursor.x && character.y === locationCursor.y && !character.isEnemy) {
+        // Deselect all other characters
+        for (let otherCharacter of characters) {
+          otherCharacter.isSelected = false;
+        }
+        // Select the current character
+        character.isSelected = true;
+        console.log(`${character.name} is now selected.`);
+        break;
+      }
+    }
   }
 }
 

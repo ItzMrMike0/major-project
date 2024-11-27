@@ -14,7 +14,8 @@
       "defense": 5,
       "resistance": 0,
       "isSelected": false,
-      "animation": "RoyIdle"
+      "animation": "RoyIdle",
+      "isEnemy": false
     },
     {
       "name": "Bors",
@@ -30,7 +31,8 @@
       "defense": 11,
       "resistance": 0,
       "isSelected": false,
-      "animation": "KnightIdle"
+      "animation": "KnightIdle",
+      "isEnemy": false
     },
     {
       "name": "Lance",
@@ -46,7 +48,8 @@
       "defense": 6,
       "resistance": 0,
       "isSelected": false,
-      "animation": "CavalierIdle"
+      "animation": "CavalierIdle",
+      "isEnemy": false
     },
     {
       "name": "Allen",
@@ -62,7 +65,8 @@
       "defense": 6,
       "resistance": 0,
       "isSelected": false,
-      "animation": "CavalierIdle"
+      "animation": "CavalierIdle",
+      "isEnemy": false
     },
     {
       "name": "Wolt",
@@ -78,7 +82,8 @@
       "defense": 4,
       "resistance": 0,
       "isSelected": false,
-      "animation": "ArcherIdle"
+      "animation": "ArcherIdle",
+      "isEnemy": false
     },
     {
       "name": "Lugh",
@@ -94,7 +99,8 @@
       "defense": 3,
       "resistance": 5,
       "isSelected": false,
-      "animation": "MageIdle"
+      "animation": "MageIdle",
+      "isEnemy": false
     },
     {
       "name": "Enemy Fighter",
@@ -110,7 +116,8 @@
       "defense": 3,
       "resistance": 0,
       "isSelected": false,
-      "animation": "EnemyFighterIdle"
+      "animation": "EnemyFighterIdle",
+      "isEnemy": true
     },
     {
       "name": "Enemy Fighter",
@@ -126,7 +133,8 @@
       "defense": 3,
       "resistance": 0,
       "isSelected": false,
-      "animation": "EnemyFighterIdle"
+      "animation": "EnemyFighterIdle",
+      "isEnemy": true
     },
     {
       "name": "Enemy Fighter",
@@ -142,7 +150,8 @@
       "defense": 3,
       "resistance": 0,
       "isSelected": false,
-      "animation": "EnemyFighterIdle"
+      "animation": "EnemyFighterIdle",
+      "isEnemy": true
     },
     {
       "name": "Enemy Fighter",
@@ -158,7 +167,8 @@
       "defense": 3,
       "resistance": 0,
       "isSelected": false,
-      "animation": "EnemyFighterIdle"
+      "animation": "EnemyFighterIdle",
+      "isEnemy": true
     },
     {
       "name": "Enemy Fighter",
@@ -174,7 +184,8 @@
       "defense": 3,
       "resistance": 0,
       "isSelected": false,
-      "animation": "EnemyFighterIdle"
+      "animation": "EnemyFighterIdle",
+      "isEnemy": true
     },
     {
       "name": "Enemy Fighter",
@@ -190,7 +201,8 @@
       "defense": 3,
       "resistance": 0,
       "isSelected": false,
-      "animation": "EnemyFighterIdle"
+      "animation": "EnemyFighterIdle",
+      "isEnemy": true
     },
     {
       "name": "Enemy Fighter",
@@ -206,7 +218,8 @@
       "defense": 3,
       "resistance": 0,
       "isSelected": false,
-      "animation": "EnemyFighterIdle"
+      "animation": "EnemyFighterIdle",
+      "isEnemy": true
     },
     {
       "name": "Enemy Fighter",
@@ -222,7 +235,8 @@
       "defense": 3,
       "resistance": 0,
       "isSelected": false,
-      "animation": "EnemyFighterIdle"
+      "animation": "EnemyFighterIdle",
+      "isEnemy": true
     },
     {
       "name": "Enemy Fighter",
@@ -238,7 +252,8 @@
       "defense": 3,
       "resistance": 0,
       "isSelected": false,
-      "animation": "EnemyFighterIdle"
+      "animation": "EnemyFighterIdle",
+      "isEnemy": true
     },
     {
       "name": "Enemy Fighter",
@@ -254,7 +269,8 @@
       "defense": 3,
       "resistance": 0,
       "isSelected": false,
-      "animation": "EnemyFighterIdle"
+      "animation": "EnemyFighterIdle",
+      "isEnemy": true
     },
     {
       "name": "Enemy Fighter",
@@ -270,7 +286,8 @@
       "defense": 3,
       "resistance": 0,
       "isSelected": false,
-      "animation": "EnemyFighterIdle"
+      "animation": "EnemyFighterIdle",
+      "isEnemy": true
     }      
   ]
 }
