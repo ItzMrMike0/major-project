@@ -104,9 +104,19 @@ class Cursor {
 
   // Render the cursor on the screen
   render() {
-    fill(0, 255, 0, 150);  // Green color with transparency
-    noStroke();
-    rect(this.x * this.width, this.y * this.height, this.width, this.height);
+    // Scale the cursor image vertically (Increase height by 20%)
+    let scaledHeight = this.height * 1.2; 
+     // Center the image vertically
+    let offsetY = (scaledHeight - this.height) / 2;
+
+    // Draw the cursor image
+    image(
+      cursorImage,
+      this.x * this.width,
+      this.y * this.height - offsetY,
+      this.width,
+      scaledHeight
+    );
   }
 }
 
@@ -125,6 +135,8 @@ let characterMapSpritePaths; // To store character paths loaded from JSON
 let characterAnimations = {}; // Object to store character animations
 let characters = []; // Array to store character instances
 let characterData; // Holds character data information
+let cursorImage; // Variable to hold the cursor image
+
 
 function preload() {
   // Preload map information 
@@ -142,6 +154,9 @@ function preload() {
 
   // Load character data from JSON
   characterData = loadJSON("Assets/Characters/characters.json");
+
+  // Preload images of cursor
+  cursorImage = loadImage("Assets/Cursor/cursorOnCharacter.png"); // Preload cursor image
 }
 
 function setup() {
