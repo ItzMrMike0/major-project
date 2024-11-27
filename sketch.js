@@ -6,6 +6,7 @@
 // Tileset acquired from https://forums.serenesforest.net/topic/24982-tileset-collection/
 // Background music acquired from https://www.youtube.com/watch?v=Cx4GQH2tHYQ
 // A lot of sprites taken from https://github.com/Klokinator/FE-Repo/tree/main
+// Cursor sound acquired from https://www.youtube.com/watch?v=fkmp_YR9RXc
 
 // Tile class 
 class Tile {
@@ -27,19 +28,23 @@ class Tile {
 
 // Character class 
 class Character {
-  constructor(name, classType, x, y, hp, attack, defense, speed, width = 65, height = 65) {
+  constructor(name, classType, x, y, level, hp, strength, skill, speed, luck, defense, resistance, width = 65, height = 65) {
     this.name = name; // Character name
     this.classType = classType; // Character class type
     this.x = x; // Character x location
     this.y = y; // Character y location
+    this.level = level; // Character level
     this.hp = hp; // Character hp stat
-    this.attack = attack; // Character attack stat
-    this.defense = defense; // Character defense stat
-    this.speed = speed; // Character speed stat
+    this.strength = strength; // Character strength stat for physical attacks
+    this.skill = skill; // Character skill stat for magic attacks
+    this.speed = speed; // Character speed stat 
+    this.luck = luck; // Character luck stat
+    this.defense = defense; // Character defense stat agaisnt physical attacks
+    this.resistance = resistance; // Character resistance stat agaisnt magic attacks
     this.isSelected = false; // Track if the character has been selected
-    this.animation = null;  // Character's GIF animation
-    this.width = width;     // Width for displaying GIF (default 65)
-    this.height = height;   // Height for displaying GIF (default 65)
+    this.animation = null; // Character's GIF animation
+    this.width = width; // Width for displaying GIF (default 65)
+    this.height = height; // Height for displaying GIF (default 65)
   }
 
   // Display the character on the map
@@ -47,18 +52,7 @@ class Character {
     if (this.animation) {
       // Calculate centered position for the character
       let drawX = this.x * tilesWidth + (tilesWidth - this.width) / 2;
-      let drawY = this.y * tilesHeight + (tilesHeight - this.height) / 2;
-
-      // Adjust drawY for specific character height adjustments
-      if (this.name === "Lance" || this.name === "Allen") {
-        // Shift the position down slightly and ensure the feet don't go into the underneath tile
-        drawY += 5;
-        drawY = Math.min(drawY, this.y * tilesHeight + tilesHeight - this.height); 
-      } 
-      else {
-        // For other characters, adjust slightly upwards
-        drawY -= 5;
-      }
+      let drawY = this.y * tilesHeight + (tilesHeight - this.height) / 2 - 5;
 
       // Draw the character's animation at the calculated position
       image(this.animation, drawX, drawY, this.width, this.height);
@@ -88,15 +82,22 @@ class Cursor {
 
   // Move the cursor based on input (WASD)
   move(direction) {
+    // Plays cursor moving sound effect
+    sounds.cursorMoving.amp(0.1);
+    sounds.cursorMoving.play();
+
     if (direction === 'up' && this.y > 0) {
       this.y--;
     }
+
     if (direction === 'down' && this.y < tilesHigh - 1) {
       this.y++;
     }
+
     if (direction === 'left' && this.x > 0) {
       this.x--;
     }
+
     if (direction === 'right' && this.x < tilesWide - 1) {
       this.x++;
     }
@@ -130,7 +131,8 @@ let tilesHeight; // How tall each tile is
 let tileImages = {}; // Object to store tile images
 let tiles = []; // Array to store Tile objects
 let tilePaths; // To store the tile paths loaded from JSON
-let music = {}; // Object to store music
+let sounds = {}; // Object to store sounds
+let soundPaths;
 let characterMapSpritePaths; // To store character paths loaded from JSON
 let characterAnimations = {}; // Object to store character animations
 let characters = []; // Array to store character instances
@@ -146,8 +148,8 @@ function preload() {
   // Preload tile images
   tilePaths = loadJSON("Assets/Tiles/tilesPath.json", setupTileImages);
 
-  // Load music files
-  music.backgroundMusic = loadSound("Assets/Music/backgroundMusic.weba");
+  // Load the sounds JSON
+  soundPaths = loadJSON("Assets/Sounds/sounds.json", setupSounds);
 
   // Load character map sprite paths from JSON
   characterMapSpritePaths = loadJSON("Assets/CharacterMapSprites/characterMapSpritesPaths.json", setupCharacterMapSpriteAnimations);
@@ -168,8 +170,8 @@ function setup() {
   tilesHeight = height / tilesHigh;
 
   // Loop background music
-  music.backgroundMusic.loop(true);
-  music.backgroundMusic.amp(0.1);
+  sounds.backgroundMusic.loop(true);
+  sounds.backgroundMusic.amp(0.1);
 
   // Disable right-click menu 
   window.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -180,17 +182,19 @@ function setup() {
   // Create characters from JSON
   for (let char of characterData.characters) {
     createCharacter(
-      char.name, 
+      char.name,
       char.classType,
       char.x,
       char.y,
+      char.level,
       char.hp,
-      char.attack,
-      char.defense,
+      char.strength,
+      char.skill,
       char.speed,
+      char.luck,
+      char.defense,
+      char.resistance,
       char.animation,
-      char.width || 65,
-      char.height || 65
     );
   }
   
@@ -212,12 +216,20 @@ function setupCharacterMapSpriteAnimations(data) {
   }
 }
 
+function setupSounds(data) {
+  // Load each sound file from the paths in the JSON
+  for (let soundName in data) {
+    sounds[soundName] = loadSound(data[soundName]);
+  }
+}
+
 // Helper function to create new characters
-function createCharacter(name, classType, x, y, hp, attack, defense, speed, animationName, width = 65, height = 65) {
-  let character = new Character(name, classType, x, y, hp, attack, defense, speed, width, height);
+function createCharacter(name, classType, x, y, level, hp, strength, skill, speed, luck, defense, resistance, animationName) {
+  let character = new Character(name, classType, x, y, level, hp, strength, skill, speed, luck, defense, resistance);
   character.animation = characterAnimations[animationName];
   characters.push(character);
 }
+
 
 // Creates 2D Grid based on the x and y from level txt file
 function createTiles(lines) {
