@@ -1,5 +1,7 @@
 {
     "backgroundMusic": "Assets/Sounds/Music/backgroundMusic.mp3",
-    "cursorMoving": "Assets/Sounds/Effects/cursorMoving.mp3"
+    "cursorMoving": "Assets/Sounds/Effects/cursorMoving.mp3",
+    "selectCharacter": "Assets/Sounds/Effects/selectCharacter.mp3",
+    "unselectCharacter": "Assets/Sounds/Effects/unselectCharacter.mp3"
   }
   

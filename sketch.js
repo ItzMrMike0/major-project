@@ -114,21 +114,24 @@ class Cursor {
 
   // Render the cursor on the screen
   render() {
+    // Get the current image based on the key
+    let currentImage = cursorImages[cursorImageKey];
+  
     // Scale the cursor image vertically (Increase height by 20%)
-    let scaledHeight = this.height * 1.2; 
+    let scaledHeight = this.height * 1.2;
     // Center the image vertically
     let offsetY = (scaledHeight - this.height) / 2;
-
+  
     // Draw the cursor image
     image(
-      cursorImage,
+      currentImage,
       this.x * this.width,
       this.y * this.height - offsetY,
       this.width,
       scaledHeight
     );
   }
-}
+}  
 
 // Global variables
 let levelToLoad; // Text file to load
@@ -141,13 +144,14 @@ let tileImages = {}; // Object to store tile images
 let tiles = []; // Array to store Tile objects
 let tilePaths; // To store the tile paths loaded from JSON
 let sounds = {}; // Object to store sounds
-let soundPaths;
+let soundPaths; // To store the sound paths loaded from JSON
 let characterMapSpritePaths; // To store character paths loaded from JSON
 let characterAnimations = {}; // Object to store character animations
 let characters = []; // Array to store character instances
 let characterData; // Holds character data information
-let cursorImage; // Variable to hold the cursor image
-
+let cursorImages = {}; // Object to hold cursor images
+let cursorImageKey = "default"; // Tracks the current cursor image key
+let cursorPaths; // To store the cursor paths loaded from JSON
 
 function preload() {
   // Preload map information 
@@ -167,7 +171,7 @@ function preload() {
   characterData = loadJSON("Assets/Characters/characters.json");
 
   // Preload images of cursor
-  cursorImage = loadImage("Assets/Cursor/cursorOnCharacter.png"); // Preload cursor image
+  cursorPaths = loadJSON("Assets/Cursor/cursorImages.json", setupCursorImages);
 }
 
 function setup() {
@@ -219,17 +223,24 @@ function setupTileImages(data) {
   }
 }
 
-// initialize characterAnimations after JSON is loaded
+// Initialize characterAnimations after JSON is loaded
 function setupCharacterMapSpriteAnimations(data) {
   for (let name in data) {
     characterAnimations[name] = loadImage(data[name]);
   }
 }
 
+// Initialize sounds after JSON is loaded
 function setupSounds(data) {
-  // Load each sound file from the paths in the JSON
   for (let soundName in data) {
     sounds[soundName] = loadSound(data[soundName]);
+  }
+}
+
+// Initialize cursorImages after JSON is loaded
+function setupCursorImages(data) {
+  for (let key in data) {
+    cursorImages[key] = loadImage(data[key]);
   }
 }
 
@@ -254,8 +265,8 @@ function createTiles(lines) {
   return tiles;
 }
 
-
 function keyPressed() {
+  cursorImageKey = "default";
   // Move cursor
   if (key === "w") {
     locationCursor.move("up");
@@ -269,21 +280,62 @@ function keyPressed() {
   else if (key === "d") {
     locationCursor.move("right");
   }
-  // Select 
+  // Select character
   else if (key === "j") {
-    // Check if there's an allied character at the cursor's location
-    for (let character of characters) {
-      if (character.x === locationCursor.x && character.y === locationCursor.y && !character.isEnemy) {
-        // Deselect all other characters
-        for (let otherCharacter of characters) {
-          otherCharacter.isSelected = false;
-        }
-        // Select the current character
-        character.isSelected = true;
-        console.log(`${character.name} is now selected.`);
-        break;
+    selectCharacter();
+  }
+  // Deselect characters
+  else if (key === "k") {
+    unselectCharacter();
+  }
+}
+
+function selectCharacter() {
+  // Check if there's an allied character at the cursor's location
+  for (let character of characters) {
+    if (character.x === locationCursor.x && character.y === locationCursor.y && !character.isEnemy) {
+      // Play sound effect
+      sounds.selectCharacter.amp(0.1);
+      sounds.selectCharacter.play();
+      // Change cursor image
+      cursorImageKey = "selectedCursor";
+
+      // Deselect all other characters
+      for (let otherCharacter of characters) {
+        otherCharacter.isSelected = false;
       }
+      // Select the current character
+      character.isSelected = true;
+      console.log(`${character.name} is now selected.`);
+      break;
     }
+  }
+}
+
+function unselectCharacter() {
+  // Check if any characters have been selected to begin with
+  let isAnyCharacterSelected = false;
+  for (let character of characters) {
+    if (character.isSelected) {
+      isAnyCharacterSelected = true;
+      break;
+    }
+  }
+
+  // If there is a selected character, unselect them
+  if (isAnyCharacterSelected) {
+    for (let character of characters) {
+      character.isSelected = false;
+    }
+    // Play sound effect
+    sounds.unselectCharacter.amp(0.1);
+    sounds.unselectCharacter.play();
+
+    // Change cursor image
+    cursorImageKey = "default";
+    console.log("Character deselected.");
+  } else {
+    console.log("No characters are selected.");
   }
 }
 
