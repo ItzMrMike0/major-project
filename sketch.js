@@ -6,7 +6,9 @@
 // Tileset acquired from https://forums.serenesforest.net/topic/24982-tileset-collection/
 // Background music acquired from https://www.youtube.com/watch?v=Cx4GQH2tHYQ
 // A lot of sprites taken from https://github.com/Klokinator/FE-Repo/tree/main
-// Cursor sound acquired from https://www.youtube.com/watch?v=fkmp_YR9RXc
+// Cursor moving sound acquired from https://www.youtube.com/watch?v=fkmp_YR9RXc
+// Select character sound acquired from https://www.youtube.com/watch?v=7Z2sxm7CkPw
+// Deselect character sound acquired from https://www.youtube.com/watch?v=U8wAHIaW4S0
 
 // Tile class 
 class Tile {

@@ -1,5 +1,11 @@
 # Project Proposal: Fire Emblem 
-A Fire Emblem-style game, featuring strategic grid-based gameplay, turn-based mechanics, and RPG elements.
+A Fire Emblem-style tactical RPG game featuring strategic, grid-based gameplay that allows players to move characters across a map, engage in turn-based combat, and make strategic decisions on both offense and defense. 
+
+The game will include a variety of character classes with distinct abilities, a dynamic battle system where positioning, terrain, and stats play key roles, and a campaign that challenges the player's ability to adapt to different tactical situations. 
+
+Players will control a group of heroes, each with unique skills and strengths, and face off against enemies with AI tactics. 
+
+Winning will rely not only on combat prowess but also on strategic planning and managing resources.
 
 ## Needs to Have List
 🔴 = Not done, 🟡 = Worked on, 🟢 = Completed
@@ -12,18 +18,19 @@ A Fire Emblem-style game, featuring strategic grid-based gameplay, turn-based me
 - Highlight movement range and attack range tiles when character selected. 🔴
 
 ### 2: Turn-Based Actions
+- Select individual characters to view stats or perform actions. 🟡
 - Swap between player turn and enemy turn. 🔴
 - Action options: 🔴
   - Move: Select a tile to move to. 🔴
   - Attack: Choose a target within attack range. 🔴
   - Items: Use or equip items during a turn. 🔴
   - End Turn: Manually end the player's turn. 🔴
-- Undo move option (before confirming an action). 🔴
+- Undo move option (before confirming an action). 🟡
+- Win condition (Completely defeat all enemy characters) 🔴
 
 ### 3: Characters
 - Characters with unique stats, animations, and abilities. 🟡
-- Select individual characters to view stats or perform actions. 🔴
-- Core stats include HP, attack, defense, speed, and evasion. 🟡
+- Core stats include HP, strength, skill, speed, luck, defense, resistance. 🟡
 - Derived stats like critical rate or hit rate. 🔴
 - Assign classes with unique traits (e.g., archers, mages, knights). 🟡
 - Include movement, selection, and idle animations. 🟡
@@ -44,7 +51,7 @@ A Fire Emblem-style game, featuring strategic grid-based gameplay, turn-based me
 
 ### 6: Sound Effects
 - Add background music with smooth transitions (e.g., calm and battle phases). 🟡
-- Include sound effects for movement, attacks, and menu interactions. 🔴
+- Include sound effects for movement, attacks, and menu interactions. 🟡
 
 ## Nice to Have List
 - Difficulty levels (e.g., aggressive, defensive, balanced). 🔴
