@@ -154,6 +154,8 @@ let characterData; // Holds character data information
 let cursorImages = {}; // Object to hold cursor images
 let cursorImageKey = "default"; // Tracks the current cursor image key
 let cursorPaths; // To store the cursor paths loaded from JSON
+let moveDelay = 200; // Delay in frames before moving cursor to the next tile
+let lastMoveTime = 0; // Tracks the time of the last cursor movement
 
 function preload() {
   // Preload map information 
@@ -269,26 +271,33 @@ function createTiles(lines) {
 
 function keyPressed() {
   cursorImageKey = "default";
-  // Move cursor
-  if (key === "w") {
-    locationCursor.move("up");
-  }
-  else if (key === "a") {
-    locationCursor.move("left");
-  }
-  else if (key === "s") {
-    locationCursor.move("down");
-  }
-  else if (key === "d") {
-    locationCursor.move("right");
-  }
-  // Select character
-  else if (key === "j") {
+  // Handle the selection and deselection of characters
+  if (key === "j") {
     selectCharacter();
   }
-  // Deselect characters
   else if (key === "k") {
     unselectCharacter();
+  }
+}
+
+// Allows user to hold down movement keys
+function holdCursorMovement() {
+  let currentTime = millis();
+  if (keyIsDown(87) && currentTime - lastMoveTime > moveDelay) {  // 'W' key - Up
+    locationCursor.move("up");
+    lastMoveTime = currentTime;
+  }
+  if (keyIsDown(65) && currentTime - lastMoveTime > moveDelay) {  // 'A' key - Left
+    locationCursor.move("left");
+    lastMoveTime = currentTime;
+  }
+  if (keyIsDown(83) && currentTime - lastMoveTime > moveDelay) {  // 'S' key - Down
+    locationCursor.move("down");
+    lastMoveTime = currentTime;
+  }
+  if (keyIsDown(68) && currentTime - lastMoveTime > moveDelay) {  // 'D' key - Right
+    locationCursor.move("right");
+    lastMoveTime = currentTime;
   }
 }
 
@@ -351,6 +360,9 @@ function displayTiles() {
 }
 
 function draw() {
+  // Handle cursor movement with WASD keys 
+  holdCursorMovement();
+  
   // Display tiles
   displayTiles();
 
