@@ -4,5 +4,6 @@
   "CavalierIdle": "Assets/CharacterMapSprites/StandingGifs/cavalier.gif",
   "ArcherIdle": "Assets/CharacterMapSprites/StandingGifs/archer.gif",
   "MageIdle": "Assets/CharacterMapSprites/StandingGifs/mage.gif",
-  "EnemyFighterIdle": "Assets/CharacterMapSprites/StandingGifs/enemyfighter.gif"
+  "EnemyFighterIdle": "Assets/CharacterMapSprites/StandingGifs/enemyfighter.gif",
+  "EnemyBrigandIdle": "Assets/CharacterMapSprites/StandingGifs/enemyboss.gif"
   }

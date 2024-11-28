@@ -49,7 +49,8 @@
       "resistance": 0,
       "isSelected": false,
       "animation": "CavalierIdle",
-      "isEnemy": false
+      "isEnemy": false,
+      "height" : 65
     },
     {
       "name": "Allen",
@@ -66,7 +67,8 @@
       "resistance": 0,
       "isSelected": false,
       "animation": "CavalierIdle",
-      "isEnemy": false
+      "isEnemy": false,
+      "height": 65
     },
     {
       "name": "Wolt",
@@ -154,10 +156,10 @@
       "isEnemy": true
     },
     {
-      "name": "Enemy Fighter",
-      "classType": "Fighter",
+      "name": "Enemy Brigand",
+      "classType": "Brigand",
       "x": 5,
-      "y": 0,
+      "y": 1,
       "level": 1,
       "hp": 20,
       "strength": 6,
@@ -167,7 +169,7 @@
       "defense": 3,
       "resistance": 0,
       "isSelected": false,
-      "animation": "EnemyFighterIdle",
+      "animation": "EnemyBrigandIdle",
       "isEnemy": true
     },
     {

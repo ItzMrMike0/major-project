@@ -30,7 +30,7 @@ class Tile {
 
 // Character class 
 class Character {
-  constructor(name, classType, x, y, level, hp, strength, skill, speed, luck, defense, resistance, isEnemy, width = 65, height = 65) {
+  constructor(name, classType, x, y, level, hp, strength, skill, speed, luck, defense, resistance, isEnemy, width = 50, height = 50) {
     this.name = name; // Character name
     this.classType = classType; // Character class type
     this.x = x; // Character x location
@@ -55,7 +55,12 @@ class Character {
     if (this.animation) {
       // Calculate centered position for the character
       let drawX = this.x * tilesWidth + (tilesWidth - this.width) / 2;
-      let drawY = this.y * tilesHeight + (tilesHeight - this.height) / 2 - 5;
+      let drawY = this.y * tilesHeight + (tilesHeight - this.height) / 2;
+
+      // Since cavaliers are on horses their height 
+      if (this.name === "Lance" || this.name === "Allen") {
+        drawY -= 5;
+      }
 
       // Draw a selection border if the character is selected
       if (this.isSelected) {
@@ -154,8 +159,11 @@ let characterData; // Holds character data information
 let cursorImages = {}; // Object to hold cursor images
 let cursorImageKey = "default"; // Tracks the current cursor image key
 let cursorPaths; // To store the cursor paths loaded from JSON
-let moveDelay = 200; // Delay in frames before moving cursor to the next tile
-let lastMoveTime = 0; // Tracks the time of the last cursor movement
+const MOVE_DELAY = 200; // Delay in frames before moving cursor to the next tile
+let lastMoveTimeW = 0; // Tracks the time of the last cursor movement upwards
+let lastMoveTimeA = 0; // Tracks the time of the last cursor movement to the left
+let lastMoveTimeS = 0; // Tracks the time of the last cursor movement downwards
+let lastMoveTimeD = 0; // Tracks the time of the last cursor movement to the right
 
 function preload() {
   // Preload map information 
@@ -212,7 +220,9 @@ function setup() {
       char.defense,
       char.resistance,
       char.animation,
-      char.isEnemy
+      char.isEnemy,
+      char.width, 
+      char.height
     );
   }
   
@@ -249,8 +259,8 @@ function setupCursorImages(data) {
 }
 
 // Helper function to create new characters
-function createCharacter(name, classType, x, y, level, hp, strength, skill, speed, luck, defense, resistance, animationName, isEnemy) {
-  let character = new Character(name, classType, x, y, level, hp, strength, skill, speed, luck, defense, resistance, isEnemy);
+function createCharacter(name, classType, x, y, level, hp, strength, skill, speed, luck, defense, resistance, animationName, isEnemy, width, height) {
+  let character = new Character(name, classType, x, y, level, hp, strength, skill, speed, luck, defense, resistance, isEnemy, width, height);
   character.animation = characterAnimations[animationName];
   characters.push(character);
 }
@@ -283,21 +293,21 @@ function keyPressed() {
 // Allows user to hold down movement keys
 function holdCursorMovement() {
   let currentTime = millis();
-  if (keyIsDown(87) && currentTime - lastMoveTime > moveDelay) {  // 'W' key - Up
+  if (keyIsDown(87) && currentTime - lastMoveTimeW > MOVE_DELAY) {  // 'W' key - Up
     locationCursor.move("up");
-    lastMoveTime = currentTime;
+    lastMoveTimeW = currentTime;
   }
-  if (keyIsDown(65) && currentTime - lastMoveTime > moveDelay) {  // 'A' key - Left
+  if (keyIsDown(65) && currentTime - lastMoveTimeA > MOVE_DELAY) {  // 'A' key - Left
     locationCursor.move("left");
-    lastMoveTime = currentTime;
+    lastMoveTimeA = currentTime;
   }
-  if (keyIsDown(83) && currentTime - lastMoveTime > moveDelay) {  // 'S' key - Down
+  if (keyIsDown(83) && currentTime - lastMoveTimeS > MOVE_DELAY) {  // 'S' key - Down
     locationCursor.move("down");
-    lastMoveTime = currentTime;
+    lastMoveTimeS = currentTime;
   }
-  if (keyIsDown(68) && currentTime - lastMoveTime > moveDelay) {  // 'D' key - Right
+  if (keyIsDown(68) && currentTime - lastMoveTimeD > MOVE_DELAY) {  // 'D' key - Right
     locationCursor.move("right");
-    lastMoveTime = currentTime;
+    lastMoveTimeD = currentTime;
   }
 }
 
@@ -339,13 +349,14 @@ function unselectCharacter() {
       character.isSelected = false;
     }
     // Play sound effect
-    sounds.unselectCharacter.amp(0.1);
+    sounds.unselectCharacter.amp(0.6);
     sounds.unselectCharacter.play();
 
     // Change cursor image
     cursorImageKey = "default";
     console.log("Character deselected.");
-  } else {
+  }
+  else {
     console.log("No characters are selected.");
   }
 }
