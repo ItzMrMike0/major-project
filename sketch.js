@@ -64,7 +64,7 @@ class Character {
       "Archer": 3,
       "Mage": 3
     };
-    return movementRanges[this.classType]
+    return movementRanges[this.classType];
   }
 
   // Determine how many tiles a unit can attack from based on class type
@@ -76,28 +76,40 @@ class Character {
     return attackRanges[this.classType] || 1; // Default is 1 tile for melee attackers
   }
 
-  // Calculate reachable tiles
+
+  //const directions = [{ dx: 0, dy: 1 }, { dx: 0, dy: -1 }, { dx: 1, dy: 0 }, { dx: -1, dy: 0 }];
+
+  // const queue = [{ x: this.x, y: this.y, distance: 0 }]; 
+  // const visited = new Set([`${this.x},${this.y}`]);  
+
+  // visited = [[false,false,false],[false]]
+
+
+  // Calculate reachable tiles using Manhattan distance
   calculateReachableTiles() {
     // Clear any previously stored tiles
     this.reachableTiles = []; 
     this.attackableTiles = [];
+  
     // Acquire character's movement range
     let movementRange = this.getMovementRange();
     let attackRange = this.getAttackRange();
-
+  
     // Loop through all tiles and check if they are within the movement range
     for (let y = 0; y < tilesHigh; y++) {
       for (let x = 0; x < tilesWide; x++) {
-        // Calculate distance to each tile
-        let distance = dist(this.x, this.y, x, y);
+        // Calculate Manhattan distance to each tile
+        let distance = Math.abs(this.x - x) + Math.abs(this.y - y);
+        
         // If the distance is less than or equal to movement range then push tile into reachableTiles
         if (distance <= movementRange) {
           let tile = tiles[y][x];
           // If tile is walkable and not occupied by another character, add to reachable tiles
-          if (tile.type !== "W" && tile.type !== "M" && !isTileOccupied(x, y)) {
+          if (tile.type !== "W" && tile.type !== "M") {
             this.reachableTiles.push({ x, y });
           }
         }
+  
         // Add attackable tiles within range
         if (distance > movementRange && distance <= movementRange + attackRange) {
           let tile = tiles[y][x];
@@ -466,37 +478,59 @@ function unselectCharacter() {
   }
 }
 
+/*
+let dx = [1,0,-1,0];
+let dy = [0,1,0,-1]
+*/
+
 function moveSelectedCharacter() {
   // Iterate through all characters and check for character that is selected and can also move
   for (let character of characters) {
     if (character.isSelected && character.canMove) {
-      // Calculate tile distance between the character and where the cursor is
-      let distance = dist(locationCursor.x, locationCursor.y, character.x, character.y);
+      // Calculate Manhattan distance between the character and where the cursor is
+      let distance = Math.abs(locationCursor.x - character.x) + Math.abs(locationCursor.y - character.y);
 
-      // Check if within movement range
+      // Check if the character is selected and if the target tile is within movement range
       if (distance <= character.getMovementRange()) {
-        // Validate the tile is walkable (not water, mountain, etc and that no other character is already on it)
-        let tile = tiles[locationCursor.y][locationCursor.x];
-        if (tile.type !== "W" && tile.type !== "M" && !isTileOccupied(locationCursor.x, locationCursor.y)) {
-          // Move character to new location
-          character.moveTo(locationCursor.x, locationCursor.y);
-          // Disable further movement this turn
-          character.canMove = false;
-          // Deselect the character after they move
-          character.isSelected = false;
-          // Grey out the character 
-          character.isGreyedOut = true;
-          console.log(`${character.name} moved to (${character.x}, ${character.y})`);
-        } else {
-          console.log("Cannot move to this tile (either it's a wall or occupied by another character).");
+        // Check if the destination is within reachable tiles
+        let targetTile = { x: locationCursor.x, y: locationCursor.y };
+        let isReachable = character.reachableTiles.some(tile => tile.x === targetTile.x && tile.y === targetTile.y);
+       
+        if (isReachable) {
+          // Validate the tile is walkable (not water, mountain, etc.) and not occupied
+          let tile = tiles[locationCursor.y][locationCursor.x];
+          if (tile.type !== "W" && tile.type !== "M" && !isTileOccupied(locationCursor.x, locationCursor.y)) {
+            // Move character to new location
+            character.moveTo(locationCursor.x, locationCursor.y);
+            // Disable further movement this turn
+            character.canMove = false;
+            // Deselect the character after they move
+            character.isSelected = false;
+            // Grey out the character
+            character.isGreyedOut = true;
+
+            console.log(`${character.name} moved to (${character.x}, ${character.y})`);
+
+            // Play move sound effect
+            sounds.selectCharacter.amp(0.1);
+            sounds.selectCharacter.play();
+          }
+          else {
+            console.log("Cannot move to this tile (either it's a wall or occupied by another character).");
+          }
         }
-      } else {
+        else {
+          console.log("This tile is not reachable.");
+        }
+      }
+      else {
         console.log("Target location is out of range.");
       }
       break;
     }
   }
 }
+
 
 // Helper function to check if a tile is occupied by another character
 function isTileOccupied(x, y) {
@@ -506,7 +540,7 @@ function isTileOccupied(x, y) {
       return true;  
     }
   }
-   // The tile is not occupied
+  // The tile is not occupied
   return false; 
 }
 
