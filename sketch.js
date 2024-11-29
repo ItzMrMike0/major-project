@@ -49,6 +49,7 @@ class Character {
     this.width = width; // Width for displaying GIF (default 65)
     this.height = height; // Height for displaying GIF (default 65)
     this.canMove = true; // Track if the character can make a move this turn
+    this.isGreyedOut = false; // Property for greying out once turn has been used
   }
 
   // Determine how many tiles a unit can move based off of class type
@@ -92,11 +93,11 @@ class Character {
           drawY -= 10;
         }
         else {
-          drawY -=5;
+          drawY -= 5;
         }
       }
-      else if (this.classType === "Cavalier"){
-          drawY -= 5;
+      else if (this.classType === "Cavalier") {
+        drawY -= 5;
       }
     
       // Draw a selection border if the character is selected
@@ -105,6 +106,15 @@ class Character {
         stroke(255, 255, 0); // Yellow border
         strokeWeight(3);
         rect(drawX, drawY, drawWidth, drawHeight);
+      }
+
+      // Apply a grey tint to the character if the character has used their turn
+      if (this.isGreyedOut) {
+        tint(100); 
+      } 
+      else {
+        // Ensure no tint is applied if the character has not moved yet
+        noTint(); 
       }
 
       // Draw the character's animation at the calculated position
@@ -364,9 +374,9 @@ function holdCursorMovement() {
 }
 
 function selectCharacter() {
-  // Check if there's an allied character at the cursor's location
+  // Make sure the character is not an enemy and hasn't moved yet (is not greyed out)
   for (let character of characters) {
-    if (character.x === locationCursor.x && character.y === locationCursor.y && !character.isEnemy) {
+    if (character.x === locationCursor.x && character.y === locationCursor.y && !character.isEnemy && !character.isGreyedOut) {
       // Play sound effect
       sounds.selectCharacter.amp(0.1);
       sounds.selectCharacter.play();
@@ -425,10 +435,14 @@ function moveSelectedCharacter() {
         // Validate the tile is walkable (not water, wall, etc.)
         let tile = tiles[locationCursor.y][locationCursor.x];
         if (tile.type !== "W") { 
-          // Move character to new location 
+          // Move character to new location
           character.moveTo(locationCursor.x, locationCursor.y);
           // Disable further movement this turn
-          character.canMove = false; 
+          character.canMove = false;
+          // Deselect the character after they move
+          character.isSelected = false;
+          // Grey out the character 
+          character.isGreyedOut = true;
           console.log(`${character.name} moved to (${character.x}, ${character.y})`);
         } else {
           console.log("Cannot move to this tile.");
