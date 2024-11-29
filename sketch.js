@@ -48,6 +48,26 @@ class Character {
     this.isEnemy = isEnemy; // Key to see if character is enemy or not
     this.width = width; // Width for displaying GIF (default 65)
     this.height = height; // Height for displaying GIF (default 65)
+    this.canMove = true; // Track if the character can make a move this turn
+  }
+
+  // Determine how many tiles a unit can move based off of class type
+  getMovementRange() {
+    if (this.classType === "Lord") {
+      return 3;
+    }
+    else if (this.classType === "Knight") {
+      return 2;
+    }
+    else if (this.classType === "Cavalier") {
+      return 4;
+    }
+    else if (this.classType === "Archer") {
+      return 3;
+    }
+    else if (this.classType === "Mage") {
+      return 3;
+    }
   }
 
   // Display the character on the map
@@ -296,11 +316,26 @@ function createTiles(lines) {
   return tiles;
 }
 
+// Handle all inputs that lead to actions
 function keyPressed() {
   cursorImageKey = "default";
-  // Handle the selection and deselection of characters
   if (key === "j") {
-    selectCharacter();
+    // Check if a character is selected
+    let selectedCharacter = null;
+    for (let character of characters) {
+      if (character.isSelected) {
+        selectedCharacter = character;
+        break;
+      }
+    }
+    if (selectedCharacter) {
+      // If a character is already selected, move them
+      moveSelectedCharacter();
+    } 
+    else {
+      // If no character is selected, select a new character
+      selectCharacter();
+    }
   }
   else if (key === "k") {
     unselectCharacter();
@@ -375,6 +410,34 @@ function unselectCharacter() {
   }
   else {
     console.log("No characters are selected.");
+  }
+}
+
+function moveSelectedCharacter() {
+  // Iterate through all characters and check for character that is selected and can also move
+  for (let character of characters) {
+    if (character.isSelected && character.canMove) {
+      // Calculate tile distance between the character and where the cursor is
+      let distance = dist(locationCursor.x, locationCursor.y, character.x, character.y);
+
+      // Check if within movement range
+      if (distance <= character.getMovementRange()) {
+        // Validate the tile is walkable (not water, wall, etc.)
+        let tile = tiles[locationCursor.y][locationCursor.x];
+        if (tile.type !== "W") { 
+          // Move character to new location 
+          character.moveTo(locationCursor.x, locationCursor.y);
+          // Disable further movement this turn
+          character.canMove = false; 
+          console.log(`${character.name} moved to (${character.x}, ${character.y})`);
+        } else {
+          console.log("Cannot move to this tile.");
+        }
+      } else {
+        console.log("Target location is out of range.");
+      }
+      break;
+    }
   }
 }
 
