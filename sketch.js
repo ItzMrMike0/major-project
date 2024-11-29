@@ -53,25 +53,42 @@ class Character {
   // Display the character on the map
   displayOnMap() {
     if (this.animation) {
-      // Calculate centered position for the character
-      let drawX = this.x * tilesWidth + (tilesWidth - this.width) / 2;
-      let drawY = this.y * tilesHeight + (tilesHeight - this.height) / 2;
+      let drawWidth = this.width;
+      let drawHeight = this.height;
 
-      // Since cavaliers are on horses their height 
-      if (this.name === "Lance" || this.name === "Allen") {
-        drawY -= 5;
+      // Adjust dimensions if the character is selected
+      if (this.isSelected) {
+        drawWidth += 15;
+        drawHeight += 15;
       }
 
+      // Calculate centered position for the character
+      let drawX = this.x * tilesWidth + (tilesWidth - drawWidth) / 2;
+      let drawY = this.y * tilesHeight + (tilesHeight - drawHeight) / 2;
+
+      // Adjust Y-position based classType 
+      if (this.isSelected) {
+        if (this.classType === "Cavalier") {
+          drawY -= 10;
+        }
+        else {
+          drawY -=5;
+        }
+      }
+      else if (this.classType === "Cavalier"){
+          drawY -= 5;
+      }
+    
       // Draw a selection border if the character is selected
       if (this.isSelected) {
         noFill();
         stroke(255, 255, 0); // Yellow border
         strokeWeight(3);
-        rect(drawX, drawY, this.width, this.height);
+        rect(drawX, drawY, drawWidth, drawHeight);
       }
 
       // Draw the character's animation at the calculated position
-      image(this.animation, drawX, drawY, this.width, this.height);
+      image(this.animation, drawX, drawY, drawWidth, drawHeight);
     }
   }
 
