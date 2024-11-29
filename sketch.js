@@ -50,24 +50,62 @@ class Character {
     this.height = height; // Height for displaying GIF (default 65)
     this.canMove = true; // Track if the character can make a move this turn
     this.isGreyedOut = false; // Property for greying out once turn has been used
+    this.reachableTiles = []; // Property to store reachable tiles
+    this.attackableTiles = []; // Property to store attackable range tiles
   }
 
   // Determine how many tiles a unit can move based off of class type
   getMovementRange() {
-    if (this.classType === "Lord") {
-      return 3;
-    }
-    else if (this.classType === "Knight") {
-      return 2;
-    }
-    else if (this.classType === "Cavalier") {
-      return 4;
-    }
-    else if (this.classType === "Archer") {
-      return 3;
-    }
-    else if (this.classType === "Mage") {
-      return 3;
+    // Movement range based on class type
+    const movementRanges = {
+      "Lord": 3,
+      "Knight": 2,
+      "Cavalier": 4,
+      "Archer": 3,
+      "Mage": 3
+    };
+    return movementRanges[this.classType]
+  }
+
+  // Determine how many tiles a unit can attack from based on class type
+  getAttackRange() {
+    const attackRanges = {
+      "Archer": 2, // Archers can attack 2 tiles away
+      "Mage": 2,   // Mages can attack 2 tiles away
+    };
+    return attackRanges[this.classType] || 1; // Default is 1 tile for melee attackers
+  }
+
+  // Calculate reachable tiles
+  calculateReachableTiles() {
+    // Clear any previously stored tiles
+    this.reachableTiles = []; 
+    this.attackableTiles = [];
+    // Acquire character's movement range
+    let movementRange = this.getMovementRange();
+    let attackRange = this.getAttackRange();
+
+    // Loop through all tiles and check if they are within the movement range
+    for (let y = 0; y < tilesHigh; y++) {
+      for (let x = 0; x < tilesWide; x++) {
+        // Calculate distance to each tile
+        let distance = dist(this.x, this.y, x, y);
+        // If the distance is less than or equal to movement range then push tile into reachableTiles
+        if (distance <= movementRange) {
+          let tile = tiles[y][x];
+          // If tile is walkable and not occupied by another character, add to reachable tiles
+          if (tile.type !== "W" && tile.type !== "M" && !isTileOccupied(x, y)) {
+            this.reachableTiles.push({ x, y });
+          }
+        }
+        // Add attackable tiles within range
+        if (distance > movementRange && distance <= movementRange + attackRange) {
+          let tile = tiles[y][x];
+          if (tile.type !== "W" && tile.type !== "M") {
+            this.attackableTiles.push({ x, y });
+          }
+        }
+      }
     }
   }
 
@@ -380,6 +418,7 @@ function selectCharacter() {
       // Play sound effect
       sounds.selectCharacter.amp(0.1);
       sounds.selectCharacter.play();
+
       // Change cursor image
       cursorImageKey = "selectedCursor";
 
@@ -387,9 +426,13 @@ function selectCharacter() {
       for (let otherCharacter of characters) {
         otherCharacter.isSelected = false;
       }
+      
       // Select the current character
       character.isSelected = true;
       console.log(`${character.name} is now selected.`);
+
+      // Calculate reachable tiles
+      character.calculateReachableTiles();
       break;
     }
   }
@@ -432,9 +475,9 @@ function moveSelectedCharacter() {
 
       // Check if within movement range
       if (distance <= character.getMovementRange()) {
-        // Validate the tile is walkable (not water, wall, etc and that no other character is already on it)
+        // Validate the tile is walkable (not water, mountain, etc and that no other character is already on it)
         let tile = tiles[locationCursor.y][locationCursor.x];
-        if (tile.type !== "W" && !isTileOccupied(locationCursor.x, locationCursor.y)) {
+        if (tile.type !== "W" && tile.type !== "M" && !isTileOccupied(locationCursor.x, locationCursor.y)) {
           // Move character to new location
           character.moveTo(locationCursor.x, locationCursor.y);
           // Disable further movement this turn
@@ -476,12 +519,46 @@ function displayTiles() {
   }
 }
 
+function displayReachableTiles() {
+  // Iterate through all characters to find selected character
+  for (let character of characters) {
+    if (character.isSelected) {
+      // Grab information of that character's reachable tiles
+      for (let tile of character.reachableTiles) {
+        let x = tile.x;
+        let y = tile.y;
+        let drawX = x * tilesWidth;
+        let drawY = y * tilesHeight;
+        
+        // Draw a blue rectangle to highlight the reachable tile
+        fill(0, 0, 255, 100); 
+        noStroke();
+        rect(drawX, drawY, tilesWidth, tilesHeight);
+      }
+      // Highlight attackable tiles in red
+      for (let tile of character.attackableTiles) {
+        let x = tile.x;
+        let y = tile.y;
+        let drawX = x * tilesWidth;
+        let drawY = y * tilesHeight;
+
+        fill(255, 0, 0, 100);
+        noStroke();
+        rect(drawX, drawY, tilesWidth, tilesHeight);
+      }
+    }
+  }
+}
+
 function draw() {
   // Handle cursor movement with WASD keys 
   holdCursorMovement();
-  
+
   // Display tiles
   displayTiles();
+
+  // Highlight reachable tiles in blue
+  displayReachableTiles();
 
   // Display all characters
   for (let character of characters) {

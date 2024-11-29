@@ -8,14 +8,14 @@ Players will control a group of heroes, each with unique skills and strengths, a
 Winning will rely not only on combat prowess but also on strategic planning and managing resources.
 
 ## Needs to Have List
-🔴 = Not done, 🟡 = Worked on, 🟢 = Completed
+🔴 = Not done, 🟡 = Working on, 🟢 = Completed
 
 ### 1: Map Creation
 - Grid-based map system. 🟢
 - Load maps using external .txt files. 🟢
-- Some tiles are impassable (e.g., walls, water). 🔴
+- Some tiles are impassable (e.g., walls, water). 🟢
 - Certain tiles provide bonuses (e.g., increased defense or evasion). 🔴
-- Highlight movement range and attack range tiles when character selected. 🔴
+- Highlight movement range and attack range tiles when character selected. 🟡
 
 ### 2: Turn-Based Actions
 - Select individual characters to view stats or perform actions. 🟡
