@@ -432,9 +432,9 @@ function moveSelectedCharacter() {
 
       // Check if within movement range
       if (distance <= character.getMovementRange()) {
-        // Validate the tile is walkable (not water, wall, etc.)
+        // Validate the tile is walkable (not water, wall, etc and that no other character is already on it)
         let tile = tiles[locationCursor.y][locationCursor.x];
-        if (tile.type !== "W") { 
+        if (tile.type !== "W" && !isTileOccupied(locationCursor.x, locationCursor.y)) {
           // Move character to new location
           character.moveTo(locationCursor.x, locationCursor.y);
           // Disable further movement this turn
@@ -445,7 +445,7 @@ function moveSelectedCharacter() {
           character.isGreyedOut = true;
           console.log(`${character.name} moved to (${character.x}, ${character.y})`);
         } else {
-          console.log("Cannot move to this tile.");
+          console.log("Cannot move to this tile (either it's a wall or occupied by another character).");
         }
       } else {
         console.log("Target location is out of range.");
@@ -453,6 +453,18 @@ function moveSelectedCharacter() {
       break;
     }
   }
+}
+
+// Helper function to check if a tile is occupied by another character
+function isTileOccupied(x, y) {
+  for (let character of characters) {
+    if (character.x === x && character.y === y) {
+      // The tile is occupied by another character
+      return true;  
+    }
+  }
+   // The tile is not occupied
+  return false; 
 }
 
 // Iterate through all tiles and display them
