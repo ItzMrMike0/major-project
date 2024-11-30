@@ -234,7 +234,7 @@ class Cursor {
   }
 
   // Render the cursor on the screen
-  render() {
+  renderCursor() {
     // Get the current image based on the key
     let currentImage = cursorImages[cursorImageKey];
  
@@ -278,6 +278,12 @@ let lastMoveTimeW = 0; // Tracks the time of the last cursor movement upwards
 let lastMoveTimeA = 0; // Tracks the time of the last cursor movement to the left
 let lastMoveTimeS = 0; // Tracks the time of the last cursor movement downwards
 let lastMoveTimeD = 0; // Tracks the time of the last cursor movement to the right
+const GAME_STATES = { // Possible game states
+  TITLESCREEN: "TITLESCREEN",
+  GAMEPLAY: "gameplay",
+}
+let gameState = GAME_STATES.GAMEPLAY; // Set gameState 
+
 
 function preload() {
   // Preload map information
@@ -586,6 +592,7 @@ function displayReachableTiles() {
         let drawX = x * tilesWidth;
         let drawY = y * tilesHeight;
 
+        // Draw a red rectangle to highlight the reachable tile
         fill(255, 0, 0, 100);
         noStroke();
         rect(drawX, drawY, tilesWidth, tilesHeight);
@@ -595,23 +602,23 @@ function displayReachableTiles() {
 }
 
 function draw() {
-  // Handle cursor movement with WASD keys
-  holdCursorMovement();
+  // Only run if gamestate is in gameplay
+  if (gameState === GAME_STATES.GAMEPLAY) {
+    // Handle cursor movement with WASD keys
+    holdCursorMovement();
 
-  // Display tiles
-  displayTiles();
+    // Display tiles
+    displayTiles();
 
-  // Highlight reachable tiles in blue
-  displayReachableTiles();
+    // Highlight reachable tiles in blue
+    displayReachableTiles();
 
-  // Display all characters
-  for (let character of characters) {
-    character.displayOnMap();
+    // Display all characters
+    for (let character of characters) {
+      character.displayOnMap();
+    }
+
+    // Render the cursor
+    locationCursor.renderCursor();
   }
-
-  // Render the cursor
-  locationCursor.render();
 }
-
-
-
