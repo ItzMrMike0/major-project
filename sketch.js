@@ -1,4 +1,4 @@
-// Fire Emblem 
+// Fire Emblem
 // Michael Yang
 // 2024-11-21
 
@@ -10,7 +10,7 @@
 // Select character sound acquired from https://www.youtube.com/watch?v=7Z2sxm7CkPw
 // Deselect character sound acquired from https://www.youtube.com/watch?v=U8wAHIaW4S0
 
-// Tile class 
+// Tile class
 class Tile {
   constructor(type, x, y, width, height) {
     this.type = type;  // Type of the tile ("G", "W", etc.)
@@ -28,7 +28,7 @@ class Tile {
   }
 }
 
-// Character class 
+// Character class
 class Character {
   constructor(name, classType, x, y, level, hp, strength, skill, speed, luck, defense, resistance, isEnemy, width = 50, height = 50) {
     this.name = name; // Character name
@@ -39,7 +39,7 @@ class Character {
     this.hp = hp; // Character hp stat
     this.strength = strength; // Character strength stat for physical attacks
     this.skill = skill; // Character skill stat for magic attacks
-    this.speed = speed; // Character speed stat 
+    this.speed = speed; // Character speed stat
     this.luck = luck; // Character luck stat
     this.defense = defense; // Character defense stat agaisnt physical attacks
     this.resistance = resistance; // Character resistance stat agaisnt magic attacks
@@ -76,50 +76,67 @@ class Character {
     return attackRanges[this.classType] || 1; // Default is 1 tile for melee attackers
   }
 
-
-  //const directions = [{ dx: 0, dy: 1 }, { dx: 0, dy: -1 }, { dx: 1, dy: 0 }, { dx: -1, dy: 0 }];
-
-  // const queue = [{ x: this.x, y: this.y, distance: 0 }]; 
-  // const visited = new Set([`${this.x},${this.y}`]);  
-
-  // visited = [[false,false,false],[false]]
-
-
-  // Calculate reachable tiles using Manhattan distance
+  // Calculate reachable and attackable tiles using Dijkstra's algorithm
   calculateReachableTiles() {
-    // Clear any previously stored tiles
+    // Clear previously stored tiles
     this.reachableTiles = []; 
     this.attackableTiles = [];
-  
-    // Acquire character's movement range
-    let movementRange = this.getMovementRange();
-    let attackRange = this.getAttackRange();
-  
-    // Loop through all tiles and check if they are within the movement range
-    for (let y = 0; y < tilesHigh; y++) {
-      for (let x = 0; x < tilesWide; x++) {
-        // Calculate Manhattan distance to each tile
-        let distance = Math.abs(this.x - x) + Math.abs(this.y - y);
-        
-        // If the distance is less than or equal to movement range then push tile into reachableTiles
-        if (distance <= movementRange) {
-          let tile = tiles[y][x];
-          // If tile is walkable and not occupied by another character, add to reachable tiles
-          if (tile.type !== "W" && tile.type !== "M") {
-            this.reachableTiles.push({ x, y });
-          }
+
+    // Get movement range and attack range of character
+    const movementRange = this.getMovementRange();
+    const attackRange = this.getAttackRange();
+
+    // Priority queue for Dijkstra, starts with the character's current position
+    const queue = [{ x: this.x, y: this.y, cost: 0 }];
+    // Track visited tiles to avoid revisiting
+    const visited = new Set();
+    visited.add(`${this.x},${this.y}`);
+
+    // Directions for adjacent tiles (up, down, left, right)
+    const directions = [{ dx: 0, dy: 1 }, { dx: 0, dy: -1 }, { dx: 1, dy: 0 }, { dx: -1, dy: 0 }];
+
+    while (queue.length) {
+      // Sort by movement cost (ascending) and process the tile with the lowest cost
+      queue.sort((a, b) => a.cost - b.cost);
+      const { x, y, cost } = queue.shift();
+
+      // Add the tile to reachable tiles if it's within movement range
+      if (cost <= movementRange) {
+        this.reachableTiles.push({ x, y });
+      }
+
+      // Add to attackable tiles if it's within attack range but outside movement range
+      if (cost > movementRange && cost <= movementRange + attackRange) {
+        const tile = tiles[y][x];
+        if (tile.type !== 'W' && tile.type !== 'M') {
+          this.attackableTiles.push({ x, y });
         }
-  
-        // Add attackable tiles within range
-        if (distance > movementRange && distance <= movementRange + attackRange) {
-          let tile = tiles[y][x];
-          if (tile.type !== "W" && tile.type !== "M") {
-            this.attackableTiles.push({ x, y });
+      }
+
+      // Explore adjacent tiles
+      for (const { dx, dy } of directions) {
+        const nextX = x + dx;
+        const nextY = y + dy;
+
+        // Check if the next tile is within map bounds
+        if (nextX >= 0 && nextX < tilesWide && nextY >= 0 && nextY < tilesHigh) {
+          const tile = tiles[nextY][nextX];
+          const nextTileKey = `${nextX},${nextY}`;
+
+          // Skip tiles that are water, mountains, or already visited
+          if (tile.type === 'W' || tile.type === 'M' || visited.has(nextTileKey)) {
+            continue;
           }
+
+          // Add the next tile to the queue with an incremented cost
+          queue.push({ x: nextX, y: nextY, cost: cost + 1 });
+          // Mark the tile as visited
+          visited.add(nextTileKey); 
         }
       }
     }
   }
+
 
   // Display the character on the map
   displayOnMap() {
@@ -137,7 +154,7 @@ class Character {
       let drawX = this.x * tilesWidth + (tilesWidth - drawWidth) / 2;
       let drawY = this.y * tilesHeight + (tilesHeight - drawHeight) / 2;
 
-      // Adjust Y-position based classType 
+      // Adjust Y-position based classType
       if (this.isSelected) {
         if (this.classType === "Cavalier") {
           drawY -= 10;
@@ -149,7 +166,7 @@ class Character {
       else if (this.classType === "Cavalier") {
         drawY -= 5;
       }
-    
+   
       // Draw a selection border if the character is selected
       if (this.isSelected) {
         noFill();
@@ -160,11 +177,11 @@ class Character {
 
       // Apply a grey tint to the character if the character has used their turn
       if (this.isGreyedOut) {
-        tint(100); 
-      } 
+        tint(100);
+      }
       else {
         // Ensure no tint is applied if the character has not moved yet
-        noTint(); 
+        noTint();
       }
 
       // Draw the character's animation at the calculated position
@@ -220,12 +237,12 @@ class Cursor {
   render() {
     // Get the current image based on the key
     let currentImage = cursorImages[cursorImageKey];
-  
+ 
     // Scale the cursor image vertically (Increase height by 20%)
     let scaledHeight = this.height * 1.2;
     // Center the image vertically
     let offsetY = (scaledHeight - this.height) / 2;
-  
+ 
     // Draw the cursor image
     image(
       currentImage,
@@ -263,7 +280,7 @@ let lastMoveTimeS = 0; // Tracks the time of the last cursor movement downwards
 let lastMoveTimeD = 0; // Tracks the time of the last cursor movement to the right
 
 function preload() {
-  // Preload map information 
+  // Preload map information
   levelToLoad = "Assets/Levels/0.txt";
   lines = loadStrings(levelToLoad);
 
@@ -286,7 +303,7 @@ function preload() {
 function setup() {
   // 4:3 ratio
   createCanvas(1000, 750);
-  tilesHigh = lines.length; 
+  tilesHigh = lines.length;
   tilesWide = lines[0].length;
   tilesWidth = width / tilesWide;
   tilesHeight = height / tilesHigh;
@@ -295,9 +312,9 @@ function setup() {
   sounds.backgroundMusic.loop(true);
   sounds.backgroundMusic.amp(0.1);
 
-  // Disable right-click menu 
+  // Disable right-click menu
   window.addEventListener('contextmenu', (e) => e.preventDefault());
-  
+ 
   // Create a 2D array of Tile objects
   tiles = createTiles(lines);
 
@@ -318,11 +335,11 @@ function setup() {
       char.resistance,
       char.animation,
       char.isEnemy,
-      char.width, 
+      char.width,
       char.height
     );
   }
-  
+ 
   // Initialize the cursor at the top-left tile
   locationCursor = new Cursor();
 }
@@ -365,7 +382,7 @@ function createCharacter(name, classType, x, y, level, hp, strength, skill, spee
 // Creates 2D Grid based on the x and y from level txt file
 function createTiles(lines) {
   // Clear tiles array before creating new tiles to get rid of previous data
-  tiles = []; 
+  tiles = [];
   for (let y = 0; y < lines.length; y++) {
     tiles.push([]);
     for (let x = 0; x < lines[y].length; x++) {
@@ -391,7 +408,7 @@ function keyPressed() {
     if (selectedCharacter) {
       // If a character is already selected, move them
       moveSelectedCharacter();
-    } 
+    }
     else {
       // If no character is selected, select a new character
       selectCharacter();
@@ -438,7 +455,7 @@ function selectCharacter() {
       for (let otherCharacter of characters) {
         otherCharacter.isSelected = false;
       }
-      
+
       // Select the current character
       character.isSelected = true;
       console.log(`${character.name} is now selected.`);
@@ -449,6 +466,7 @@ function selectCharacter() {
     }
   }
 }
+
 
 function unselectCharacter() {
   // Check if any characters have been selected to begin with
@@ -477,11 +495,6 @@ function unselectCharacter() {
     console.log("No characters are selected.");
   }
 }
-
-/*
-let dx = [1,0,-1,0];
-let dy = [0,1,0,-1]
-*/
 
 function moveSelectedCharacter() {
   // Iterate through all characters and check for character that is selected and can also move
@@ -514,16 +527,13 @@ function moveSelectedCharacter() {
             // Play move sound effect
             sounds.selectCharacter.amp(0.1);
             sounds.selectCharacter.play();
-          }
-          else {
+          } else {
             console.log("Cannot move to this tile (either it's a wall or occupied by another character).");
           }
-        }
-        else {
+        } else {
           console.log("This tile is not reachable.");
         }
-      }
-      else {
+      } else {
         console.log("Target location is out of range.");
       }
       break;
@@ -540,8 +550,8 @@ function isTileOccupied(x, y) {
       return true;  
     }
   }
-  // The tile is not occupied
-  return false; 
+   // The tile is not occupied
+  return false;
 }
 
 // Iterate through all tiles and display them
@@ -563,9 +573,9 @@ function displayReachableTiles() {
         let y = tile.y;
         let drawX = x * tilesWidth;
         let drawY = y * tilesHeight;
-        
+       
         // Draw a blue rectangle to highlight the reachable tile
-        fill(0, 0, 255, 100); 
+        fill(0, 0, 255, 100);
         noStroke();
         rect(drawX, drawY, tilesWidth, tilesHeight);
       }
@@ -585,7 +595,7 @@ function displayReachableTiles() {
 }
 
 function draw() {
-  // Handle cursor movement with WASD keys 
+  // Handle cursor movement with WASD keys
   holdCursorMovement();
 
   // Display tiles
@@ -602,3 +612,6 @@ function draw() {
   // Render the cursor
   locationCursor.render();
 }
+
+
+
