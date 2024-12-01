@@ -242,17 +242,32 @@ class Character {
       }
     }
   
-    // Unselect any selected character
     static unselectCharacter() {
-      // Go through all characters and turn select off
+      // Check if any characters have been selected to begin with
+      let isAnyCharacterSelected = false;
       for (let character of characters) {
-        character.isSelected = false;
+        if (character.isSelected) {
+          isAnyCharacterSelected = true;
+          break;
+        }
       }
-  
-      // Play unselect character sound
-      sounds.unselectCharacter.amp(0.6);
-      sounds.unselectCharacter.play();
-      console.log("Character deselected.");
+      // If there is a selected character, unselect them
+      if (isAnyCharacterSelected) {
+        for (let character of characters) {
+          character.isSelected = false;
+        }
+
+        // Play sound effect
+        sounds.unselectCharacter.amp(0.6);
+        sounds.unselectCharacter.play();
+
+        // // Change cursor image
+        // cursorImageKey = "default";
+        console.log("Character deselected.");
+      }
+      else {
+        console.log("No characters are selected.");
+      }
     }
 
   // Movement range based on class type (How many tiles a character can walk in one turn)
