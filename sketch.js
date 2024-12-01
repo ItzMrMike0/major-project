@@ -20,13 +20,37 @@ class Tile {
     this.height = height; // Height of the tile
   }
 
-  // Method to display a single tile
+  // Render a single tile
   renderTile() {
     if (tileImages[this.type]) {
       image(tileImages[this.type], this.x * this.width, this.y * this.height, this.width, this.height);
     }
   }
-}
+  
+  // Create a grid of tiles from lines of data
+  static createTiles(lines) {
+    // Clear tiles array before creating new tiles to get rid of previous data
+    tiles = [];
+    for (let y = 0; y < lines.length; y++) {
+      tiles.push([]);
+      for (let x = 0; x < lines[y].length; x++) {
+        const tileType = lines[y][x];
+        tiles[y].push(new Tile(tileType, x, y, tilesWidth, tilesHeight));
+      }
+    }
+    return tiles;
+  }
+
+  // Iterate through all tiles and display them
+  static displayAll(tiles) {
+    for (let row of tiles) {
+      for (let tile of row) {
+        tile.renderTile();
+      }
+    }
+  }
+}  
+
 
 // Character class
 class Character {
@@ -322,7 +346,7 @@ function setup() {
   window.addEventListener('contextmenu', (e) => e.preventDefault());
  
   // Create a 2D array of Tile objects
-  tiles = createTiles(lines);
+  tiles = Tile.createTiles(lines);
 
   // Create characters from JSON
   for (let char of characterData.characters) {
@@ -385,19 +409,6 @@ function createCharacter(name, classType, x, y, level, hp, strength, skill, spee
   characters.push(character);
 }
 
-// Creates 2D Grid based on the x and y from level txt file
-function createTiles(lines) {
-  // Clear tiles array before creating new tiles to get rid of previous data
-  tiles = [];
-  for (let y = 0; y < lines.length; y++) {
-    tiles.push([]);
-    for (let x = 0; x < lines[y].length; x++) {
-      let tileType = lines[y][x];
-      tiles[y].push(new Tile(tileType, x, y, tilesWidth, tilesHeight));
-    }
-  }
-  return tiles;
-}
 
 // Handle all inputs that lead to actions
 function keyPressed() {
@@ -472,7 +483,6 @@ function selectCharacter() {
     }
   }
 }
-
 
 function unselectCharacter() {
   // Check if any characters have been selected to begin with
@@ -560,14 +570,6 @@ function isTileOccupied(x, y) {
   return false;
 }
 
-// Iterate through all tiles and display them
-function displayTiles() {
-  for (let row of tiles) {
-    for (let tile of row) {
-      tile.renderTile();
-    }
-  }
-}
 
 function displayReachableTiles() {
   // Iterate through all characters to find selected character
@@ -608,7 +610,7 @@ function draw() {
     holdCursorMovement();
 
     // Display tiles
-    displayTiles();
+    Tile.displayAll(tiles);
 
     // Highlight reachable tiles in blue
     displayReachableTiles();
