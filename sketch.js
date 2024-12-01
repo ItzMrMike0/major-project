@@ -351,7 +351,6 @@ class Character {
   }
 }
 
-///asdasd
 // Cursor class
 class Cursor {
   constructor(x = 2, y = 12) {
@@ -367,6 +366,7 @@ class Cursor {
     sounds.cursorMoving.amp(0.1);
     sounds.cursorMoving.play();
 
+    // Change x or y depending on direction input
     if (direction === 'up' && this.y > 0) {
       this.y--;
     }
@@ -391,6 +391,7 @@ class Cursor {
  
     // Scale the cursor image vertically (Increase height by 20%)
     let scaledHeight = this.height * 1.2;
+    
     // Center the image vertically
     let offsetY = (scaledHeight - this.height) / 2;
  
@@ -405,36 +406,17 @@ class Cursor {
   }
 }  
 
-// Global variables
-let levelToLoad; // Text file to load
-let lines; // What each line from text file says
-let tilesHigh; // How many tiles high
-let tilesWide; // How many tiles wide
-let tilesWidth; // How wide each tile is
-let tilesHeight; // How tall each tile is
-let tileImages = {}; // Object to store tile images
-let tiles = []; // Array to store Tile objects
-let tilePaths; // To store the tile paths loaded from JSON
-let sounds = {}; // Object to store sounds
-let soundPaths; // To store the sound paths loaded from JSON
-let characterMapSpritePaths; // To store character paths loaded from JSON
-let characterAnimations = {}; // Object to store character animations
-let characters = []; // Array to store character instances
-let characterData; // Holds character data information
-let cursorImages = {}; // Object to hold cursor images
-let cursorImageKey = "default"; // Tracks the current cursor image key
-let cursorPaths; // To store the cursor paths loaded from JSON
-const MOVE_DELAY = 200; // Delay in frames before moving cursor to the next tile
-let lastMoveTimeW = 0; // Tracks the time of the last cursor movement upwards
-let lastMoveTimeA = 0; // Tracks the time of the last cursor movement to the left
-let lastMoveTimeS = 0; // Tracks the time of the last cursor movement downwards
-let lastMoveTimeD = 0; // Tracks the time of the last cursor movement to the right
-const GAME_STATES = { // Possible game states
-  TITLESCREEN: "TITLESCREEN",
-  GAMEPLAY: "gameplay",
-}
-let gameState = GAME_STATES.GAMEPLAY; // Set gameState 
-
+// GLOBAL VARIABLES
+let levelToLoad, lines; // Level file to load and its content (lines)
+let tilesHigh, tilesWide, tilesWidth, tilesHeight; // Tile grid dimensions and sizes
+let tileImages = {}, tiles = [], tilePaths; // Tile assets, objects, and paths
+let sounds = {}, soundPaths; // Sound assets and paths
+let characterMapSpritePaths, characterAnimations = {}, characters = [], characterData; // Character assets and data
+let cursorImages = {}, cursorImageKey = "default", cursorPaths, locationCursor; // Cursor assets and location
+const MOVE_DELAY = 200; // Delay before cursor moves to the next tile
+const GAME_STATES = { TITLESCREEN: "TITLESCREEN", GAMEPLAY: "gameplay" }; // Possible game states
+let lastMoveTimeW = 0, lastMoveTimeA = 0, lastMoveTimeS = 0, lastMoveTimeD = 0; // Last move times for each direction
+let gameState = GAME_STATES.GAMEPLAY; // Current game state
 
 function preload() {
   // Preload map information
@@ -512,12 +494,10 @@ function setupCursorImages(data) {
   }
 }
 
-
-
-
 // Handle all inputs that lead to actions
 function keyPressed() {
   cursorImageKey = "default";
+  // Select and move key
   if (key === "j") {
     // Check if a character is selected
     let selectedCharacter = null;
@@ -527,15 +507,16 @@ function keyPressed() {
         break;
       }
     }
+    // If there is a selected character and j is pressed move them
     if (selectedCharacter) {
-      // If a character is already selected, move them
       Character.moveSelectedCharacter(locationCursor, tiles);
     }
-    else {
       // If no character is selected, select a new character
+    else {
       Character.selectCharacter();
     }
   }
+  // Unselect and cancel key
   else if (key === "k") {
     Character.unselectCharacter();
   }
@@ -543,21 +524,39 @@ function keyPressed() {
 
 // Allows user to hold down movement keys
 function holdCursorMovement() {
+  // Check current time
   let currentTime = millis();
-  if (keyIsDown(87) && currentTime - lastMoveTimeW > MOVE_DELAY) {  // 'W' key - Up
+
+  // 'W' key - Up
+  if (keyIsDown(87) && currentTime - lastMoveTimeW > MOVE_DELAY) { 
+    // Send input to move up
     locationCursor.move("up");
+
+    // Update move times for up direction
     lastMoveTimeW = currentTime;
   }
-  if (keyIsDown(65) && currentTime - lastMoveTimeA > MOVE_DELAY) {  // 'A' key - Left
+  // 'A' key - Left
+  if (keyIsDown(65) && currentTime - lastMoveTimeA > MOVE_DELAY) {  
+    // Send input to move left
     locationCursor.move("left");
+    
+    // Update move times for left direction
     lastMoveTimeA = currentTime;
   }
-  if (keyIsDown(83) && currentTime - lastMoveTimeS > MOVE_DELAY) {  // 'S' key - Down
+  // 'S' key - Down
+  if (keyIsDown(83) && currentTime - lastMoveTimeS > MOVE_DELAY) {  
+    // Send input to move down
     locationCursor.move("down");
+
+    // Update move times for down direction
     lastMoveTimeS = currentTime;
   }
-  if (keyIsDown(68) && currentTime - lastMoveTimeD > MOVE_DELAY) {  // 'D' key - Right
+  // 'D' key - Right
+  if (keyIsDown(68) && currentTime - lastMoveTimeD > MOVE_DELAY) {  
+    // Send input to move right
     locationCursor.move("right");
+    
+    // Update move times for right direction
     lastMoveTimeD = currentTime;
   }
 }
