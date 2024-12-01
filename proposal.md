@@ -1,5 +1,5 @@
 # Project Proposal: Fire Emblem 
-A Fire Emblem-style tactical RPG game featuring strategic, grid-based gameplay that allows players to move characters across a map, engage in turn-based combat, and make strategic decisions on both offense and defense. 
+A Fire Emblem clone which is a tactical RPG game featuring strategic, grid-based gameplay that allows players to move characters across a map, engage in turn-based combat, and make strategic decisions on both offense and defense. 
 
 The game will include a variety of character classes with distinct abilities, a dynamic battle system where positioning, terrain, and stats play key roles, and a campaign that challenges the player's ability to adapt to different tactical situations. 
 
@@ -15,13 +15,13 @@ Winning will rely not only on combat prowess but also on strategic planning and 
 - Load maps using external .txt files. 🟢
 - Some tiles are impassable (e.g., walls, water). 🟢
 - Certain tiles provide bonuses (e.g., increased defense or evasion). 🔴
-- Highlight movement range and attack range tiles when character selected. 🟡
+- Highlight movement range and attack range tiles when character selected. 🟢
 
 ### 2: Turn-Based Actions
 - Select individual characters to view stats or perform actions. 🟡
 - Swap between player turn and enemy turn. 🔴
-- Action options: 🔴
-  - Move: Select a tile to move to. 🔴
+- Action options: 🟡
+  - Move: Select a tile to move to. 🟢
   - Attack: Choose a target within attack range. 🔴
   - Items: Use or equip items during a turn. 🔴
   - End Turn: Manually end the player's turn. 🔴
