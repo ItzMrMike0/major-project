@@ -49,61 +49,238 @@ class Tile {
       }
     }
   }
-}  
 
+  // Display reachable and attackable tiles for the selected character
+  static displayReachableTiles() {
+    // Iterate through all characters to find selected character
+    for (let character of characters) {
+      if (character.isSelected) {
+        // Grab information of that character's reachable tiles
+        for (let tile of character.reachableTiles) {
+          let drawX = tile.x * tilesWidth;
+          let drawY = tile.y * tilesHeight;
 
-// Character class
-class Character {
-  constructor(name, classType, x, y, level, hp, strength, skill, speed, luck, defense, resistance, isEnemy, width = 50, height = 50) {
-    this.name = name; // Character name
-    this.classType = classType; // Character class type
-    this.x = x; // Character x location
-    this.y = y; // Character y location
-    this.level = level; // Character level
-    this.hp = hp; // Character hp stat
-    this.strength = strength; // Character strength stat for physical attacks
-    this.skill = skill; // Character skill stat for magic attacks
-    this.speed = speed; // Character speed stat
-    this.luck = luck; // Character luck stat
-    this.defense = defense; // Character defense stat agaisnt physical attacks
-    this.resistance = resistance; // Character resistance stat agaisnt magic attacks
-    this.isSelected = false; // Track if the character has been selected
-    this.animation = null; // Character's GIF animation
-    this.isEnemy = isEnemy; // Key to see if character is enemy or not
-    this.width = width; // Width for displaying GIF (default 65)
-    this.height = height; // Height for displaying GIF (default 65)
-    this.canMove = true; // Track if the character can make a move this turn
-    this.isGreyedOut = false; // Property for greying out once turn has been used
-    this.reachableTiles = []; // Property to store reachable tiles
-    this.attackableTiles = []; // Property to store attackable range tiles
+          // Draw a blue rectangle to highlight the reachable tile
+          fill(0, 0, 255, 100);
+          noStroke();
+          rect(drawX, drawY, tilesWidth, tilesHeight);
+        }
+        // Highlight attackable tiles in red
+        for (let tile of character.attackableTiles) {
+          let drawX = tile.x * tilesWidth;
+          let drawY = tile.y * tilesHeight;
+
+          // Draw a red rectangle to highlight the reachable tile
+          fill(255, 0, 0, 100);
+          noStroke();
+          rect(drawX, drawY, tilesWidth, tilesHeight);
+        }
+      }
+    }
   }
 
-  // Determine how many tiles a unit can move based off of class type
+  // Check if a tile is occupied by another character
+  static isTileOccupied(x, y) {
+    // Iterate through all character x and y 
+    for (let character of characters) {
+      if (character.x === x && character.y === y) {
+        // The tile is occupied by another character
+        return true;  
+      }
+    }
+      // The tile is not occupied
+    return false;
+  }
+}  
+
+// Character Class
+class Character {
+  constructor(name, classType, x, y, level, hp, strength, skill, speed, luck, defense, resistance, isEnemy, width = 50, height = 50) {
+    this.name = name;
+    this.classType = classType;
+    this.x = x;
+    this.y = y;
+    this.level = level;
+    this.hp = hp;
+    this.strength = strength;
+    this.skill = skill;
+    this.speed = speed;
+    this.luck = luck;
+    this.defense = defense;
+    this.resistance = resistance;
+    this.isSelected = false;
+    this.animation = null;
+    this.isEnemy = isEnemy;
+    this.width = width;
+    this.height = height;
+    this.canMove = true;
+    this.isGreyedOut = false;
+    this.reachableTiles = [];
+    this.attackableTiles = [];
+  }
+
+// Helper function to create new characters
+  static createCharacter(data) {
+    let character = new Character(data.name, data.classType, data.x, data.y, data.level, data.hp,
+      data.strength, data.skill, data.speed, data.luck, data.defense,
+      data.resistance, data.isEnemy, data.width, data.height
+    );
+    character.animation = characterAnimations[data.animation];
+    return character;
+  }
+
+  // Display character on the map
+  displayOnMap() {
+    if (this.animation) {
+      // Calculate dimensions
+      let drawWidth = this.width;
+      let drawHeight =  this.height;
+      // Adjust if character is selected
+      if (this.isSelected) {
+        drawWidth += 15;
+        drawHeight += 15;
+      }
+
+      // Calculate centered position for the character
+      let drawX = this.x * tilesWidth + (tilesWidth - drawWidth) / 2;
+      let drawY = this.y * tilesHeight + (tilesHeight - drawHeight) / 2;
+
+      // Adjust Y-position if character is selected because character gets bigger or if character is a Cavalier
+      if (this.isSelected) {
+        drawY -= 5;
+        // Horses are drawY - 10 total because their base height is taller
+        if (this.classType === "Cavalier") {
+          drawY -=5;
+        }
+        // Draw a selection border if the character is selected
+        noFill();
+        stroke(255, 255, 0);
+        strokeWeight(3);
+        rect(drawX, drawY, drawWidth, drawHeight);
+      } 
+      // If not selected but classType is Cavalier adjust drawY since base height is taller
+      else if (this.classType === "Cavalier") {
+        drawY -= 5;
+      }
+
+      // Apply a grey tint to the character if the character has used their turn
+      if (this.isGreyedOut) {
+        tint(100);
+      } 
+      else {
+      // Ensure no tint is applied if the character has not moved yet
+        noTint();
+      }
+
+      // Draw the character's animation at the calculated position
+      image(this.animation, drawX, drawY, drawWidth, drawHeight);
+    }
+  }
+
+    // Move the selected character to a new location
+    static moveSelectedCharacter(cursor, tiles) {
+      // Iterate through all characters and check for character that is selected and can also move
+      for (let character of characters) {
+        if (character.isSelected && character.canMove) {
+          // Calculate distance between the character and where the cursor is
+          let distance = Math.abs(cursor.x - character.x) + Math.abs(cursor.y - character.y);
+  
+          // Check if the character is selected and if the target tile is within movement range
+          if (distance <= character.getMovementRange() && character.reachableTiles.some(tile => tile.x === cursor.x && tile.y === cursor.y)) {
+            // Check that the tile is walkable (not water, mountain, etc.) and not occupied
+            let tile = tiles[cursor.y][cursor.x];
+            if (tile.type !== "W" && tile.type !== "M" && !Tile.isTileOccupied(cursor.x, cursor.y)) {
+              // Move character to new location
+              character.moveTo(cursor.x, cursor.y);
+              // Disable further movement this turn
+              character.canMove = false;
+              // Deselect the character after they move
+              character.isSelected = false;
+              // Grey out the character
+              character.isGreyedOut = true;
+  
+              console.log(`${character.name} moved to (${character.x}, ${character.y})`);
+  
+              // Play move sound effect NEED NEW SOUNDS 
+              sounds.selectCharacter.amp(0.1);
+              sounds.selectCharacter.play();
+            } else {
+              console.log("Cannot move to this tile.");
+            }
+          } else {
+            console.log("Target location is out of range.");
+          }
+          break;
+        }
+      }
+    }
+  
+    static selectCharacter() {
+      // Make sure the character is not an enemy and hasn't moved yet (is not greyed out)
+      for (let character of characters) {
+        if (character.x === locationCursor.x && character.y === locationCursor.y && !character.isEnemy && !character.isGreyedOut) {
+          // Play sound effect
+          sounds.selectCharacter.amp(0.1);
+          sounds.selectCharacter.play();
+   
+          // Change cursor image
+          cursorImageKey = "selectedCursor";
+   
+          // Deselect all other characters
+          for (let otherCharacter of characters) {
+            otherCharacter.isSelected = false;
+          }
+   
+          // Select the current character
+          character.isSelected = true;
+          console.log(`${character.name} is now selected.`);
+   
+          // Calculate reachable tiles
+          character.calculateReachableTiles();
+          break;
+        }
+      }
+    }
+  
+    // Unselect any selected character
+    static unselectCharacter() {
+      // Go through all characters and turn select off
+      for (let character of characters) {
+        character.isSelected = false;
+      }
+  
+      // Play unselect character sound
+      sounds.unselectCharacter.amp(0.6);
+      sounds.unselectCharacter.play();
+      console.log("Character deselected.");
+    }
+
+  // Movement range based on class type (How many tiles a character can walk in one turn)
   getMovementRange() {
-    // Movement range based on class type
     const movementRanges = {
       "Lord": 3,
       "Knight": 2,
       "Cavalier": 4,
       "Archer": 3,
-      "Mage": 3
+      "Mage": 3,
     };
     return movementRanges[this.classType];
   }
 
-  // Determine how many tiles a unit can attack from based on class type
+  // Determine attack range based on class type (How many tiles a unit can attack from)
   getAttackRange() {
     const attackRanges = {
-      "Archer": 2, // Archers can attack 2 tiles away
-      "Mage": 2,   // Mages can attack 2 tiles away
+      "Archer": 2,
+      "Mage": 2,
     };
-    return attackRanges[this.classType] || 1; // Default is 1 tile for melee attackers
+    // Return 1 if not archer or mage
+    return attackRanges[this.classType] || 1;
   }
 
   // Calculate reachable and attackable tiles using Dijkstra's algorithm
   calculateReachableTiles() {
     // Clear previously stored tiles
-    this.reachableTiles = []; 
+    this.reachableTiles = [];
     this.attackableTiles = [];
 
     // Get movement range and attack range of character
@@ -119,8 +296,8 @@ class Character {
     // Directions for adjacent tiles (up, down, left, right)
     const directions = [{ dx: 0, dy: 1 }, { dx: 0, dy: -1 }, { dx: 1, dy: 0 }, { dx: -1, dy: 0 }];
 
+    // Sort by movement cost (ascending) and process the tile with the lowest cost
     while (queue.length) {
-      // Sort by movement cost (ascending) and process the tile with the lowest cost
       queue.sort((a, b) => a.cost - b.cost);
       const { x, y, cost } = queue.shift();
 
@@ -136,7 +313,7 @@ class Character {
           this.attackableTiles.push({ x, y });
         }
       }
-
+      
       // Explore adjacent tiles
       for (const { dx, dy } of directions) {
         const nextX = x + dx;
@@ -154,62 +331,11 @@ class Character {
 
           // Add the next tile to the queue with an incremented cost
           queue.push({ x: nextX, y: nextY, cost: cost + 1 });
+
           // Mark the tile as visited
-          visited.add(nextTileKey); 
+          visited.add(nextTileKey);
         }
       }
-    }
-  }
-
-
-  // Display the character on the map
-  displayOnMap() {
-    if (this.animation) {
-      let drawWidth = this.width;
-      let drawHeight = this.height;
-
-      // Adjust dimensions if the character is selected
-      if (this.isSelected) {
-        drawWidth += 15;
-        drawHeight += 15;
-      }
-
-      // Calculate centered position for the character
-      let drawX = this.x * tilesWidth + (tilesWidth - drawWidth) / 2;
-      let drawY = this.y * tilesHeight + (tilesHeight - drawHeight) / 2;
-
-      // Adjust Y-position based classType
-      if (this.isSelected) {
-        if (this.classType === "Cavalier") {
-          drawY -= 10;
-        }
-        else {
-          drawY -= 5;
-        }
-      }
-      else if (this.classType === "Cavalier") {
-        drawY -= 5;
-      }
-   
-      // Draw a selection border if the character is selected
-      if (this.isSelected) {
-        noFill();
-        stroke(255, 255, 0); // Yellow border
-        strokeWeight(3);
-        rect(drawX, drawY, drawWidth, drawHeight);
-      }
-
-      // Apply a grey tint to the character if the character has used their turn
-      if (this.isGreyedOut) {
-        tint(100);
-      }
-      else {
-        // Ensure no tint is applied if the character has not moved yet
-        noTint();
-      }
-
-      // Draw the character's animation at the calculated position
-      image(this.animation, drawX, drawY, drawWidth, drawHeight);
     }
   }
 
@@ -225,6 +351,7 @@ class Character {
   }
 }
 
+///asdasd
 // Cursor class
 class Cursor {
   constructor(x = 2, y = 12) {
@@ -349,27 +476,10 @@ function setup() {
   tiles = Tile.createTiles(lines);
 
   // Create characters from JSON
-  for (let char of characterData.characters) {
-    createCharacter(
-      char.name,
-      char.classType,
-      char.x,
-      char.y,
-      char.level,
-      char.hp,
-      char.strength,
-      char.skill,
-      char.speed,
-      char.luck,
-      char.defense,
-      char.resistance,
-      char.animation,
-      char.isEnemy,
-      char.width,
-      char.height
-    );
+  for (let charData of characterData.characters) {
+    characters.push(Character.createCharacter(charData));
   }
- 
+
   // Initialize the cursor at the top-left tile
   locationCursor = new Cursor();
 }
@@ -402,12 +512,7 @@ function setupCursorImages(data) {
   }
 }
 
-// Helper function to create new characters
-function createCharacter(name, classType, x, y, level, hp, strength, skill, speed, luck, defense, resistance, animationName, isEnemy, width, height) {
-  let character = new Character(name, classType, x, y, level, hp, strength, skill, speed, luck, defense, resistance, isEnemy, width, height);
-  character.animation = characterAnimations[animationName];
-  characters.push(character);
-}
+
 
 
 // Handle all inputs that lead to actions
@@ -424,15 +529,15 @@ function keyPressed() {
     }
     if (selectedCharacter) {
       // If a character is already selected, move them
-      moveSelectedCharacter();
+      Character.moveSelectedCharacter(locationCursor, tiles);
     }
     else {
       // If no character is selected, select a new character
-      selectCharacter();
+      Character.selectCharacter();
     }
   }
   else if (key === "k") {
-    unselectCharacter();
+    Character.unselectCharacter();
   }
 }
 
@@ -457,152 +562,6 @@ function holdCursorMovement() {
   }
 }
 
-function selectCharacter() {
-  // Make sure the character is not an enemy and hasn't moved yet (is not greyed out)
-  for (let character of characters) {
-    if (character.x === locationCursor.x && character.y === locationCursor.y && !character.isEnemy && !character.isGreyedOut) {
-      // Play sound effect
-      sounds.selectCharacter.amp(0.1);
-      sounds.selectCharacter.play();
-
-      // Change cursor image
-      cursorImageKey = "selectedCursor";
-
-      // Deselect all other characters
-      for (let otherCharacter of characters) {
-        otherCharacter.isSelected = false;
-      }
-
-      // Select the current character
-      character.isSelected = true;
-      console.log(`${character.name} is now selected.`);
-
-      // Calculate reachable tiles
-      character.calculateReachableTiles();
-      break;
-    }
-  }
-}
-
-function unselectCharacter() {
-  // Check if any characters have been selected to begin with
-  let isAnyCharacterSelected = false;
-  for (let character of characters) {
-    if (character.isSelected) {
-      isAnyCharacterSelected = true;
-      break;
-    }
-  }
-
-  // If there is a selected character, unselect them
-  if (isAnyCharacterSelected) {
-    for (let character of characters) {
-      character.isSelected = false;
-    }
-    // Play sound effect
-    sounds.unselectCharacter.amp(0.6);
-    sounds.unselectCharacter.play();
-
-    // Change cursor image
-    cursorImageKey = "default";
-    console.log("Character deselected.");
-  }
-  else {
-    console.log("No characters are selected.");
-  }
-}
-
-function moveSelectedCharacter() {
-  // Iterate through all characters and check for character that is selected and can also move
-  for (let character of characters) {
-    if (character.isSelected && character.canMove) {
-      // Calculate Manhattan distance between the character and where the cursor is
-      let distance = Math.abs(locationCursor.x - character.x) + Math.abs(locationCursor.y - character.y);
-
-      // Check if the character is selected and if the target tile is within movement range
-      if (distance <= character.getMovementRange()) {
-        // Check if the destination is within reachable tiles
-        let targetTile = { x: locationCursor.x, y: locationCursor.y };
-        let isReachable = character.reachableTiles.some(tile => tile.x === targetTile.x && tile.y === targetTile.y);
-       
-        if (isReachable) {
-          // Validate the tile is walkable (not water, mountain, etc.) and not occupied
-          let tile = tiles[locationCursor.y][locationCursor.x];
-          if (tile.type !== "W" && tile.type !== "M" && !isTileOccupied(locationCursor.x, locationCursor.y)) {
-            // Move character to new location
-            character.moveTo(locationCursor.x, locationCursor.y);
-            // Disable further movement this turn
-            character.canMove = false;
-            // Deselect the character after they move
-            character.isSelected = false;
-            // Grey out the character
-            character.isGreyedOut = true;
-
-            console.log(`${character.name} moved to (${character.x}, ${character.y})`);
-
-            // Play move sound effect
-            sounds.selectCharacter.amp(0.1);
-            sounds.selectCharacter.play();
-          } else {
-            console.log("Cannot move to this tile (either it's a wall or occupied by another character).");
-          }
-        } else {
-          console.log("This tile is not reachable.");
-        }
-      } else {
-        console.log("Target location is out of range.");
-      }
-      break;
-    }
-  }
-}
-
-
-// Helper function to check if a tile is occupied by another character
-function isTileOccupied(x, y) {
-  for (let character of characters) {
-    if (character.x === x && character.y === y) {
-      // The tile is occupied by another character
-      return true;  
-    }
-  }
-   // The tile is not occupied
-  return false;
-}
-
-
-function displayReachableTiles() {
-  // Iterate through all characters to find selected character
-  for (let character of characters) {
-    if (character.isSelected) {
-      // Grab information of that character's reachable tiles
-      for (let tile of character.reachableTiles) {
-        let x = tile.x;
-        let y = tile.y;
-        let drawX = x * tilesWidth;
-        let drawY = y * tilesHeight;
-       
-        // Draw a blue rectangle to highlight the reachable tile
-        fill(0, 0, 255, 100);
-        noStroke();
-        rect(drawX, drawY, tilesWidth, tilesHeight);
-      }
-      // Highlight attackable tiles in red
-      for (let tile of character.attackableTiles) {
-        let x = tile.x;
-        let y = tile.y;
-        let drawX = x * tilesWidth;
-        let drawY = y * tilesHeight;
-
-        // Draw a red rectangle to highlight the reachable tile
-        fill(255, 0, 0, 100);
-        noStroke();
-        rect(drawX, drawY, tilesWidth, tilesHeight);
-      }
-    }
-  }
-}
-
 function draw() {
   // Only run if gamestate is in gameplay
   if (gameState === GAME_STATES.GAMEPLAY) {
@@ -613,7 +572,7 @@ function draw() {
     Tile.displayAll(tiles);
 
     // Highlight reachable tiles in blue
-    displayReachableTiles();
+    Tile.displayReachableTiles();
 
     // Display all characters
     for (let character of characters) {
