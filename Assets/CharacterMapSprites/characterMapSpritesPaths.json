@@ -5,5 +5,6 @@
   "ArcherIdle": "Assets/CharacterMapSprites/StandingGifs/archer.gif",
   "MageIdle": "Assets/CharacterMapSprites/StandingGifs/mage.gif",
   "EnemyFighterIdle": "Assets/CharacterMapSprites/StandingGifs/enemyfighter.gif",
-  "EnemyBrigandIdle": "Assets/CharacterMapSprites/StandingGifs/enemyboss.gif"
+  "EnemyBrigandIdle": "Assets/CharacterMapSprites/StandingGifs/enemyboss.gif",
+  "RoySelected": "Assets/CharacterMapSprites/SelectedGifs/royselected.gif"
   }
