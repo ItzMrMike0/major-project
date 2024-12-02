@@ -88,7 +88,7 @@ class Tile {
         return true;  
       }
     }
-      // The tile is not occupied
+    // The tile is not occupied
     return false;
   }
 }  
@@ -119,7 +119,7 @@ class Character {
     this.attackableTiles = [];
   }
 
-// Helper function to create new characters
+  // Helper function to create new characters
   static createCharacter(data) {
     let character = new Character(data.name, data.classType, data.x, data.y, data.level, data.hp,
       data.strength, data.skill, data.speed, data.luck, data.defense,
@@ -177,98 +177,98 @@ class Character {
     }
   }
 
-    // Move the selected character to a new location
-    static moveSelectedCharacter(cursor, tiles) {
-      // Iterate through all characters and check for character that is selected and can also move
-      for (let character of characters) {
-        if (character.isSelected && character.canMove) {
-          // Calculate distance between the character and where the cursor is
-          let distance = Math.abs(cursor.x - character.x) + Math.abs(cursor.y - character.y);
+  // Move the selected character to a new location
+  static moveSelectedCharacter(cursor, tiles) {
+    // Iterate through all characters and check for character that is selected and can also move
+    for (let character of characters) {
+      if (character.isSelected && character.canMove) {
+        // Calculate distance between the character and where the cursor is
+        let distance = Math.abs(cursor.x - character.x) + Math.abs(cursor.y - character.y);
   
-          // Check if the character is selected and if the target tile is within movement range
-          if (distance <= character.getMovementRange() && character.reachableTiles.some(tile => tile.x === cursor.x && tile.y === cursor.y)) {
-            // Check that the tile is walkable (not water, mountain, etc.) and not occupied
-            let tile = tiles[cursor.y][cursor.x];
-            if (tile.type !== "W" && tile.type !== "M" && !Tile.isTileOccupied(cursor.x, cursor.y)) {
-              // Move character to new location
-              character.moveTo(cursor.x, cursor.y);
-              // Disable further movement this turn
-              character.canMove = false;
-              // Deselect the character after they move
-              character.isSelected = false;
-              // Grey out the character
-              character.isGreyedOut = true;
+        // Check if the character is selected and if the target tile is within movement range
+        if (distance <= character.getMovementRange() && character.reachableTiles.some(tile => tile.x === cursor.x && tile.y === cursor.y)) {
+          // Check that the tile is walkable (not water, mountain, etc.) and not occupied
+          let tile = tiles[cursor.y][cursor.x];
+          if (tile.type !== "W" && tile.type !== "M" && !Tile.isTileOccupied(cursor.x, cursor.y)) {
+            // Move character to new location
+            character.moveTo(cursor.x, cursor.y);
+            // Disable further movement this turn
+            character.canMove = false;
+            // Deselect the character after they move
+            character.isSelected = false;
+            // Grey out the character
+            character.isGreyedOut = true;
   
-              console.log(`${character.name} moved to (${character.x}, ${character.y})`);
+            console.log(`${character.name} moved to (${character.x}, ${character.y})`);
   
-              // Play move sound effect NEED NEW SOUNDS 
-              sounds.selectCharacter.amp(0.1);
-              sounds.selectCharacter.play();
-            } else {
-              console.log("Cannot move to this tile.");
-            }
-          } else {
-            console.log("Target location is out of range.");
+            // Play move sound effect NEED NEW SOUNDS 
+            sounds.selectCharacter.amp(0.1);
+            sounds.selectCharacter.play();
           }
-          break;
+          else {
+            console.log("Cannot move to this tile.");
+          }
         }
+        else {
+          console.log("Target location is out of range.");
+        }
+        break;
       }
     }
+  }
   
-    static selectCharacter() {
-      // Make sure the character is not an enemy and hasn't moved yet (is not greyed out)
-      for (let character of characters) {
-        if (character.x === locationCursor.x && character.y === locationCursor.y && !character.isEnemy && !character.isGreyedOut) {
-          // Play sound effect
-          sounds.selectCharacter.amp(0.1);
-          sounds.selectCharacter.play();
-   
-          // Change cursor image
-          cursorImageKey = "selectedCursor";
-   
-          // Deselect all other characters
-          for (let otherCharacter of characters) {
-            otherCharacter.isSelected = false;
-          }
-   
-          // Select the current character
-          character.isSelected = true;
-          console.log(`${character.name} is now selected.`);
-   
-          // Calculate reachable tiles
-          character.calculateReachableTiles();
-          break;
-        }
-      }
-    }
-  
-    static unselectCharacter() {
-      // Check if any characters have been selected to begin with
-      let isAnyCharacterSelected = false;
-      for (let character of characters) {
-        if (character.isSelected) {
-          isAnyCharacterSelected = true;
-          break;
-        }
-      }
-      // If there is a selected character, unselect them
-      if (isAnyCharacterSelected) {
-        for (let character of characters) {
-          character.isSelected = false;
-        }
-
+  static selectCharacter() {
+    // Make sure the character is not an enemy and hasn't moved yet (is not greyed out)
+    for (let character of characters) {
+      if (character.x === locationCursor.x && character.y === locationCursor.y && !character.isEnemy && !character.isGreyedOut) {
         // Play sound effect
-        sounds.unselectCharacter.amp(0.6);
-        sounds.unselectCharacter.play();
-
-        // // Change cursor image
-        // cursorImageKey = "default";
-        console.log("Character deselected.");
-      }
-      else {
-        console.log("No characters are selected.");
+        sounds.selectCharacter.amp(0.1);
+        sounds.selectCharacter.play();
+   
+        // Change cursor image
+        cursorImageKey = "selectedCursor";
+   
+        // Deselect all other characters
+        for (let otherCharacter of characters) {
+          otherCharacter.isSelected = false;
+        }
+   
+        // Select the current character
+        character.isSelected = true;
+        console.log(`${character.name} is now selected.`);
+   
+        // Calculate reachable tiles
+        character.calculateReachableTiles();
+        break;
       }
     }
+  }
+  
+  static unselectCharacter() {
+    // Check if any characters have been selected to begin with
+    let isAnyCharacterSelected = false;
+    for (let character of characters) {
+      if (character.isSelected) {
+        isAnyCharacterSelected = true;
+        break;
+      }
+    }
+    // If there is a selected character, unselect them
+    if (isAnyCharacterSelected) {
+      for (let character of characters) {
+        character.isSelected = false;
+      }
+
+      // Play sound effect
+      sounds.unselectCharacter.amp(0.6);
+      sounds.unselectCharacter.play();
+      
+      console.log("Character deselected.");
+    }
+    else {
+      console.log("No characters are selected.");
+    }
+  }
 
   // Movement range based on class type (How many tiles a character can walk in one turn)
   getMovementRange() {
@@ -526,7 +526,7 @@ function keyPressed() {
     if (selectedCharacter) {
       Character.moveSelectedCharacter(locationCursor, tiles);
     }
-      // If no character is selected, select a new character
+    // If no character is selected, select a new character
     else {
       Character.selectCharacter();
     }
