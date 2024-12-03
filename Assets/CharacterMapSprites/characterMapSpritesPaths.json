@@ -1,10 +1,11 @@
 {
-  "RoyIdle": "Assets/CharacterMapSprites/StandingGifs/roy.gif",
-  "KnightIdle": "Assets/CharacterMapSprites/StandingGifs/knight.gif",
-  "CavalierIdle": "Assets/CharacterMapSprites/StandingGifs/cavalier.gif",
-  "ArcherIdle": "Assets/CharacterMapSprites/StandingGifs/archer.gif",
-  "MageIdle": "Assets/CharacterMapSprites/StandingGifs/mage.gif",
-  "EnemyFighterIdle": "Assets/CharacterMapSprites/StandingGifs/enemyfighter.gif",
-  "EnemyBrigandIdle": "Assets/CharacterMapSprites/StandingGifs/enemyboss.gif",
-  "RoySelected": "Assets/CharacterMapSprites/SelectedGifs/royselected.gif"
+  "RoyIdle": "Assets/CharacterMapSprites/StandingGifs/lordstanding.gif",
+  "KnightIdle": "Assets/CharacterMapSprites/StandingGifs/knightstanding.gif",
+  "CavalierIdle": "Assets/CharacterMapSprites/StandingGifs/cavalierstanding.gif",
+  "ArcherIdle": "Assets/CharacterMapSprites/StandingGifs/archerstanding.gif",
+  "MageIdle": "Assets/CharacterMapSprites/StandingGifs/magestanding.gif",
+  "EnemyFighterIdle": "Assets/CharacterMapSprites/StandingGifs/fighterstanding.gif",
+  "EnemyBrigandIdle": "Assets/CharacterMapSprites/StandingGifs/brigandstanding.gif",
+  "RoySelected": "Assets/CharacterMapSprites/SelectedGifs/lordselected.gif",
+  "CavalierSelected": "Assets/CharacterMapSprites/SelectedGifs/cavalierselected.gif"
   }

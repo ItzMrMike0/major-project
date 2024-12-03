@@ -93,7 +93,6 @@ class Tile {
   }
 }  
 
-
 // Character Class
 class Character {
   constructor(name, classType, x, y, level, hp, strength, skill, speed, luck, defense, resistance, isEnemy, width = 50, height = 50) {
@@ -126,7 +125,6 @@ class Character {
       data.strength, data.skill, data.speed, data.luck, data.defense,
       data.resistance, data.isEnemy, data.width, data.height
     );
-    // Assign initial animation from characterAnimations map (default animation)
     character.animation = characterAnimations[data.animation];
     return character;
   }
@@ -230,18 +228,13 @@ class Character {
         // Change cursor image
         cursorImageKey = "selectedCursor";
    
-        // Assign a new GIF animation when selected
-        if (character.name === "Roy") {
-          character.animation = loadImage("Assets/CharacterMapSprites/SelectedGifs/" + character.name.toLowerCase() + "selected.gif");
-        }
-        
-        character.isSelected = true;
-
         // Deselect all other characters
         for (let otherCharacter of characters) {
           otherCharacter.isSelected = false;
         }
    
+        // Select the current character
+        character.isSelected = true;
         console.log(`${character.name} is now selected.`);
    
         // Calculate reachable tiles
@@ -250,7 +243,7 @@ class Character {
       }
     }
   }
-
+  
   static unselectCharacter() {
     // Check if any characters have been selected to begin with
     let isAnyCharacterSelected = false;
@@ -261,10 +254,9 @@ class Character {
       }
     }
 
-    // If there is a selected character, unselect them and change their animation back
+    // If there is a selected character, unselect them
     if (isAnyCharacterSelected) {
       for (let character of characters) {
-        character.animation = characterAnimations[data.animation];
         character.isSelected = false;
       }
 
