@@ -147,10 +147,10 @@ class Character {
 
       // Adjust Y-position if character is selected because character gets bigger or if character is a Cavalier
       if (this.isSelected) {
-        drawY -= 5;
+        drawY -= 7;
         // Horses are drawY - 10 total because their base height is taller
         if (this.classType === "Cavalier") {
-          drawY -=5;
+          drawY -= 7;
         }
         // Draw a selection border if the character is selected
         noFill();
@@ -160,7 +160,7 @@ class Character {
       } 
       // If not selected but classType is Cavalier adjust drawY since base height is taller
       else if (this.classType === "Cavalier") {
-        drawY -= 5;
+        drawY -= 7;
       }
 
       // Apply a grey tint to the character if the character has used their turn
@@ -178,44 +178,43 @@ class Character {
   }
 
   // Move the selected character to a new location
-  static moveSelectedCharacter(cursor, tiles) {
-    // Iterate through all characters and check for character that is selected and can also move
-    for (let character of characters) {
-      if (character.isSelected && character.canMove) {
-        // Calculate distance between the character and where the cursor is
-        let distance = Math.abs(cursor.x - character.x) + Math.abs(cursor.y - character.y);
-  
-        // Check if the character is selected and if the target tile is within movement range
-        if (distance <= character.getMovementRange() && character.reachableTiles.some(tile => tile.x === cursor.x && tile.y === cursor.y)) {
-          // Check that the tile is walkable (not water, mountain, etc.) and not occupied
-          let tile = tiles[cursor.y][cursor.x];
-          if (tile.type !== "W" && tile.type !== "M" && !Tile.isTileOccupied(cursor.x, cursor.y)) {
-            // Move character to new location
-            character.moveTo(cursor.x, cursor.y);
-            // Disable further movement this turn
-            character.canMove = false;
-            // Deselect the character after they move
-            character.isSelected = false;
-            // Grey out the character
-            character.isGreyedOut = true;
-  
-            console.log(`${character.name} moved to (${character.x}, ${character.y})`);
-  
-            // Play move sound effect NEED NEW SOUNDS 
-            sounds.selectCharacter.amp(0.1);
-            sounds.selectCharacter.play();
-          }
-          else {
-            console.log("Cannot move to this tile.");
-          }
-        }
-        else {
-          console.log("Target location is out of range.");
-        }
-        break;
+static moveSelectedCharacter(cursor, tiles) {
+  if (selectedCharacter && selectedCharacter.canMove) {
+    // Calculate distance between the character and where the cursor is
+    const distance = Math.abs(cursor.x - selectedCharacter.x) + Math.abs(cursor.y - selectedCharacter.y);
+
+    // Check if the target tile is within movement range
+    if (distance <= selectedCharacter.getMovementRange() && selectedCharacter.reachableTiles.some(tile => tile.x === cursor.x && tile.y === cursor.y)) {
+      const tile = tiles[cursor.y][cursor.x];
+
+      // Check that the tile is walkable and not occupied
+      if (tile.type !== "W" && tile.type !== "M" && !Tile.isTileOccupied(cursor.x, cursor.y)) {
+        // Move the character to the new location
+        selectedCharacter.moveTo(cursor.x, cursor.y);
+        selectedCharacter.canMove = false;
+        selectedCharacter.isGreyedOut = true;
+
+        // Reset animation after move
+        animationManager(selectedCharacter, "standing");
+
+        console.log(`${selectedCharacter.name} moved to (${cursor.x}, ${cursor.y})`);
+
+        // Deselect the character
+        selectedCharacter.isSelected = false;
+        selectedCharacter = null;
+
+        // Play move sound effect
+        sounds.selectCharacter.amp(0.1);
+        sounds.selectCharacter.play();
+      } else {
+        console.log("Cannot move to this tile.");
       }
+    } else {
+      console.log("Target location is out of range.");
     }
   }
+}
+
   
   static selectCharacter() {
     // Make sure the character is not an enemy and hasn't moved yet (is not greyed out)
@@ -228,15 +227,20 @@ class Character {
         // Change cursor image
         cursorImageKey = "selectedCursor";
    
-        // Deselect all other characters
-        for (let otherCharacter of characters) {
-          otherCharacter.isSelected = false;
+        // Reset animation of currently selected character (if any)
+        if (selectedCharacter && selectedCharacter !== character) {
+          animationManager(selectedCharacter, "standing");
+          selectedCharacter.isSelected = false;
         }
-   
-        // Select the current character
+
+        // Update the newly selected character
+        selectedCharacter = character;
         character.isSelected = true;
+
+        // Set selected animation
+        animationManager(character, "selected");
         console.log(`${character.name} is now selected.`);
-   
+
         // Calculate reachable tiles
         character.calculateReachableTiles();
         break;
@@ -245,27 +249,20 @@ class Character {
   }
   
   static unselectCharacter() {
-    // Check if any characters have been selected to begin with
-    let isAnyCharacterSelected = false;
-    for (let character of characters) {
-      if (character.isSelected) {
-        isAnyCharacterSelected = true;
-        break;
-      }
-    }
+    if (selectedCharacter) {
+      // Reset animation for the selected character
+      animationManager(selectedCharacter, "standing");
 
-    // If there is a selected character, unselect them
-    if (isAnyCharacterSelected) {
-      for (let character of characters) {
-        character.isSelected = false;
-      }
-
-      // Play sound effect
+      // Unselect the character
+      selectedCharacter.isSelected = false;
+      selectedCharacter = null;
+  
+      // Play unselect sound effect
       sounds.unselectCharacter.amp(0.6);
       sounds.unselectCharacter.play();
-      
+  
       console.log("Character deselected.");
-    }
+    } 
     else {
       console.log("No characters are selected.");
     }
@@ -427,7 +424,7 @@ let levelToLoad, lines; // Level file to load and its content (lines)
 let tilesHigh, tilesWide, tilesWidth, tilesHeight; // Tile grid dimensions and sizes
 let tileImages = {}, tiles = [], tilePaths; // Tile assets, objects, and paths
 let sounds = {}, soundPaths; // Sound assets and paths
-let characterMapSpritePaths, characterAnimations = {}, characters = [], characterData; // Character assets and data
+let characterMapSpritePaths, characterAnimations = {}, characters = [], characterData, selectedCharacter; // Character assets and data
 let cursorImages = {}, cursorImageKey = "default", cursorPaths, locationCursor; // Cursor assets and location
 const MOVE_DELAY = 200; // Delay before cursor moves to the next tile
 const GAME_STATES = { TITLESCREEN: "TITLESCREEN", GAMEPLAY: "gameplay" }; // Possible game states
@@ -510,13 +507,35 @@ function setupCursorImages(data) {
   }
 }
 
+// Handles animation changes
+function animationManager(character, state) {
+  if (!character) {
+    console.error("Animation manager called with an invalid character.");
+    return;
+  }
+
+  // Map states to file paths
+  const statePaths = {
+    "standing": `Assets/CharacterMapSprites/StandingGifs/${character.classType.toLowerCase()}standing.gif`,
+    "selected": `Assets/CharacterMapSprites/SelectedGifs/${character.classType.toLowerCase()}selected.gif`
+  };
+
+  // Check if the state exists and load the corresponding animation
+  if (statePaths[state]) {
+    character.animation = loadImage(statePaths[state]);
+  } else {
+    console.warn(`Unknown animation state: ${state}`);
+  }
+}
+
 // Handle all inputs that lead to actions
 function keyPressed() {
   cursorImageKey = "default";
   // Select and move key
   if (key === "j") {
+    // Reset selectedCharacter variable
+    let selectedCharacter;
     // Check if a character is selected
-    let selectedCharacter = null;
     for (let character of characters) {
       if (character.isSelected) {
         selectedCharacter = character;
