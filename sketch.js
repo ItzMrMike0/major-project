@@ -9,6 +9,7 @@
 // Cursor moving sound acquired from https://www.youtube.com/watch?v=fkmp_YR9RXc
 // Select character sound acquired from https://www.youtube.com/watch?v=7Z2sxm7CkPw
 // Deselect character sound acquired from https://www.youtube.com/watch?v=U8wAHIaW4S0
+// All voice lines acquired from https://www.sounds-resource.com/nintendo_switch/fireemblemthreehouses/
 
 // Tile class
 class Tile {
@@ -223,7 +224,16 @@ static moveSelectedCharacter(cursor, tiles) {
         // Play sound effect
         sounds.selectCharacter.amp(0.1);
         sounds.selectCharacter.play();
-   
+
+        // Play character's select voice line
+        const voiceKey = `${character.name}SelectVoice`;
+        if (sounds[voiceKey]) {
+          sounds[voiceKey].play();
+        } 
+        else {
+          console.warn(`Select voice line for "${character.name}" not preloaded.`);
+        }
+
         // Change cursor image
         cursorImageKey = "selectedCursor";
    
