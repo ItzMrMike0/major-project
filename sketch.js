@@ -9,7 +9,6 @@
 // Cursor moving sound acquired from https://www.youtube.com/watch?v=fkmp_YR9RXc
 // Select character sound acquired from https://www.youtube.com/watch?v=7Z2sxm7CkPw
 // Deselect character sound acquired from https://www.youtube.com/watch?v=U8wAHIaW4S0
-// All voice lines acquired from https://www.sounds-resource.com/nintendo_switch/fireemblemthreehouses/
 
 // Tile class
 class Tile {
@@ -27,7 +26,7 @@ class Tile {
       image(tileImages[this.type], this.x * this.width, this.y * this.height, this.width, this.height);
     }
   }
-  
+ 
   // Create a grid of tiles from lines of data
   static createTiles(lines) {
     // Clear tiles array before creating new tiles to get rid of previous data
@@ -82,7 +81,7 @@ class Tile {
 
   // Check if a tile is occupied by another character
   static isTileOccupied(x, y) {
-    // Iterate through all character x and y 
+    // Iterate through all character x and y
     for (let character of characters) {
       if (character.x === x && character.y === y) {
         // The tile is occupied by another character
@@ -118,6 +117,69 @@ class Character {
     this.isGreyedOut = false;
     this.reachableTiles = [];
     this.attackableTiles = [];
+  }
+
+  // Use A* to find tile by tile movement to selected tile
+  static findPath(start, goal, tiles) {
+    const openSet = [{ x: start.x, y: start.y, g: 0, f: 0 }];
+    const cameFrom = {};
+    const visited = new Set();
+    visited.add(`${start.x},${start.y}`);
+ 
+    // Adjacent tiles 
+    const directions = [
+      { dx: 0, dy: 1 }, { dx: 1, dy: 0 },
+      { dx: 0, dy: -1 }, { dx: -1, dy: 0 }
+    ];
+ 
+    const heuristic = (x1, y1, x2, y2) => Math.abs(x1 - x2) + Math.abs(y1 - y2);
+ 
+    // Sort openSet by lowest f score
+    while (openSet.length > 0) {
+      openSet.sort((a, b) => a.f - b.f);
+      const current = openSet.shift();
+ 
+      // Reconstruct path after curreny x and y matches the selected x and y
+      if (current.x === goal.x && current.y === goal.y) {
+        const path = [];
+        let curr = `${goal.x},${goal.y}`;
+        while (cameFrom[curr]) {
+          const [x, y] = curr.split(',').map(Number);
+          path.push({ x, y });
+          curr = cameFrom[curr];
+        }
+        // Reverse to start from the beginning
+        return path.reverse(); 
+      }
+ 
+      // Go to adjacent tiles 
+      for (const { dx, dy } of directions) {
+        const neighborX = current.x + dx;
+        const neighborY = current.y + dy;
+        const tileKey = `${neighborX},${neighborY}`;
+ 
+        // Ensure tile is on canvas
+        if (neighborX < 0 || neighborX >= tiles[0].length || neighborY < 0 || neighborY >= tiles.length) {
+          continue;
+        }
+ 
+        // Ensure tile is walkable and not already visited
+        const tile = tiles[neighborY][neighborX];
+        if (tile.type === 'W' || tile.type === 'M' || visited.has(tileKey)) {
+          continue;
+        }
+ 
+        // Cost to move to this tile
+        const g = current.g + 1; 
+        const h = heuristic(neighborX, neighborY, goal.x, goal.y);
+        const f = g + h;
+ 
+        openSet.push({ x: neighborX, y: neighborY, g, f });
+        visited.add(tileKey);
+        cameFrom[tileKey] = `${current.x},${current.y}`;
+      }
+    }
+    return null; // No path found
   }
 
   // Helper function to create new characters
@@ -158,7 +220,7 @@ class Character {
         stroke(255, 255, 0);
         strokeWeight(3);
         rect(drawX, drawY, drawWidth, drawHeight);
-      } 
+      }
       // If not selected but classType is Cavalier adjust drawY since base height is taller
       else if (this.classType === "Cavalier") {
         drawY -= 7;
@@ -167,7 +229,7 @@ class Character {
       // Apply a grey tint to the character if the character has used their turn
       if (this.isGreyedOut) {
         tint(100);
-      } 
+      }
       else {
       // Ensure no tint is applied if the character has not moved yet
         noTint();
@@ -179,44 +241,43 @@ class Character {
   }
 
   // Move the selected character to a new location
-static moveSelectedCharacter(cursor, tiles) {
-  if (selectedCharacter && selectedCharacter.canMove) {
-    // Calculate distance between the character and where the cursor is
-    const distance = Math.abs(cursor.x - selectedCharacter.x) + Math.abs(cursor.y - selectedCharacter.y);
+  static moveSelectedCharacter(cursor, tiles) {
+    if (selectedCharacter && selectedCharacter.canMove) {
+      // Calculate distance between the character and where the cursor is
+      const distance = Math.abs(cursor.x - selectedCharacter.x) + Math.abs(cursor.y - selectedCharacter.y);
 
-    // Check if the target tile is within movement range
-    if (distance <= selectedCharacter.getMovementRange() && selectedCharacter.reachableTiles.some(tile => tile.x === cursor.x && tile.y === cursor.y)) {
-      const tile = tiles[cursor.y][cursor.x];
+      // Check if the target tile is within movement range
+      if (distance <= selectedCharacter.getMovementRange() && selectedCharacter.reachableTiles.some(tile => tile.x === cursor.x && tile.y === cursor.y)) {
+        const tile = tiles[cursor.y][cursor.x];
 
-      // Check that the tile is walkable and not occupied
-      if (tile.type !== "W" && tile.type !== "M" && !Tile.isTileOccupied(cursor.x, cursor.y)) {
-        // Move the character to the new location
-        selectedCharacter.moveTo(cursor.x, cursor.y);
-        selectedCharacter.canMove = false;
-        selectedCharacter.isGreyedOut = true;
+        // Check that the tile is walkable and not occupied
+        if (tile.type !== "W" && tile.type !== "M" && !Tile.isTileOccupied(cursor.x, cursor.y)) {
+          // Move the character to the new location
+          selectedCharacter.moveTo(cursor.x, cursor.y);
 
-        // Reset animation after move
-        animationManager(selectedCharacter, "standing");
+          // Reset animation after move
+          animationManager(selectedCharacter, "standing");
 
-        console.log(`${selectedCharacter.name} moved to (${cursor.x}, ${cursor.y})`);
+          console.log(`${selectedCharacter.name} moved to (${cursor.x}, ${cursor.y})`);
 
-        // Deselect the character
-        selectedCharacter.isSelected = false;
-        selectedCharacter = null;
+          // Deselect the character
+          selectedCharacter.isSelected = false;
+          selectedCharacter = null;
 
-        // Play move sound effect
-        sounds.selectCharacter.amp(0.1);
-        sounds.selectCharacter.play();
-      } else {
-        console.log("Cannot move to this tile.");
+          // Play move sound effect
+          sounds.selectCharacter.amp(0.1);
+          sounds.selectCharacter.play();
+        }
+        else {
+          console.log("Cannot move to this tile.");
+        }
       }
-    } else {
-      console.log("Target location is out of range.");
+      else {
+        console.log("Target location is out of range.");
+      }
     }
   }
-}
-
-  
+ 
   static selectCharacter() {
     // Make sure the character is not an enemy and hasn't moved yet (is not greyed out)
     for (let character of characters) {
@@ -224,19 +285,19 @@ static moveSelectedCharacter(cursor, tiles) {
         // Play sound effect
         sounds.selectCharacter.amp(0.1);
         sounds.selectCharacter.play();
+   
+        // Change cursor image
+        cursorImageKey = "selectedCursor";
 
         // Play character's select voice line
         const voiceKey = `${character.name}SelectVoice`;
         if (sounds[voiceKey]) {
           sounds[voiceKey].play();
-        } 
+        }
         else {
           console.warn(`Select voice line for "${character.name}" not preloaded.`);
         }
 
-        // Change cursor image
-        cursorImageKey = "selectedCursor";
-   
         // Reset animation of currently selected character (if any)
         if (selectedCharacter && selectedCharacter !== character) {
           animationManager(selectedCharacter, "standing");
@@ -257,7 +318,7 @@ static moveSelectedCharacter(cursor, tiles) {
       }
     }
   }
-  
+ 
   static unselectCharacter() {
     if (selectedCharacter) {
       // Reset animation for the selected character
@@ -266,13 +327,13 @@ static moveSelectedCharacter(cursor, tiles) {
       // Unselect the character
       selectedCharacter.isSelected = false;
       selectedCharacter = null;
-  
+ 
       // Play unselect sound effect
       sounds.unselectCharacter.amp(0.6);
       sounds.unselectCharacter.play();
-  
+ 
       console.log("Character deselected.");
-    } 
+    }
     else {
       console.log("No characters are selected.");
     }
@@ -336,7 +397,7 @@ static moveSelectedCharacter(cursor, tiles) {
           this.attackableTiles.push({ x, y });
         }
       }
-      
+     
       // Explore adjacent tiles
       for (const { dx, dy } of directions) {
         const nextX = x + dx;
@@ -364,8 +425,33 @@ static moveSelectedCharacter(cursor, tiles) {
 
   // Move the character to a new location
   moveTo(newX, newY) {
-    this.x = newX;
-    this.y = newY;
+    const path = Character.findPath({ x: this.x, y: this.y }, { x: newX, y: newY }, tiles);
+    if (!path) {
+      console.log("No path found!");
+      return;
+    }
+
+    const moveStep = (index) => {
+      if (index >= path.length) {
+        console.log(`${this.name} reached destination (${newX}, ${newY}).`);
+        this.x = newX;
+        this.y = newY;
+
+        // Only grey out and disable movement after reaching the destination
+        this.canMove = false;
+        this.isGreyedOut = true;
+        return;
+      }
+
+      const step = path[index];
+      this.x = step.x;
+      this.y = step.y;
+
+      // Animate movement with delay
+      setTimeout(() => moveStep(index + 1), 200);
+    };
+
+    moveStep(0);
   }
 
   // Attack logic for the character
@@ -414,7 +500,7 @@ class Cursor {
  
     // Scale the cursor image vertically (Increase height by 20%)
     let scaledHeight = this.height * 1.2;
-    
+   
     // Center the image vertically
     let offsetY = (scaledHeight - this.height) / 2;
  
@@ -533,7 +619,8 @@ function animationManager(character, state) {
   // Check if the state exists and load the corresponding animation
   if (statePaths[state]) {
     character.animation = loadImage(statePaths[state]);
-  } else {
+  }
+  else {
     console.warn(`Unknown animation state: ${state}`);
   }
 }
@@ -573,7 +660,7 @@ function holdCursorMovement() {
   let currentTime = millis();
 
   // 'W' key - Up
-  if (keyIsDown(87) && currentTime - lastMoveTimeW > MOVE_DELAY) { 
+  if (keyIsDown(87) && currentTime - lastMoveTimeW > MOVE_DELAY) {
     // Send input to move up
     locationCursor.move("up");
 
@@ -584,7 +671,7 @@ function holdCursorMovement() {
   if (keyIsDown(65) && currentTime - lastMoveTimeA > MOVE_DELAY) {  
     // Send input to move left
     locationCursor.move("left");
-    
+   
     // Update move times for left direction
     lastMoveTimeA = currentTime;
   }
@@ -600,7 +687,7 @@ function holdCursorMovement() {
   if (keyIsDown(68) && currentTime - lastMoveTimeD > MOVE_DELAY) {  
     // Send input to move right
     locationCursor.move("right");
-    
+   
     // Update move times for right direction
     lastMoveTimeD = currentTime;
   }
