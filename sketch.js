@@ -10,17 +10,17 @@
 // Select character sound acquired from https://www.youtube.com/watch?v=7Z2sxm7CkPw
 // Deselect character sound acquired from https://www.youtube.com/watch?v=U8wAHIaW4S0
 
-// Tile class
+// Tile Class: Manages individual tiles and their rendering
 class Tile {
   constructor(type, x, y, width, height) {
     this.type = type;  // Type of the tile ("G", "W", etc.)
-    this.x = x;        // x-coordinate in the grid
-    this.y = y;        // y-coordinate in the grid
+    this.x = x;        // X-coordinate in the grid
+    this.y = y;        // Y-coordinate in the grid
     this.width = width; // Width of the tile
     this.height = height; // Height of the tile
   }
 
-  // Render a single tile
+  // Renders a single tile based on its type
   renderTile() {
     if (tileImages[this.type]) {
       image(tileImages[this.type], this.x * this.width, this.y * this.height, this.width, this.height);
@@ -29,7 +29,7 @@ class Tile {
  
   // Create a grid of tiles from lines of data
   static createTiles(lines) {
-    // Clear tiles array before creating new tiles to get rid of previous data
+    // Reset tile array
     tiles = [];
     for (let y = 0; y < lines.length; y++) {
       tiles.push([]);
@@ -93,30 +93,35 @@ class Tile {
   }
 }  
 
-// Character Class
+// Character Class: Manages characters, movement, and combat
 class Character {
   constructor(name, classType, x, y, level, hp, strength, skill, speed, luck, defense, resistance, isEnemy, width = 50, height = 50) {
-    this.name = name;
-    this.classType = classType;
-    this.x = x;
-    this.y = y;
-    this.level = level;
-    this.hp = hp;
-    this.strength = strength;
-    this.skill = skill;
-    this.speed = speed;
-    this.luck = luck;
-    this.defense = defense;
-    this.resistance = resistance;
-    this.isSelected = false;
-    this.animation = null;
-    this.isEnemy = isEnemy;
-    this.width = width;
-    this.height = height;
-    this.canMove = true;
-    this.isGreyedOut = false;
-    this.reachableTiles = [];
-    this.attackableTiles = [];
+    // Basic properties
+    this.name = name; // Name of character
+    this.classType = classType; // Character class of character
+    this.x = x; // Character's x location
+    this.y = y; // Character's y location
+    this.level = level; // Character's level
+    this.hp = hp; // Character HP stat
+    this.strength = strength; // Character Strength stat
+    this.skill = skill; // Character skill stat
+    this.speed = speed; // Character speed stat
+    this.luck = luck; // Character luck stat
+    this.defense = defense; // Character defense stat (Physical)
+    this.resistance = resistance; // Character resistance stat (Magic)
+    this.isEnemy = isEnemy; // Is this character an enemy
+
+    // Visual and gameplay properties
+    this.isSelected = false; // Whether the character is selected
+    this.canMove = true; // Whether the character can move or not
+    this.isGreyedOut = false; // Whether the character is greyed out or not
+    this.width = width; // Width of character 
+    this.height = height; // Height of character
+
+    // Movement and attack calculations 
+    this.animation = null; // Character visual sprite 
+    this.reachableTiles = []; // Character reachable movement tiles 
+    this.attackableTiles = []; // Characters attackable movement tiles
   }
 
   // Use A* to find tile by tile movement to selected tile
