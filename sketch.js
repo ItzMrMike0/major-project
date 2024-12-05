@@ -20,13 +20,6 @@ class Tile {
     this.height = height; // Height of the tile
   }
 
-  // Renders a single tile based on its type
-  renderTile() {
-    if (tileImages[this.type]) {
-      image(tileImages[this.type], this.x * this.width, this.y * this.height, this.width, this.height);
-    }
-  }
- 
   // Create a grid of tiles from lines of data
   static createTiles(lines) {
     // Reset tile array
@@ -49,7 +42,14 @@ class Tile {
       }
     }
   }
-
+  
+  // Renders a single tile based on its type
+  renderTile() {
+    if (tileImages[this.type]) {
+      image(tileImages[this.type], this.x * this.width, this.y * this.height, this.width, this.height);
+    }
+  }
+ 
   // Display reachable and attackable tiles for the selected character
   static displayReachableTiles() {
     // Iterate through all characters to find selected character
@@ -124,68 +124,6 @@ class Character {
     this.attackableTiles = []; // Characters attackable movement tiles
   }
 
-  // Use A* to find tile by tile movement to selected tile
-  static findPath(start, goal, tiles) {
-    const openSet = [{ x: start.x, y: start.y, g: 0, f: 0 }];
-    const cameFrom = {};
-    const visited = new Set();
-    visited.add(`${start.x},${start.y}`);
- 
-    // Adjacent tiles 
-    const directions = [
-      { dx: 0, dy: 1 }, { dx: 1, dy: 0 },
-      { dx: 0, dy: -1 }, { dx: -1, dy: 0 }
-    ];
- 
-    const heuristic = (x1, y1, x2, y2) => Math.abs(x1 - x2) + Math.abs(y1 - y2);
- 
-    // Sort openSet by lowest f score
-    while (openSet.length > 0) {
-      openSet.sort((a, b) => a.f - b.f);
-      const current = openSet.shift();
- 
-      // Reconstruct path after curreny x and y matches the selected x and y
-      if (current.x === goal.x && current.y === goal.y) {
-        const path = [];
-        let curr = `${goal.x},${goal.y}`;
-        while (cameFrom[curr]) {
-          const [x, y] = curr.split(',').map(Number);
-          path.push({ x, y });
-          curr = cameFrom[curr];
-        }
-        // Reverse to start from the beginning
-        return path.reverse(); 
-      }
- 
-      // Go to adjacent tiles 
-      for (const { dx, dy } of directions) {
-        const neighborX = current.x + dx;
-        const neighborY = current.y + dy;
-        const tileKey = `${neighborX},${neighborY}`;
- 
-        // Ensure tile is on canvas
-        if (neighborX < 0 || neighborX >= tiles[0].length || neighborY < 0 || neighborY >= tiles.length) {
-          continue;
-        }
- 
-        // Ensure tile is walkable and not already visited
-        const tile = tiles[neighborY][neighborX];
-        if (tile.type === 'W' || tile.type === 'M' || visited.has(tileKey)) {
-          continue;
-        }
- 
-        // Cost to move to this tile
-        const g = current.g + 1; 
-        const h = heuristic(neighborX, neighborY, goal.x, goal.y);
-        const f = g + h;
- 
-        openSet.push({ x: neighborX, y: neighborY, g, f });
-        visited.add(tileKey);
-        cameFrom[tileKey] = `${current.x},${current.y}`;
-      }
-    }
-    return null; // No path found
-  }
 
   // Helper function to create new characters
   static createCharacter(data) {
@@ -245,44 +183,6 @@ class Character {
     }
   }
 
-  // Move the selected character to a new location
-  static moveSelectedCharacter(cursor, tiles) {
-    if (selectedCharacter && selectedCharacter.canMove) {
-      // Calculate distance between the character and where the cursor is
-      const distance = Math.abs(cursor.x - selectedCharacter.x) + Math.abs(cursor.y - selectedCharacter.y);
-
-      // Check if the target tile is within movement range
-      if (distance <= selectedCharacter.getMovementRange() && selectedCharacter.reachableTiles.some(tile => tile.x === cursor.x && tile.y === cursor.y)) {
-        const tile = tiles[cursor.y][cursor.x];
-
-        // Check that the tile is walkable and not occupied
-        if (tile.type !== "W" && tile.type !== "M" && !Tile.isTileOccupied(cursor.x, cursor.y)) {
-          // Move the character to the new location
-          selectedCharacter.moveTo(cursor.x, cursor.y);
-
-          // Reset animation after move
-          animationManager(selectedCharacter, "standing");
-
-          console.log(`${selectedCharacter.name} moved to (${cursor.x}, ${cursor.y})`);
-
-          // Deselect the character
-          selectedCharacter.isSelected = false;
-          selectedCharacter = null;
-
-          // Play move sound effect
-          sounds.selectCharacter.amp(0.1);
-          sounds.selectCharacter.play();
-        }
-        else {
-          console.log("Cannot move to this tile.");
-        }
-      }
-      else {
-        console.log("Target location is out of range.");
-      }
-    }
-  }
- 
   static selectCharacter() {
     // Make sure the character is not an enemy and hasn't moved yet (is not greyed out)
     for (let character of characters) {
@@ -459,6 +359,106 @@ class Character {
     moveStep(0);
   }
 
+  // Move the selected character to a new location
+  static moveSelectedCharacter(cursor, tiles) {
+    if (selectedCharacter && selectedCharacter.canMove) {
+      // Calculate distance between the character and where the cursor is
+      const distance = Math.abs(cursor.x - selectedCharacter.x) + Math.abs(cursor.y - selectedCharacter.y);
+
+      // Check if the target tile is within movement range
+      if (distance <= selectedCharacter.getMovementRange() && selectedCharacter.reachableTiles.some(tile => tile.x === cursor.x && tile.y === cursor.y)) {
+        const tile = tiles[cursor.y][cursor.x];
+
+        // Check that the tile is walkable and not occupied
+        if (tile.type !== "W" && tile.type !== "M" && !Tile.isTileOccupied(cursor.x, cursor.y)) {
+          // Move the character to the new location
+          selectedCharacter.moveTo(cursor.x, cursor.y);
+
+          // Reset animation after move
+          animationManager(selectedCharacter, "standing");
+
+          console.log(`${selectedCharacter.name} moved to (${cursor.x}, ${cursor.y})`);
+
+          // Deselect the character
+          selectedCharacter.isSelected = false;
+          selectedCharacter = null;
+
+          // Play move sound effect
+          sounds.selectCharacter.amp(0.1);
+          sounds.selectCharacter.play();
+        }
+        else {
+          console.log("Cannot move to this tile.");
+        }
+      }
+      else {
+        console.log("Target location is out of range.");
+      }
+    }
+  }
+
+  // Use A* to find tile by tile movement to selected tile
+  static findPath(start, goal, tiles) {
+    const openSet = [{ x: start.x, y: start.y, g: 0, f: 0 }];
+    const cameFrom = {};
+    const visited = new Set();
+    visited.add(`${start.x},${start.y}`);
+   
+    // Adjacent tiles 
+    const directions = [
+      { dx: 0, dy: 1 }, { dx: 1, dy: 0 },
+      { dx: 0, dy: -1 }, { dx: -1, dy: 0 }
+    ];
+   
+    const heuristic = (x1, y1, x2, y2) => Math.abs(x1 - x2) + Math.abs(y1 - y2);
+   
+    // Sort openSet by lowest f score
+    while (openSet.length > 0) {
+      openSet.sort((a, b) => a.f - b.f);
+      const current = openSet.shift();
+   
+      // Reconstruct path after curreny x and y matches the selected x and y
+      if (current.x === goal.x && current.y === goal.y) {
+        const path = [];
+        let curr = `${goal.x},${goal.y}`;
+        while (cameFrom[curr]) {
+          const [x, y] = curr.split(',').map(Number);
+          path.push({ x, y });
+          curr = cameFrom[curr];
+        }
+        // Reverse to start from the beginning
+        return path.reverse(); 
+      }
+   
+      // Go to adjacent tiles 
+      for (const { dx, dy } of directions) {
+        const neighborX = current.x + dx;
+        const neighborY = current.y + dy;
+        const tileKey = `${neighborX},${neighborY}`;
+   
+        // Ensure tile is on canvas
+        if (neighborX < 0 || neighborX >= tiles[0].length || neighborY < 0 || neighborY >= tiles.length) {
+          continue;
+        }
+   
+        // Ensure tile is walkable and not already visited
+        const tile = tiles[neighborY][neighborX];
+        if (tile.type === 'W' || tile.type === 'M' || visited.has(tileKey)) {
+          continue;
+        }
+   
+        // Cost to move to this tile
+        const g = current.g + 1; 
+        const h = heuristic(neighborX, neighborY, goal.x, goal.y);
+        const f = g + h;
+   
+        openSet.push({ x: neighborX, y: neighborY, g, f });
+        visited.add(tileKey);
+        cameFrom[tileKey] = `${current.x},${current.y}`;
+      }
+    }
+    return null; // No path found
+  }
   // Attack logic for the character
   attack() {
     // Logic for attacking
