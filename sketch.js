@@ -125,56 +125,65 @@ class Character {
   }
 
 
-  // Helper function to create new characters
+  // Helper function to create new characters based on provided data
   static createCharacter(data) {
+    // Initialize a new character with the data attributes
     let character = new Character(data.name, data.classType, data.x, data.y, data.level, data.hp,
       data.strength, data.skill, data.speed, data.luck, data.defense,
       data.resistance, data.isEnemy, data.width, data.height
     );
+
+    // Assign the character's animation based on the specified animation key
     character.animation = characterAnimations[data.animation];
+
     return character;
   }
 
-  // Display character on the map
+  // Display the character on the map at their current position
   displayOnMap() {
+    // Check if the character has an animation assigned
     if (this.animation) {
-      // Calculate dimensions
+      // Calculate the character's drawing dimensions
       let drawWidth = this.width;
       let drawHeight =  this.height;
-      // Adjust if character is selected
+
+      // If the character is selected, increase the size slightly for visual effect
       if (this.isSelected) {
         drawWidth += 15;
         drawHeight += 15;
       }
-
-      // Calculate centered position for the character
+     
+      // Calculate the character's position on the map, centering it within the grid cell
       let drawX = this.x * tilesWidth + (tilesWidth - drawWidth) / 2;
       let drawY = this.y * tilesHeight + (tilesHeight - drawHeight) / 2;
 
-      // Adjust Y-position if character is selected because character gets bigger or if character is a Cavalier
+      // Adjust Y-position if the character is selected so the character won't display under their grid cell
       if (this.isSelected) {
         drawY -= 7;
-        // Horses are drawY - 10 total because their base height is taller
+        // Further adjustment for Cavaliers, as their base height is taller
         if (this.classType === "Cavalier") {
           drawY -= 7;
         }
-        // Draw a selection border if the character is selected
+
+        // Draw a yellow border around the selected character to indicate selection
         noFill();
         stroke(255, 255, 0);
         strokeWeight(3);
         rect(drawX, drawY, drawWidth, drawHeight);
       }
-      // If not selected but classType is Cavalier adjust drawY since base height is taller
+
+      // If the character is not selected but is a Cavalier, adjust the Y-position as their base height is taller
       else if (this.classType === "Cavalier") {
         drawY -= 7;
       }
 
-      // Apply a grey tint to the character if the character has used their turn
+      // If the character has already moved or acted, apply a grey tint to show it's inactive
       if (this.isGreyedOut) {
         tint(100);
       }
+      
+      // If the character is active, ensure no tint is applied
       else {
-      // Ensure no tint is applied if the character has not moved yet
         noTint();
       }
 
@@ -328,7 +337,7 @@ class Character {
     }
   }
 
-  // Move the character to a new location
+  // Move the character to a new location gradually
   moveTo(newX, newY) {
     const path = Character.findPath({ x: this.x, y: this.y }, { x: newX, y: newY }, tiles);
     if (!path) {
@@ -341,17 +350,21 @@ class Character {
         this.x = newX;
         this.y = newY;
 
-        // Only grey out and disable movement after reaching the destination
+        // After completing movement, reset animations and disable further movement
         animationManager(this, "standing");
         this.canMove = false;
         this.isGreyedOut = true;
         return;
       }
 
-      const step = path[index];
-      const dx = step.x - this.x;
-      const dy = step.y - this.y;
-      
+      // Current and next tiles
+      const { x: startX, y: startY } = this;
+      const { x: targetX, y: targetY } = path[index];
+
+      // Directional animation
+      const dx = targetX - startX;
+      const dy = targetY - startY;
+
       // Determine the walking animation based on direction
       if (dx === 1) {
         animationManager(this, "walkright"); 
@@ -366,18 +379,43 @@ class Character {
         animationManager(this, "walkup"); 
       }
 
-      // Animate movement with delay, then update the position after the animation
-      setTimeout(() => {
-        // Update the character's position after animation
-        this.x = step.x;
-        this.y = step.y;
+      // Tracks character completion to finish movement
+      let progress = 0;
 
-        // Call the next step
-        moveStep(index + 1);
-      }, 200); // Delay for animation duration
+      // Total time (ms) to move between tiles
+      const duration = 125; 
+
+      // Smooth interpolation between tiles
+      const animateStep = () => {
+        if (progress >= 1) {
+          // Snap to the target position
+          this.x = targetX;
+          this.y = targetY;
+
+          // Continue to the next tile in the path
+          moveStep(index + 1);
+          return;
+        }
+
+        // Calculate the interpolated position
+        this.renderX = startX + (targetX - startX) * progress;
+        this.renderY = startY + (targetY - startY) * progress;
+
+        // Increase progress based on the frame rate
+        progress += deltaTime / duration;
+
+        // Schedule the next frame
+        setTimeout(animateStep, 16);
+      };
+
+      // Start the animation
+      animateStep();
     };
+
+    // Begin the movement sequence
     moveStep(0);
   }
+
 
   // Move the selected character to a new location
   static moveSelectedCharacter(cursor, tiles) {
