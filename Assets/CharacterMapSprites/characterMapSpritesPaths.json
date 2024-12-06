@@ -18,5 +18,17 @@
   "CavalierWalkingUp": "Assets/CharacterMapSprites/WalkingGifs/cavalierwalkup.gif",
   "CavalierWalkingLeft": "Assets/CharacterMapSprites/WalkingGifs/cavalierwalkleft.gif",
   "CavalierWalkingRight": "Assets/CharacterMapSprites/WalkingGifs/cavalierwalkright.gif",
-  "CavalierWalkingDown": "Assets/CharacterMapSprites/WalkingGifs/cavalierwalkdown.gif"
+  "CavalierWalkingDown": "Assets/CharacterMapSprites/WalkingGifs/cavalierwalkdown.gif",
+  "KnightWalkingUp": "Assets/CharacterMapSprites/WalkingGifs/knightwalkup.gif",
+  "KnightWalkingLeft": "Assets/CharacterMapSprites/WalkingGifs/knightwalkleft.gif",
+  "KnightWalkingRight": "Assets/CharacterMapSprites/WalkingGifs/knightwalkright.gif",
+  "KnightWalkingDown": "Assets/CharacterMapSprites/WalkingGifs/knightwalkdown.gif",
+  "ArcherWalkingUp": "Assets/CharacterMapSprites/WalkingGifs/archerwalkup.gif",
+  "ArcherWalkingLeft": "Assets/CharacterMapSprites/WalkingGifs/archerwalkleft.gif",
+  "ArcherWalkingRight": "Assets/CharacterMapSprites/WalkingGifs/archerwalkright.gif",
+  "ArcherWalkingDown": "Assets/CharacterMapSprites/WalkingGifs/archerwalkdown.gif",
+  "MageWalkingUp": "Assets/CharacterMapSprites/WalkingGifs/magewalkup.gif",
+  "MageWalkingLeft": "Assets/CharacterMapSprites/WalkingGifs/magewalkleft.gif",
+  "MageWalkingRight": "Assets/CharacterMapSprites/WalkingGifs/magewalkright.gif",
+  "MageWalkingDown": "Assets/CharacterMapSprites/WalkingGifs/magewalkdown.gif"
   }

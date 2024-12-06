@@ -394,7 +394,8 @@ class Character {
         if (progress < 1) {
           // Keep animating the current step
           requestAnimationFrame(animateStep);
-        } else {
+        } 
+        else {
           // Finalize position and move to the next step
           this.x = targetX;
           this.y = targetY;
