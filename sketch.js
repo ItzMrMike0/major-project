@@ -344,79 +344,72 @@ class Character {
       console.log("No path found!");
       return;
     }
-
+  
     const moveStep = (index) => {
       if (index >= path.length) {
         this.x = newX;
         this.y = newY;
-
-        // After completing movement, reset animations and disable further movement
+  
+        // Reset animations and disable further movement after reaching the final tile
         animationManager(this, "standing");
         this.canMove = false;
         this.isGreyedOut = true;
         return;
       }
-
-      // Current and next tiles
+  
+      // Current and target positions
       const { x: startX, y: startY } = this;
       const { x: targetX, y: targetY } = path[index];
-
-      // Directional animation
+  
+      // Determine movement direction and animation
       const dx = targetX - startX;
       const dy = targetY - startY;
-
-      // Determine the walking animation based on direction
+  
       if (dx === 1) {
-        animationManager(this, "walkright"); 
+        animationManager(this, "walkright");
       } 
       else if (dx === -1) {
-        animationManager(this, "walkleft"); 
+        animationManager(this, "walkleft");
       } 
       else if (dy === 1) {
-        animationManager(this, "walkdown"); 
+        animationManager(this, "walkdown");
       } 
       else if (dy === -1) {
-        animationManager(this, "walkup"); 
+        animationManager(this, "walkup");
       }
-
-      // Tracks character completion to finish movement
-      let progress = 0;
-
-      // Total time (ms) to move between tiles
-      const duration = 125; 
-
-      // Smooth interpolation between tiles
+  
+      // Duration and progress tracking for smooth movement
+      const duration = 200; // ms to move between tiles
+      let startTime = millis();
+  
       const animateStep = () => {
-        if (progress >= 1) {
-          // Snap to the target position
-          this.x = targetX;
-          this.y = targetY;
-
-          // Continue to the next tile in the path
-          moveStep(index + 1);
-          return;
-        }
-
-        // Calculate the interpolated position
+        let elapsed = millis() - startTime;
+        let progress = Math.min(elapsed / duration, 1); // Ensure progress doesn't exceed 1
+  
+        // Interpolate position
         this.renderX = startX + (targetX - startX) * progress;
         this.renderY = startY + (targetY - startY) * progress;
-
-        // Increase progress based on the frame rate
-        progress += deltaTime / duration;
-
-        // Schedule the next frame
-        setTimeout(animateStep, 16);
+  
+        // Check if step is complete
+        if (progress < 1) {
+          // Keep animating the current step
+          requestAnimationFrame(animateStep);
+        } else {
+          // Finalize position and move to the next step
+          this.x = targetX;
+          this.y = targetY;
+          moveStep(index + 1);
+        }
       };
-
-      // Start the animation
+  
+      // Start the animation for the current step
       animateStep();
     };
-
+  
     // Begin the movement sequence
     moveStep(0);
   }
-
-
+  
   // Move the selected character to a new location
   static moveSelectedCharacter(cursor, tiles) {
     if (selectedCharacter && selectedCharacter.canMove) {
