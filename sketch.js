@@ -338,24 +338,44 @@ class Character {
 
     const moveStep = (index) => {
       if (index >= path.length) {
-        console.log(`${this.name} reached destination (${newX}, ${newY}).`);
         this.x = newX;
         this.y = newY;
 
         // Only grey out and disable movement after reaching the destination
+        animationManager(this, "standing");
         this.canMove = false;
         this.isGreyedOut = true;
         return;
       }
 
       const step = path[index];
-      this.x = step.x;
-      this.y = step.y;
+      const dx = step.x - this.x;
+      const dy = step.y - this.y;
+      
+      // Determine the walking animation based on direction
+      if (dx === 1) {
+        animationManager(this, "walkright"); 
+      } 
+      else if (dx === -1) {
+        animationManager(this, "walkleft"); 
+      } 
+      else if (dy === 1) {
+        animationManager(this, "walkdown"); 
+      } 
+      else if (dy === -1) {
+        animationManager(this, "walkup"); 
+      }
 
-      // Animate movement with delay
-      setTimeout(() => moveStep(index + 1), 200);
+      // Animate movement with delay, then update the position after the animation
+      setTimeout(() => {
+        // Update the character's position after animation
+        this.x = step.x;
+        this.y = step.y;
+
+        // Call the next step
+        moveStep(index + 1);
+      }, 200); // Delay for animation duration
     };
-
     moveStep(0);
   }
 
@@ -618,7 +638,11 @@ function animationManager(character, state) {
   // Map states to file paths
   const statePaths = {
     "standing": `Assets/CharacterMapSprites/StandingGifs/${character.classType.toLowerCase()}standing.gif`,
-    "selected": `Assets/CharacterMapSprites/SelectedGifs/${character.classType.toLowerCase()}selected.gif`
+    "selected": `Assets/CharacterMapSprites/SelectedGifs/${character.classType.toLowerCase()}selected.gif`,
+    "walkleft": `Assets/CharacterMapSprites/WalkingGifs/${character.classType.toLowerCase()}walkleft.gif`,
+    "walkright": `Assets/CharacterMapSprites/WalkingGifs/${character.classType.toLowerCase()}walkright.gif`,
+    "walkup": `Assets/CharacterMapSprites/WalkingGifs/${character.classType.toLowerCase()}walkup.gif`,
+    "walkdown": `Assets/CharacterMapSprites/WalkingGifs/${character.classType.toLowerCase()}walkdown.gif`,
   };
 
   // Check if the state exists and load the corresponding animation

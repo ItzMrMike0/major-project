@@ -10,5 +10,13 @@
   "CavalierSelected": "Assets/CharacterMapSprites/SelectedGifs/cavalierselected.gif",
   "KnightSelected": "Assets/CharacterMapSprites/SelectedGifs/knightselected.gif",
   "ArcherSelected": "Assets/CharacterMapSprites/SelectedGifs/archerselected.gif",
-  "MageSelected": "Assets/CharacterMapSprites/SelectedGifs/mageselected.gif"
+  "MageSelected": "Assets/CharacterMapSprites/SelectedGifs/mageselected.gif",
+  "RoyWalkingUp": "Assets/CharacterMapSprites/WalkingGifs/lordwalkup.gif",
+  "RoyWalkingLeft": "Assets/CharacterMapSprites/WalkingGifs/lordwalkleft.gif",
+  "RoyWalkingRight": "Assets/CharacterMapSprites/WalkingGifs/lordwalkright.gif",
+  "RoyWalkingDown": "Assets/CharacterMapSprites/WalkingGifs/lordwalkdown.gif",
+  "CavalierWalkingUp": "Assets/CharacterMapSprites/WalkingGifs/cavalierwalkup.gif",
+  "CavalierWalkingLeft": "Assets/CharacterMapSprites/WalkingGifs/cavalierwalkleft.gif",
+  "CavalierWalkingRight": "Assets/CharacterMapSprites/WalkingGifs/cavalierwalkright.gif",
+  "CavalierWalkingDown": "Assets/CharacterMapSprites/WalkingGifs/cavalierwalkdown.gif"
   }
