@@ -50,6 +50,29 @@ class Tile {
     }
   }
  
+  // Check if a tile is occupied by another character
+  static isTileOccupied(x, y) {
+    // Iterate through all character x and y
+    for (let character of characters) {
+      if (character.x === x && character.y === y) {
+        // The tile is occupied by another character
+        return true;  
+      }
+    }
+    // The tile is not occupied
+    return false;
+  }
+
+  // Check if a tile is walkable
+  isWalkable() {
+    return this.type !== 'W' && this.type !== 'M';
+  }
+
+  // Check if coordinates are within map bounds
+  static isWithinMapBounds(x, y) {
+    return x >= 0 && x < tilesWide && y >= 0 && y < tilesHigh;
+  }
+
   // Display reachable and attackable tiles for the selected character
   static displayReachableTiles() {
     // Iterate through all characters to find selected character
@@ -77,19 +100,6 @@ class Tile {
         }
       }
     }
-  }
-
-  // Check if a tile is occupied by another character
-  static isTileOccupied(x, y) {
-    // Iterate through all character x and y
-    for (let character of characters) {
-      if (character.x === x && character.y === y) {
-        // The tile is occupied by another character
-        return true;  
-      }
-    }
-    // The tile is not occupied
-    return false;
   }
 }  
 
@@ -284,7 +294,7 @@ class Character {
 
   // Calculate reachable and attackable tiles using Dijkstra's algorithm
   calculateReachableTiles() {
-    // Clear previously stored tiles
+    // Clear previous calculations
     this.reachableTiles = [];
     this.attackableTiles = [];
 
@@ -293,53 +303,51 @@ class Character {
     const attackRange = this.getAttackRange();
 
     // Priority queue for Dijkstra, starts with the character's current position
+    const visited = new Set([`${this.x},${this.y}`]);
     const queue = [{ x: this.x, y: this.y, cost: 0 }];
-    // Track visited tiles to avoid revisiting
-    const visited = new Set();
-    visited.add(`${this.x},${this.y}`);
 
-    // Directions for adjacent tiles (up, down, left, right)
-    const directions = [{ dx: 0, dy: 1 }, { dx: 0, dy: -1 }, { dx: 1, dy: 0 }, { dx: -1, dy: 0 }];
-
-    // Sort by movement cost (ascending) and process the tile with the lowest cost
-    while (queue.length) {
+    while (queue.length > 0) {
+      // Sort by cost and get the lowest cost tile
       queue.sort((a, b) => a.cost - b.cost);
-      const { x, y, cost } = queue.shift();
+      const current = queue.shift();
+      const { x, y, cost } = current;
 
-      // Add the tile to reachable tiles if it's within movement range
+      // Process tile based on its distance
       if (cost <= movementRange) {
         this.reachableTiles.push({ x, y });
+      } else if (cost <= movementRange + attackRange && tiles[y][x].isWalkable()) {
+        this.attackableTiles.push({ x, y });
       }
 
-      // Add to attackable tiles if it's within attack range but outside movement range
-      if (cost > movementRange && cost <= movementRange + attackRange) {
-        const tile = tiles[y][x];
-        if (tile.type !== 'W' && tile.type !== 'M') {
-          this.attackableTiles.push({ x, y });
-        }
+      // If we're beyond attack range, skip exploring further tiles
+      if (cost > movementRange + attackRange) {
+        continue;
       }
-     
-      // Explore adjacent tiles
-      for (const { dx, dy } of directions) {
-        const nextX = x + dx;
-        const nextY = y + dy;
 
-        // Check if the next tile is within map bounds
-        if (nextX >= 0 && nextX < tilesWide && nextY >= 0 && nextY < tilesHigh) {
-          const tile = tiles[nextY][nextX];
-          const nextTileKey = `${nextX},${nextY}`;
+      // Check each adjacent tile (up, down, left, right)
+      const directions = [
+        { x: x, y: y - 1 }, // up
+        { x: x, y: y + 1 }, // down
+        { x: x + 1, y: y }, // right
+        { x: x - 1, y: y }  // left
+      ];
 
-          // Skip tiles that are water, mountains, or already visited
-          if (tile.type === 'W' || tile.type === 'M' || visited.has(nextTileKey)) {
-            continue;
-          }
+      // Process each adjacent tile
+      for (const dir of directions) {
+        const nextX = dir.x;
+        const nextY = dir.y;
+        const nextKey = `${nextX},${nextY}`;
 
-          // Add the next tile to the queue with an incremented cost
-          queue.push({ x: nextX, y: nextY, cost: cost + 1 });
-
-          // Mark the tile as visited
-          visited.add(nextTileKey);
+        // Skip if out of bounds, already visited, or not walkable
+        if (!Tile.isWithinMapBounds(nextX, nextY) || 
+            visited.has(nextKey) || 
+            !tiles[nextY][nextX].isWalkable()) {
+          continue;
         }
+
+        // Add to queue and mark as visited
+        queue.push({ x: nextX, y: nextY, cost: cost + 1 });
+        visited.add(nextKey);
       }
     }
   }
