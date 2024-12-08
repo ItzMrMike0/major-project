@@ -33,7 +33,7 @@ Winning will rely not only on combat prowess but also on strategic planning and 
 - Core stats include HP, strength, skill, speed, luck, defense, resistance. 🟡
 - Derived stats like critical rate or hit rate. 🔴
 - Assign classes with unique traits (e.g., archers, mages, knights). 🟡
-- Include movement, selection, and idle animations. 🟡
+- Include movement, selection, and idle animations. 🟢
 
 ### 4: Battle System
 - Transition to a new scene or overlay for battle sequences. 🔴
@@ -64,5 +64,5 @@ Winning will rely not only on combat prowess but also on strategic planning and 
 - Multiple maps or scenarios to increase replayability. 🔴
 - Inventory management system for equipping, using, and organizing items. 🔴
 - Save/load system with multiple slots. 🔴
-- Implement voiceovers for character actions like attacks or item use. 🔴
+- Implement voiceovers for character actions like attacks or item use. 🟡
 - Level-up system with randomized or semi-randomized stat increases. 🔴

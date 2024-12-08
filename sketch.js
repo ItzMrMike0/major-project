@@ -10,19 +10,18 @@
 // Select character sound acquired from https://www.youtube.com/watch?v=7Z2sxm7CkPw
 // Deselect character sound acquired from https://www.youtube.com/watch?v=U8wAHIaW4S0
 
-// Tile Class: Manages individual tiles and their rendering
+// Tile Class: Represents individual tiles on the map, including their type, position, and dimensions
 class Tile {
   constructor(type, x, y, width, height) {
-    this.type = type;  // Type of the tile ("G", "W", etc.)
-    this.x = x;        // X-coordinate in the grid
-    this.y = y;        // Y-coordinate in the grid
-    this.width = width; // Width of the tile
-    this.height = height; // Height of the tile
+    this.type = type;    // Tile type (G = ground, W = wall, M = mountain, etc)
+    this.x = x;          // Grid x position
+    this.y = y;          // Grid y position
+    this.width = width;  // Tile width in pixels
+    this.height = height;// Tile height in pixels
   }
 
-  // Create a grid of tiles from lines of data
+  // Makes the map grid from level data
   static createTiles(lines) {
-    // Reset tile array
     tiles = [];
     for (let y = 0; y < lines.length; y++) {
       tiles.push([]);
@@ -34,7 +33,7 @@ class Tile {
     return tiles;
   }
 
-  // Iterate through all tiles and display them
+  // Display all map tiles
   static displayAll(tiles) {
     for (let row of tiles) {
       for (let tile of row) {
@@ -43,7 +42,7 @@ class Tile {
     }
   }
   
-  // Renders a single tile based on its type
+  // Draws tile using its type
   renderTile() {
     if (tileImages[this.type]) {
       image(tileImages[this.type], this.x * this.width, this.y * this.height, this.width, this.height);
@@ -55,11 +54,9 @@ class Tile {
     // Iterate through all character x and y
     for (let character of characters) {
       if (character.x === x && character.y === y) {
-        // The tile is occupied by another character
         return true;  
       }
     }
-    // The tile is not occupied
     return false;
   }
 
@@ -74,26 +71,23 @@ class Tile {
   }
 
   // Display reachable and attackable tiles for the selected character
-  static displayReachableTiles() {
+  static displayActionableTiles() {
     // Iterate through all characters to find selected character
     for (let character of characters) {
       if (character.isSelected) {
-        // Grab information of that character's reachable tiles
+        // Draw blue squares to show character's reachable tiles
         for (let tile of character.reachableTiles) {
           let drawX = tile.x * tilesWidth;
           let drawY = tile.y * tilesHeight;
-
-          // Draw a blue rectangle to highlight the reachable tile
           fill(0, 0, 255, 100);
           noStroke();
           rect(drawX, drawY, tilesWidth, tilesHeight);
         }
-        // Highlight attackable tiles in red
+
+        // Draw red squares to show character's attackable tiles
         for (let tile of character.attackableTiles) {
           let drawX = tile.x * tilesWidth;
           let drawY = tile.y * tilesHeight;
-
-          // Draw a red rectangle to highlight the reachable tile
           fill(255, 0, 0, 100);
           noStroke();
           rect(drawX, drawY, tilesWidth, tilesHeight);
@@ -103,22 +97,22 @@ class Tile {
   }
 }  
 
-// Character Class: Manages characters, movement, and combat
+// Character Class: Represents a character on the map, including their properties, state, and actions
 class Character {
   constructor(name, classType, x, y, level, hp, strength, skill, speed, luck, defense, resistance, isEnemy, width = 50, height = 50) {
     // Basic properties
     this.name = name; // Name of character
-    this.classType = classType; // Character class of character
-    this.x = x; // Character's x location
-    this.y = y; // Character's y location
+    this.classType = classType; // Character class (Lord, Knight, etc)
+    this.x = x; // X position on the tile grid
+    this.y = y; // Y position on the tile grid
     this.level = level; // Character's level
-    this.hp = hp; // Character HP stat
-    this.strength = strength; // Character Strength stat
-    this.skill = skill; // Character skill stat
-    this.speed = speed; // Character speed stat
-    this.luck = luck; // Character luck stat
-    this.defense = defense; // Character defense stat (Physical)
-    this.resistance = resistance; // Character resistance stat (Magic)
+    this.hp = hp; // HP stat
+    this.strength = strength; // Strength stat
+    this.skill = skill; // Skill stat
+    this.speed = speed; // Speed stat
+    this.luck = luck; // Luck stat
+    this.defense = defense; // Physical defense stat
+    this.resistance = resistance; // Magical defense stat
     this.isEnemy = isEnemy; // Is this character an enemy
 
     // Visual and gameplay properties
@@ -135,16 +129,15 @@ class Character {
     this.attackableTiles = []; // Characters attackable movement tiles
   }
 
-
-  // Helper function to create new characters based on provided data
+  // Helper function to create new characters based on provided data in character JSON
   static createCharacter(data) {
-    // Initialize a new character with the data attributes
+    // Create a new character with the data attributes
     let character = new Character(data.name, data.classType, data.x, data.y, data.level, data.hp,
       data.strength, data.skill, data.speed, data.luck, data.defense,
       data.resistance, data.isEnemy, data.width, data.height
     );
 
-    // Assign the character's animation based on the specified animation key
+    // Set character's animation provided in character JSON
     character.animation = characterAnimations[data.animation];
 
     return character;
@@ -152,75 +145,73 @@ class Character {
 
   // Display the character on the map at their current position
   displayOnMap() {
-    // Check if the character has an animation assigned
-    if (this.animation) {
-      // Calculate the character's drawing dimensions
-      let drawWidth = this.width 
-      let drawHeight = this.height
+    // Calculate the character's drawing dimensions
+    let drawWidth = this.width 
+    let drawHeight = this.height
 
-      // Only increase width for left/right walking animations for Lord and Cavalier
-      const isHorizontalWalking = this.currentState === "walkleft" || this.currentState === "walkright";
-      if (isHorizontalWalking && (this.classType === "Lord" || this.classType === "Cavalier")) {
-        drawWidth = 65;  // Larger width for walking animations
-      }
-
-      // If the character is selected, increase the size slightly for visual effect
-      if (this.isSelected) {
-        drawWidth += 15;
-        drawHeight += 15;
-      }
-     
-      // Calculate the character's position on the map, centering it within the grid cell
-      let drawX = this.x * tilesWidth + (tilesWidth - drawWidth) / 2;
-      let drawY = this.y * tilesHeight + (tilesHeight - drawHeight) / 2;
-
-      // Adjust Y-position if the character is selected so the character won't display under their grid cell
-      if (this.isSelected) {
-        drawY -= 7;
-        // Further adjustment for Cavaliers, as their base height is taller
-        if (this.classType === "Cavalier") {
-          drawY -= 7;
-        }
-
-        // Draw a yellow border around the selected character to indicate selection
-        noFill();
-        stroke(255, 255, 0);
-        strokeWeight(3);
-        rect(drawX, drawY, drawWidth, drawHeight);
-      }
-
-      // If the character is not selected but is a Cavalier, adjust the Y-position as their base height is taller
-      else if (this.classType === "Cavalier") {
-        drawY -= 7;
-      }
-
-      // If the character has already moved or acted, apply a grey tint to show it's inactive
-      if (this.isGreyedOut) {
-        tint(100);
-      }
-      
-      // If the character is active, ensure no tint is applied
-      else {
-        noTint();
-      }
-
-      // Draw the character's animation at the calculated position
-      image(this.animation, drawX, drawY, drawWidth, drawHeight);
+    // Only increase width for left/right walking animations for Lord and Cavalier
+    const isHorizontalWalking = this.currentState === "walkleft" || this.currentState === "walkright";
+    if (isHorizontalWalking && (this.classType === "Lord" || this.classType === "Cavalier")) {
+      drawWidth = 65;  // Larger width for walking animations
     }
+
+    // If the character is selected, increase the size slightly for visual effect
+    if (this.isSelected) {
+      drawWidth += 15;
+      drawHeight += 15;
+    }
+    
+    // Calculate the character's position on the map, centering it within the grid cell
+    let drawX = this.x * tilesWidth + (tilesWidth - drawWidth) / 2;
+    let drawY = this.y * tilesHeight + (tilesHeight - drawHeight) / 2;
+
+    // Adjust Y-position if the character is selected so the character won't display under their grid cell
+    if (this.isSelected) {
+      drawY -= 7;
+      // Further adjustment for Cavaliers if selected, as their base height is taller
+      if (this.classType === "Cavalier") {
+        drawY -= 7;
+      }
+
+      // Draw a yellow border around the selected character to indicate selection
+      noFill();
+      stroke(255, 255, 0);
+      strokeWeight(3);
+      rect(drawX, drawY, drawWidth, drawHeight);
+    }
+
+    // If the character is not selected but is a Cavalier, adjust the Y-position as their base height is taller
+    else if (this.classType === "Cavalier") {
+      drawY -= 7;
+    }
+
+    // If the character has already moved or acted, apply a grey tint to show it's inactive
+    if (this.isGreyedOut) {
+      tint(100);
+    }
+    
+    // If the character is active, ensure no tint is applied
+    else {
+      noTint();
+    }
+
+    // Draw the character's animation at the calculated position
+    image(this.animation, drawX, drawY, drawWidth, drawHeight);
   }
 
+  // Selects a character at the cursor's position
   static selectCharacter() {
-    // Make sure the character is not an enemy and hasn't moved yet (is not greyed out)
+    // Check for valid character selection at cursor position
     for (let character of characters) {
       if (character.x === locationCursor.x && character.y === locationCursor.y && !character.isEnemy && !character.isGreyedOut) {
-        // Play sound effect
-        sounds.selectCharacter.amp(0.1);
+        // Play selection sound effect
+        sounds.selectCharacter.amp(0.4);
         sounds.selectCharacter.play();
    
-        // Change cursor image
+        // Update cursor to show selection state
         cursorImageKey = "selectedCursor";
 
-        // Play character's select voice line
+        // Play character-specific voice line
         const voiceKey = `${character.name}SelectVoice`;
         if (sounds[voiceKey]) {
           sounds[voiceKey].play();
@@ -229,38 +220,29 @@ class Character {
           console.warn(`Select voice line for "${character.name}" not preloaded.`);
         }
 
-        // Reset animation of currently selected character (if any)
-        if (selectedCharacter && selectedCharacter !== character) {
-          animationManager(selectedCharacter, "standing");
-          selectedCharacter.isSelected = false;
-        }
-
-        // Update the newly selected character
+        // Update selection state and animation
         selectedCharacter = character;
         character.isSelected = true;
-
-        // Set selected animation
         animationManager(character, "selected");
         console.log(`${character.name} is now selected.`);
 
-        // Calculate reachable tiles
-        character.calculateReachableTiles();
+        // Calculate possible movement options
+        character.calculateActionableTiles();
         break;
       }
     }
   }
- 
+
+  // Deselects the currently selected character
   static unselectCharacter() {
     if (selectedCharacter) {
-      // Reset animation for the selected character
+      // Reset character's animation and selection state
       animationManager(selectedCharacter, "standing");
-
-      // Unselect the character
       selectedCharacter.isSelected = false;
       selectedCharacter = null;
  
       // Play unselect sound effect
-      sounds.unselectCharacter.amp(0.6);
+      sounds.unselectCharacter.amp(0.5);
       sounds.unselectCharacter.play();
  
       console.log("Character deselected.");
@@ -270,7 +252,7 @@ class Character {
     }
   }
 
-  // Movement range based on class type (How many tiles a character can walk in one turn)
+  // Movement range values based on class type (How many tiles a character can walk in one turn)
   getMovementRange() {
     const movementRanges = {
       "Lord": 3,
@@ -282,7 +264,7 @@ class Character {
     return movementRanges[this.classType];
   }
 
-  // Determine attack range based on class type (How many tiles a unit can attack from)
+  // Attack range based on class type (How many tiles a unit can attack from)
   getAttackRange() {
     const attackRanges = {
       "Archer": 2,
@@ -293,8 +275,8 @@ class Character {
   }
 
   // Calculate reachable and attackable tiles using Dijkstra's algorithm
-  calculateReachableTiles() {
-    // Clear previous calculations
+  calculateActionableTiles() {
+    // Arrays for reachable and attackable tiles
     this.reachableTiles = [];
     this.attackableTiles = [];
 
@@ -302,7 +284,7 @@ class Character {
     const movementRange = this.getMovementRange();
     const attackRange = this.getAttackRange();
 
-    // Priority queue for Dijkstra, starts with the character's current position
+    // Initialize visited set and queue for Dijkstra's algorithm, starting at the character's current position
     const visited = new Set([`${this.x},${this.y}`]);
     const queue = [{ x: this.x, y: this.y, cost: 0 }];
 
@@ -312,19 +294,21 @@ class Character {
       const current = queue.shift();
       const { x, y, cost } = current;
 
-      // Process tile based on its distance
+      // Check if tile is within movement range and add to reachable tiles
       if (cost <= movementRange) {
         this.reachableTiles.push({ x, y });
-      } else if (cost <= movementRange + attackRange && tiles[y][x].isWalkable()) {
+      } 
+      // Check if tile is within attack range and walkable, then add to attackable tiles
+      else if (cost <= movementRange + attackRange && tiles[y][x].isWalkable()) {
         this.attackableTiles.push({ x, y });
       }
 
-      // If we're beyond attack range, skip exploring further tiles
+      // Skip exploring further tiles if we've exceeded the combined movement and attack range
       if (cost > movementRange + attackRange) {
         continue;
       }
 
-      // Check each adjacent tile (up, down, left, right)
+      // Explore adjacent tiles (up, down, left, right)
       const directions = [
         { x: x, y: y - 1 }, // up
         { x: x, y: y + 1 }, // down
@@ -345,7 +329,7 @@ class Character {
           continue;
         }
 
-        // Add to queue and mark as visited
+        // Add adjacent tile to queue and mark as visited
         queue.push({ x: nextX, y: nextY, cost: cost + 1 });
         visited.add(nextKey);
       }
@@ -361,26 +345,27 @@ class Character {
     }
   
     const moveStep = (index) => {
+      // If the path is complete, set the final position and stop the movement
       if (index >= path.length) {
         this.x = newX;
         this.y = newY;
   
-        // Reset animations and disable further movement after reaching the final tile
+        // Reset animations and prevent further movement after reaching the destination
         animationManager(this, "standing");
         this.canMove = false;
         this.isGreyedOut = true;
         return;
       }
   
-      // Current and target positions
+      // Current and target positions from the path
       const { x: startX, y: startY } = this;
       const { x: targetX, y: targetY } = path[index];
   
-      // Determine movement direction and animation
+      // Calculate direction for movement
       const dx = targetX - startX;
       const dy = targetY - startY;
 
-      // Play walking sound once when starting to move to a new tile
+      // Play walking sound effect depending on the character class
       let walkSound;
       if (this.classType === "Cavalier") {
         walkSound = sounds.horseWalking;
@@ -390,10 +375,11 @@ class Character {
         walkSound = sounds.regularWalking;
       }
       if (walkSound && walkSound.isLoaded()) {
-        walkSound.amp(0.6);
+        walkSound.amp(0.4);
         walkSound.play();
       }
   
+      // Set walking animation based on direction
       if (dx === 1) {
         animationManager(this, "walkright");
       } 
@@ -415,17 +401,17 @@ class Character {
         let elapsed = millis() - startTime;
         let progress = Math.min(elapsed / duration, 1); // Ensure progress doesn't exceed 1
   
-        // Interpolate position
+        // Calculate and update position for smooth animation
         this.renderX = startX + (targetX - startX) * progress;
         this.renderY = startY + (targetY - startY) * progress;
   
-        // Check if step is complete
+        // If step is complete, finalize position and proceed to the next step
         if (progress < 1) {
           // Keep animating the current step
           requestAnimationFrame(animateStep);
         } 
         else {
-          // Finalize position and move to the next step
+          // Finalize position and move to the next step in the path
           this.x = targetX;
           this.y = targetY;
           moveStep(index + 1);
@@ -443,21 +429,20 @@ class Character {
   // Move the selected character to a new location
   static moveSelectedCharacter(cursor, tiles) {
     if (selectedCharacter && selectedCharacter.canMove) {
-      // Calculate distance between the character and where the cursor is
+      // Calculate the distance to the target tile
       const distance = Math.abs(cursor.x - selectedCharacter.x) + Math.abs(cursor.y - selectedCharacter.y);
 
       // Check if the target tile is within movement range
       if (distance <= selectedCharacter.getMovementRange() && selectedCharacter.reachableTiles.some(tile => tile.x === cursor.x && tile.y === cursor.y)) {
         const tile = tiles[cursor.y][cursor.x];
 
-        // Check that the tile is walkable and not occupied
+        // Ensure the target tile is walkable and not occupied
         if (tile.type !== "W" && tile.type !== "M" && !Tile.isTileOccupied(cursor.x, cursor.y)) {
           // Move the character to the new location
           selectedCharacter.moveTo(cursor.x, cursor.y);
 
-          // Reset animation after move
+          // Reset animation to "standing" after the move
           animationManager(selectedCharacter, "standing");
-
           console.log(`${selectedCharacter.name} moved to (${cursor.x}, ${cursor.y})`);
 
           // Deselect the character
@@ -478,75 +463,98 @@ class Character {
     }
   }
 
-  // Use A* to find tile by tile movement to selected tile
+
+  // Use A* algorithm to find a path to the selected tile
   static findPath(start, goal, tiles) {
+    // Stores the tiles to be evaluated. Each tile contains its coordinates, g, and f values
     const openSet = [{ x: start.x, y: start.y, g: 0, f: 0 }];
+
+    // Used to reconstruct the path later (stores the parent of each tile)
     const cameFrom = {};
+
+    // Keeps track of visited tiles to avoid revisiting them
     const visited = new Set();
     visited.add(`${start.x},${start.y}`);
    
-    // Adjacent tiles 
+    // Define adjacent directions (up, right, down, left)
     const directions = [
       { dx: 0, dy: 1 }, { dx: 1, dy: 0 },
       { dx: 0, dy: -1 }, { dx: -1, dy: 0 }
     ];
    
+    // Heuristic function for estimating the distance between two points using Manhattan distance
     const heuristic = (x1, y1, x2, y2) => Math.abs(x1 - x2) + Math.abs(y1 - y2);
    
-    // Sort openSet by lowest f score
+    // Process tiles by lowest f score
     while (openSet.length > 0) {
+      // Sort by the lowest f score
       openSet.sort((a, b) => a.f - b.f);
+
+      // Get the tile with the lowest f score
       const current = openSet.shift();
    
-      // Reconstruct path after curreny x and y matches the selected x and y
+      // If the goal is reached, reconstruct the path
       if (current.x === goal.x && current.y === goal.y) {
         const path = [];
         let curr = `${goal.x},${goal.y}`;
+
+        // Reconstruct the path by following the "cameFrom" references back to the start
         while (cameFrom[curr]) {
           const [x, y] = curr.split(',').map(Number);
           path.push({ x, y });
           curr = cameFrom[curr];
         }
-        // Reverse to start from the beginning
+
+        // Reverse the path so that it starts from the beginning
         return path.reverse(); 
       }
    
-      // Go to adjacent tiles 
+      // Explore adjacent tiles
       for (const { dx, dy } of directions) {
         const neighborX = current.x + dx;
         const neighborY = current.y + dy;
         const tileKey = `${neighborX},${neighborY}`;
    
-        // Ensure tile is on canvas
+        // Skip tile is not on canvas
         if (neighborX < 0 || neighborX >= tiles[0].length || neighborY < 0 || neighborY >= tiles.length) {
           continue;
         }
    
-        // Ensure tile is walkable and not already visited
+        // Skip tiles that aren't walkable and have already been visited
         const tile = tiles[neighborY][neighborX];
         if (tile.type === 'W' || tile.type === 'M' || visited.has(tileKey)) {
           continue;
         }
-   
-        // Cost to move to this tile
+
+        // Calculate the movement cost to move to this tile
         const g = current.g + 1; 
+
+        // Calculate the heuristic estimate of how far the goal is from the current tile
         const h = heuristic(neighborX, neighborY, goal.x, goal.y);
+
+        // f is the total estimated cost (f = g + h)
         const f = g + h;
-   
+
+        // Add the neighbor to the openSet to evaluate it next, with its updated g and f values
         openSet.push({ x: neighborX, y: neighborY, g, f });
+
+        // Mark the neighbor as visited
         visited.add(tileKey);
+
+        // Record the current tile as the parent of the neighbor (for path reconstruction)
         cameFrom[tileKey] = `${current.x},${current.y}`;
       }
     }
     return null; // No path found
   }
+
   // Attack logic for the character
   attack() {
     // Logic for attacking
   }
 }
 
-// Cursor class
+// Cursor class: Renders the cursor used for selecting tiles and moving characters
 class Cursor {
   constructor(x = 2, y = 12) {
     this.x = x;  // Horizontal position (in tile coordinates)
@@ -561,7 +569,7 @@ class Cursor {
     sounds.cursorMoving.amp(0.1);
     sounds.cursorMoving.play();
 
-    // Change x or y depending on direction input
+    // Change x or y depending on direction input, ensuring the cursor stays within bounds
     if (direction === 'up' && this.y > 0) {
       this.y--;
     }
@@ -587,7 +595,7 @@ class Cursor {
     // Scale the cursor image vertically (Increase height by 20%)
     let scaledHeight = this.height * 1.2;
    
-    // Center the image vertically
+    // Calculate the offset to center the cursor image vertically
     let offsetY = (scaledHeight - this.height) / 2;
  
     // Draw the cursor image
@@ -615,88 +623,95 @@ let gameState = GAME_STATES.GAMEPLAY; // Current game state
 
 function preload() {
   // Preload map information
-  levelToLoad = "Assets/Levels/0.txt";
-  lines = loadStrings(levelToLoad);
+  levelToLoad = "Assets/Levels/0.txt"; // Path to the level file
+  lines = loadStrings(levelToLoad); // Load the level as an array of strings
 
-  // Preload tile images
+  // Preload tile images from JSON
   tilePaths = loadJSON("Assets/Tiles/tilesPath.json", setupTileImages);
 
   // Load the sounds JSON
   soundPaths = loadJSON("Assets/Sounds/sounds.json", setupSounds);
 
-  // Load character map sprite paths from JSON
+  // Load character map sprite paths for animations
   characterMapSpritePaths = loadJSON("Assets/CharacterMapSprites/characterMapSpritesPaths.json", setupCharacterMapSpriteAnimations);
 
   // Load character data from JSON
   characterData = loadJSON("Assets/Characters/characters.json");
 
-  // Preload images of cursor
+  // Preload cursor images from JSON
   cursorPaths = loadJSON("Assets/Cursor/cursorImages.json", setupCursorImages);
 }
 
 function setup() {
   // 4:3 ratio
   createCanvas(1000, 750);
+
+  // Calculate tile grid dimensions based on the canvas size and level layout
   tilesHigh = lines.length;
   tilesWide = lines[0].length;
   tilesWidth = width / tilesWide;
   tilesHeight = height / tilesHigh;
 
-  // Loop background music
+  // Loop background music and set volume
   sounds.backgroundMusic.loop(true);
   sounds.backgroundMusic.amp(0.1);
 
   // Disable right-click menu
   window.addEventListener('contextmenu', (e) => e.preventDefault());
  
-  // Create a 2D array of Tile objects
+  // Create a 2D array of Tile objects based on the level layout
   tiles = Tile.createTiles(lines);
 
-  // Create characters from JSON
+  // Create characters from the loaded JSON data
   for (let charData of characterData.characters) {
+    // Add each character to the characters array
     characters.push(Character.createCharacter(charData));
   }
 
-  // Initialize the cursor at the top-left tile
+  // Initialize the cursor
   locationCursor = new Cursor();
 }
 
-// Initialize tileImages after JSON is loaded
+// Initialize tileImages after the tile path JSON is loaded
 function setupTileImages(data) {
   for (let type in data) {
+    // Load the image for each tile type
     tileImages[type] = loadImage(data[type]);
   }
 }
 
-// Initialize characterAnimations after JSON is loaded
+// Initialize characterAnimations after the sprite paths JSON is loaded
 function setupCharacterMapSpriteAnimations(data) {
   for (let name in data) {
+    // Load each character animation sprite
     characterAnimations[name] = loadImage(data[name]);
   }
 }
 
-// Initialize sounds after JSON is loaded
+// Initialize sounds after the sounds JSON is loaded
 function setupSounds(data) {
   for (let soundName in data) {
+    // Load each sound effect
     sounds[soundName] = loadSound(data[soundName]);
   }
 }
 
-// Initialize cursorImages after JSON is loaded
+// Initialize cursorImages after the cursor images JSON is loaded
 function setupCursorImages(data) {
   for (let key in data) {
+    // Load each cursor image
     cursorImages[key] = loadImage(data[key]);
   }
 }
 
-// Handles animation changes
+// Handles animation changes based on the character's state (e.g., walking, standing)
 function animationManager(character, state) {
   if (!character) {
     console.error("Animation manager called with an invalid character.");
     return;
   }
 
-  // Map states to file paths
+  // Map states to file paths for different animations (e.g., walking, standing)
   const statePaths = {
     "standing": `Assets/CharacterMapSprites/StandingGifs/${character.classType.toLowerCase()}standing.gif`,
     "selected": `Assets/CharacterMapSprites/SelectedGifs/${character.classType.toLowerCase()}selected.gif`,
@@ -706,8 +721,9 @@ function animationManager(character, state) {
     "walkdown": `Assets/CharacterMapSprites/WalkingGifs/${character.classType.toLowerCase()}walkdown.gif`,
   };
 
-  // Check if the state exists and load the corresponding animation
+  // If the state exists, load the corresponding animation
   if (statePaths[state]) {
+    // Load the animation
     character.animation = loadImage(statePaths[state]);
     // Update the current state
     character.currentState = state; 
@@ -717,21 +733,26 @@ function animationManager(character, state) {
   }
 }
 
-// Handle all inputs that lead to actions
+// Handle all inputs
 function keyPressed() {
+  // Reset cursor image to default on key press
   cursorImageKey = "default";
-  // Select and move key
+
+  // If "j" is pressed, select or move a character
   if (key === "j") {
     // Reset selectedCharacter variable
     let selectedCharacter;
+
     // Check if a character is selected
     for (let character of characters) {
       if (character.isSelected) {
+        // If selected, store the character
         selectedCharacter = character;
         break;
       }
     }
-    // If there is a selected character and j is pressed move them
+
+    // If there is a selected character and j is pressed, move them
     if (selectedCharacter) {
       Character.moveSelectedCharacter(locationCursor, tiles);
     }
@@ -740,64 +761,66 @@ function keyPressed() {
       Character.selectCharacter();
     }
   }
-  // Unselect and cancel key
+
+  // If "k" is pressed, unselect the character
   else if (key === "k") {
     Character.unselectCharacter();
   }
 }
 
-// Allows user to hold down movement keys
+// Allows user to hold down movement keys for continuous movement
 function holdCursorMovement() {
-  // Check current time
+  // Get the current time
   let currentTime = millis();
 
-  // 'W' key - Up
+  // 'W' key - Move up
   if (keyIsDown(87) && currentTime - lastMoveTimeW > MOVE_DELAY) {
     // Send input to move up
     locationCursor.move("up");
 
-    // Update move times for up direction
+    // Update the last move times for up direction
     lastMoveTimeW = currentTime;
   }
-  // 'A' key - Left
+  // 'A' key - Move left
   if (keyIsDown(65) && currentTime - lastMoveTimeA > MOVE_DELAY) {  
     // Send input to move left
     locationCursor.move("left");
    
-    // Update move times for left direction
+    // Update the last move times for left direction
     lastMoveTimeA = currentTime;
   }
-  // 'S' key - Down
+  // 'S' key - Move down
   if (keyIsDown(83) && currentTime - lastMoveTimeS > MOVE_DELAY) {  
     // Send input to move down
     locationCursor.move("down");
 
-    // Update move times for down direction
+    // Update the last move times for down direction
     lastMoveTimeS = currentTime;
   }
-  // 'D' key - Right
+  // 'D' key - Move right
   if (keyIsDown(68) && currentTime - lastMoveTimeD > MOVE_DELAY) {  
     // Send input to move right
     locationCursor.move("right");
    
-    // Update move times for right direction
+    // Update the last move times for right direction
     lastMoveTimeD = currentTime;
   }
 }
 
+// Main game loop for rendering everything on the screen
 function draw() {
-  // Only run if gamestate is in gameplay
+  // Only run if the game state is gameplay
   if (gameState === GAME_STATES.GAMEPLAY) {
     // Handle cursor movement with WASD keys
     holdCursorMovement();
 
-    // Display tiles
+    // Display all maptiles
     Tile.displayAll(tiles);
 
-    // Highlight reachable tiles in blue
-    Tile.displayReachableTiles();
+    // Highlight reachable tiles in blue and attackable tiles in red
+    Tile.displayActionableTiles();
 
-    // Display all characters
+    // Display all characters on the map
     for (let character of characters) {
       character.displayOnMap();
     }
