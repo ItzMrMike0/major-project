@@ -117,6 +117,7 @@ class Character {
     this.isGreyedOut = false; // Whether the character is greyed out or not
     this.width = width; // Width of character 
     this.height = height; // Height of character
+    this.currentState = "standing"; // Current animation state
 
     // Movement and attack calculations 
     this.animation = null; // Character visual sprite 
@@ -144,8 +145,14 @@ class Character {
     // Check if the character has an animation assigned
     if (this.animation) {
       // Calculate the character's drawing dimensions
-      let drawWidth = this.width;
-      let drawHeight =  this.height;
+      let drawWidth = this.width 
+      let drawHeight = this.height
+
+      // Only increase width for left/right walking animations for Lord and Cavalier
+      const isHorizontalWalking = this.currentState === "walkleft" || this.currentState === "walkright";
+      if (isHorizontalWalking && (this.classType === "Lord" || this.classType === "Cavalier")) {
+        drawWidth = 65;  // Larger width for walking animations
+      }
 
       // If the character is selected, increase the size slightly for visual effect
       if (this.isSelected) {
@@ -680,6 +687,8 @@ function animationManager(character, state) {
   // Check if the state exists and load the corresponding animation
   if (statePaths[state]) {
     character.animation = loadImage(statePaths[state]);
+    // Update the current state
+    character.currentState = state; 
   }
   else {
     console.warn(`Unknown animation state: ${state}`);
