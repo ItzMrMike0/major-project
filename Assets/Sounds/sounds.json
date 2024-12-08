@@ -8,6 +8,9 @@
     "AllenSelectVoice": "Assets/Sounds/SelectVoiceLines/allenselect.wav",
     "BorsSelectVoice": "Assets/Sounds/SelectVoiceLines/borsselect.wav",
     "LughSelectVoice": "Assets/Sounds/SelectVoiceLines/lughselect.wav",
-    "WoltSelectVoice": "Assets/Sounds/SelectVoiceLines/woltselect.wav"
+    "WoltSelectVoice": "Assets/Sounds/SelectVoiceLines/woltselect.wav",
+    "armorWalking": "Assets/Sounds/Walking/armorwalking.mp3",
+    "horseWalking": "Assets/Sounds/Walking/horsewalking.mp3",
+    "regularWalking": "Assets/Sounds/Walking/regularwalking.mp3"
   }
   

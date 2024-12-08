@@ -371,6 +371,20 @@ class Character {
       // Determine movement direction and animation
       const dx = targetX - startX;
       const dy = targetY - startY;
+
+      // Play walking sound once when starting to move to a new tile
+      let walkSound;
+      if (this.classType === "Cavalier") {
+        walkSound = sounds.horseWalking;
+      } else if (this.classType === "Knight") {
+        walkSound = sounds.armorWalking;
+      } else {
+        walkSound = sounds.regularWalking;
+      }
+      if (walkSound && walkSound.isLoaded()) {
+        walkSound.amp(0.6);
+        walkSound.play();
+      }
   
       if (dx === 1) {
         animationManager(this, "walkright");
