@@ -119,6 +119,7 @@ class Character {
     this.isSelected = false; // Whether the character is selected
     this.canMove = true; // Whether the character can move or not
     this.isGreyedOut = false; // Whether the character is greyed out or not
+    // this.action = null; // The action the character is going to do (Attack, item, or wait)
     this.width = width; // Width of character 
     this.height = height; // Height of character
     this.currentState = "standing"; // Current animation state
@@ -146,8 +147,8 @@ class Character {
   // Display the character on the map at their current position
   displayOnMap() {
     // Calculate the character's drawing dimensions
-    let drawWidth = this.width 
-    let drawHeight = this.height
+    let drawWidth = this.width; 
+    let drawHeight = this.height;
 
     // Only increase width for left/right walking animations for Lord and Cavalier
     const isHorizontalWalking = this.currentState === "walkleft" || this.currentState === "walkright";
@@ -335,7 +336,7 @@ class Character {
       }
     }
   }
-
+  
   // Move the character to a new location gradually
   moveTo(newX, newY) {
     const path = Character.findPath({ x: this.x, y: this.y }, { x: newX, y: newY }, tiles);
@@ -344,17 +345,25 @@ class Character {
       return;
     }
   
+    // characterWait = false;
     const moveStep = (index) => {
       // If the path is complete, set the final position and stop the movement
       if (index >= path.length) {
         this.x = newX;
         this.y = newY;
-  
+
+        // if (characterWait === true) {
+        //   this.action = "wait";
+        //   console.log("bruh");
+        // }
+
+        // if (this.action === "wait") {
         // Reset animations and prevent further movement after reaching the destination
         animationManager(this, "standing");
         this.canMove = false;
         this.isGreyedOut = true;
         return;
+        // }
       }
   
       // Current and target positions from the path
@@ -369,9 +378,11 @@ class Character {
       let walkSound;
       if (this.classType === "Cavalier") {
         walkSound = sounds.horseWalking;
-      } else if (this.classType === "Knight") {
+      }
+      else if (this.classType === "Knight") {
         walkSound = sounds.armorWalking;
-      } else {
+      }
+      else {
         walkSound = sounds.regularWalking;
       }
       if (walkSound && walkSound.isLoaded()) {
@@ -621,6 +632,8 @@ const GAME_STATES = { TITLESCREEN: "TITLESCREEN", GAMEPLAY: "gameplay" }; // Pos
 let lastMoveTimeW = 0, lastMoveTimeA = 0, lastMoveTimeS = 0, lastMoveTimeD = 0; // Last move times for each direction
 let gameState = GAME_STATES.GAMEPLAY; // Current game state
 
+// let actionMenu = false; // Check if the action menu is open
+
 function preload() {
   // Preload map information
   levelToLoad = "Assets/Levels/0.txt"; // Path to the level file
@@ -766,7 +779,13 @@ function keyPressed() {
   else if (key === "k") {
     Character.unselectCharacter();
   }
+  // // If "1" is pressed, set character action to wait
+  // else if (key === "1") {
+  //   characterWait = true;
+  // }
 }
+
+// let characterWait = false;
 
 // Allows user to hold down movement keys for continuous movement
 function holdCursorMovement() {
