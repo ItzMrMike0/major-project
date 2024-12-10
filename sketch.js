@@ -41,7 +41,7 @@ class Tile {
       }
     }
   }
-  
+ 
   // Draws tile using its type
   renderTile() {
     if (tileImages[this.type]) {
@@ -119,14 +119,16 @@ class Character {
     this.isSelected = false; // Whether the character is selected
     this.canMove = true; // Whether the character can move or not
     this.isGreyedOut = false; // Whether the character is greyed out or not
-    // this.action = null; // The action the character is going to do (Attack, item, or wait)
-    this.width = width; // Width of character 
+    this.action = null; // The action the character is going to do (Attack, item, or wait)
+    this.previousX = x; // X position of the character before movement
+    this.previousY = y; // Y position of the character before movement
+    this.width = width; // Width of character
     this.height = height; // Height of character
     this.currentState = "standing"; // Current animation state
 
-    // Movement and attack calculations 
-    this.animation = null; // Character visual sprite 
-    this.reachableTiles = []; // Character reachable movement tiles 
+    // Movement and attack calculations
+    this.animation = null; // Character visual sprite
+    this.reachableTiles = []; // Character reachable movement tiles
     this.attackableTiles = []; // Characters attackable movement tiles
   }
 
@@ -147,59 +149,63 @@ class Character {
   // Display the character on the map at their current position
   displayOnMap() {
     // Calculate the character's drawing dimensions
-    let drawWidth = this.width; 
+    let drawWidth = this.width;
     let drawHeight = this.height;
-
+  
+    // Set isSelectedAnimation to true if the character is selected
+    const isSelectedAnimation = this.currentState === "selected";
+  
     // Only increase width for left/right walking animations for Lord and Cavalier
     const isHorizontalWalking = this.currentState === "walkleft" || this.currentState === "walkright";
     if (isHorizontalWalking && (this.classType === "Lord" || this.classType === "Cavalier")) {
       drawWidth = 65;  // Larger width for walking animations
     }
-
-    // If the character is selected, increase the size slightly for visual effect
-    if (this.isSelected) {
+  
+    // If the character is selected and has the selected animation, increase the size slightly for visual effect
+    if (this.isSelected && isSelectedAnimation) {
+      console.log("increase size");
       drawWidth += 15;
       drawHeight += 15;
     }
-    
+     
     // Calculate the character's position on the map, centering it within the grid cell
     let drawX = this.x * tilesWidth + (tilesWidth - drawWidth) / 2;
     let drawY = this.y * tilesHeight + (tilesHeight - drawHeight) / 2;
-
-    // Adjust Y-position if the character is selected so the character won't display under their grid cell
-    if (this.isSelected) {
+  
+    // Adjust Y-position if the character is selected and has isSelectedAnimation so the character won't display under their grid cell
+    if (this.isSelected && isSelectedAnimation) {
       drawY -= 7;
       // Further adjustment for Cavaliers if selected, as their base height is taller
       if (this.classType === "Cavalier") {
         drawY -= 7;
       }
-
+  
       // Draw a yellow border around the selected character to indicate selection
       noFill();
       stroke(255, 255, 0);
       strokeWeight(3);
       rect(drawX, drawY, drawWidth, drawHeight);
     }
-
+  
     // If the character is not selected but is a Cavalier, adjust the Y-position as their base height is taller
     else if (this.classType === "Cavalier") {
       drawY -= 7;
     }
-
+  
     // If the character has already moved or acted, apply a grey tint to show it's inactive
     if (this.isGreyedOut) {
       tint(100);
     }
-    
+     
     // If the character is active, ensure no tint is applied
     else {
       noTint();
     }
-
+  
     // Draw the character's animation at the calculated position
     image(this.animation, drawX, drawY, drawWidth, drawHeight);
   }
-
+  
   // Selects a character at the cursor's position
   static selectCharacter() {
     // Check for valid character selection at cursor position
@@ -235,16 +241,18 @@ class Character {
   }
 
   // Deselects the currently selected character
-  static unselectCharacter() {
+  static unselectCharacter(playSound) {
     if (selectedCharacter) {
       // Reset character's animation and selection state
       animationManager(selectedCharacter, "standing");
       selectedCharacter.isSelected = false;
       selectedCharacter = null;
  
-      // Play unselect sound effect
-      sounds.unselectCharacter.amp(0.5);
-      sounds.unselectCharacter.play();
+      // Play unselect sound effect if playSound is true
+      if (playSound) {
+        sounds.unselectCharacter.amp(0.5);
+        sounds.unselectCharacter.play();
+      }
  
       console.log("Character deselected.");
     }
@@ -298,7 +306,7 @@ class Character {
       // Check if tile is within movement range and add to reachable tiles
       if (cost <= movementRange) {
         this.reachableTiles.push({ x, y });
-      } 
+      }
       // Check if tile is within attack range and walkable, then add to attackable tiles
       else if (cost <= movementRange + attackRange && tiles[y][x].isWalkable()) {
         this.attackableTiles.push({ x, y });
@@ -324,8 +332,8 @@ class Character {
         const nextKey = `${nextX},${nextY}`;
 
         // Skip if out of bounds, already visited, or not walkable
-        if (!Tile.isWithinMapBounds(nextX, nextY) || 
-            visited.has(nextKey) || 
+        if (!Tile.isWithinMapBounds(nextX, nextY) ||
+            visited.has(nextKey) ||
             !tiles[nextY][nextX].isWalkable()) {
           continue;
         }
@@ -336,15 +344,20 @@ class Character {
       }
     }
   }
-  
+
   // Move the character to a new location gradually
   moveTo(newX, newY) {
+    // Already repeated in moveSelectedCharacter function may not be needed!
+    // Save the previous position before moving
+    // this.previousX = this.x;
+    // this.previousY = this.y;
+
     const path = Character.findPath({ x: this.x, y: this.y }, { x: newX, y: newY }, tiles);
     if (!path) {
       console.log("No path found!");
       return;
     }
-  
+ 
     // characterWait = false;
     const moveStep = (index) => {
       // If the path is complete, set the final position and stop the movement
@@ -352,24 +365,16 @@ class Character {
         this.x = newX;
         this.y = newY;
 
-        // if (characterWait === true) {
-        //   this.action = "wait";
-        //   console.log("bruh");
-        // }
-
-        // if (this.action === "wait") {
-        // Reset animations and prevent further movement after reaching the destination
-        animationManager(this, "standing");
-        this.canMove = false;
-        this.isGreyedOut = true;
+        // Keep the character selected and show the action menu
+        this.isSelected = true;
+        actionMenu.show(this.x, this.y);
         return;
-        // }
       }
-  
+ 
       // Current and target positions from the path
       const { x: startX, y: startY } = this;
       const { x: targetX, y: targetY } = path[index];
-  
+ 
       // Calculate direction for movement
       const dx = targetX - startX;
       const dy = targetY - startY;
@@ -389,38 +394,38 @@ class Character {
         walkSound.amp(0.4);
         walkSound.play();
       }
-  
+ 
       // Set walking animation based on direction
       if (dx === 1) {
         animationManager(this, "walkright");
-      } 
+      }
       else if (dx === -1) {
         animationManager(this, "walkleft");
-      } 
+      }
       else if (dy === 1) {
         animationManager(this, "walkdown");
-      } 
+      }
       else if (dy === -1) {
         animationManager(this, "walkup");
       }
-  
+ 
       // Duration and progress tracking for smooth movement
       const duration = 200; // ms to move between tiles
       let startTime = millis();
-  
+ 
       const animateStep = () => {
         let elapsed = millis() - startTime;
         let progress = Math.min(elapsed / duration, 1); // Ensure progress doesn't exceed 1
-  
+ 
         // Calculate and update position for smooth animation
         this.renderX = startX + (targetX - startX) * progress;
         this.renderY = startY + (targetY - startY) * progress;
-  
+ 
         // If step is complete, finalize position and proceed to the next step
         if (progress < 1) {
           // Keep animating the current step
           requestAnimationFrame(animateStep);
-        } 
+        }
         else {
           // Finalize position and move to the next step in the path
           this.x = targetX;
@@ -428,15 +433,15 @@ class Character {
           moveStep(index + 1);
         }
       };
-  
+ 
       // Start the animation for the current step
       animateStep();
     };
-  
+ 
     // Begin the movement sequence
     moveStep(0);
   }
-  
+
   // Move the selected character to a new location
   static moveSelectedCharacter(cursor, tiles) {
     if (selectedCharacter && selectedCharacter.canMove) {
@@ -449,16 +454,16 @@ class Character {
 
         // Ensure the target tile is walkable and not occupied
         if (tile.type !== "W" && tile.type !== "M" && !Tile.isTileOccupied(cursor.x, cursor.y)) {
+          // Store previous position of character before moving
+          selectedCharacter.previousX = selectedCharacter.x;
+          selectedCharacter.previousY = selectedCharacter.y;
+
           // Move the character to the new location
           selectedCharacter.moveTo(cursor.x, cursor.y);
-
-          // Reset animation to "standing" after the move
-          animationManager(selectedCharacter, "standing");
           console.log(`${selectedCharacter.name} moved to (${cursor.x}, ${cursor.y})`);
 
-          // Deselect the character
+          // When character is walking, set isSelected to false so width and height don't increase
           selectedCharacter.isSelected = false;
-          selectedCharacter = null;
 
           // Play move sound effect
           sounds.selectCharacter.amp(0.1);
@@ -474,7 +479,6 @@ class Character {
     }
   }
 
-
   // Use A* algorithm to find a path to the selected tile
   static findPath(start, goal, tiles) {
     // Stores the tiles to be evaluated. Each tile contains its coordinates, g, and f values
@@ -489,8 +493,8 @@ class Character {
    
     // Define adjacent directions (up, right, down, left)
     const directions = [
-      { dx: 0, dy: 1 }, { dx: 1, dy: 0 },
-      { dx: 0, dy: -1 }, { dx: -1, dy: 0 }
+      { x: 0, y: 1 }, { x: 1, y: 0 },
+      { x: 0, y: -1 }, { x: -1, y: 0 }
     ];
    
     // Heuristic function for estimating the distance between two points using Manhattan distance
@@ -517,11 +521,11 @@ class Character {
         }
 
         // Reverse the path so that it starts from the beginning
-        return path.reverse(); 
+        return path.reverse();
       }
    
       // Explore adjacent tiles
-      for (const { dx, dy } of directions) {
+      for (const { x: dx, y: dy } of directions) {
         const neighborX = current.x + dx;
         const neighborY = current.y + dy;
         const tileKey = `${neighborX},${neighborY}`;
@@ -538,7 +542,7 @@ class Character {
         }
 
         // Calculate the movement cost to move to this tile
-        const g = current.g + 1; 
+        const g = current.g + 1;
 
         // Calculate the heuristic estimate of how far the goal is from the current tile
         const h = heuristic(neighborX, neighborY, goal.x, goal.y);
@@ -559,9 +563,88 @@ class Character {
     return null; // No path found
   }
 
+  // Helper function to get the selected character
+  static getSelectedCharacter() {
+    for (let character of characters) {
+      if (character.isSelected) {
+        return character;
+      }
+    }
+    return null;
+  }
+
   // Attack logic for the character
   attack() {
     // Logic for attacking
+  }
+}
+
+// Action Menu class: Handles the menu that appears after moving a character
+class ActionMenu {
+  constructor() {
+    this.options = ["Attack", "Item", "Wait"]; // Option of menu
+    this.selectedOption = 0; // What option is being selected
+    this.isVisible = false; // If the action menu is visible
+    this.x = 0; // Menu's x location
+    this.y = 0; // Menu's y location
+  }
+
+  // Show the action menu
+  show(x, y) {
+    this.x = x * tilesWidth + tilesWidth; // Calculate x location
+    this.y = y * tilesHeight; // Calculate y location
+    this.isVisible = true; // Set action menu to be visible
+    this.selectedOption = 0; // Set option to the very top most option
+  }
+
+  // Hide the action menu
+  hide() {
+    this.isVisible = false;
+  }
+
+  // Move the selection choice up or down
+  moveSelection(direction) {
+    // If user presses W move option up
+    if (direction === "up") {
+      this.selectedOption = (this.selectedOption - 1 + this.options.length) % this.options.length;
+    }
+    // If user presses w move option down
+    else if (direction === "down") {
+      this.selectedOption = (this.selectedOption + 1) % this.options.length;
+    }
+  }
+
+  // Render the action menu
+  display() {
+    if (!this.isVisible) {
+      return;
+    }
+
+    // Menu background
+    fill(50, 50, 50);
+    stroke(255);
+    strokeWeight(2);
+    rect(this.x, this.y, 100, this.options.length * 30);
+    noStroke();
+
+    // Option text 
+    textSize(16);
+    for (let i = 0; i < this.options.length; i++) {
+      if (i === this.selectedOption) {
+        fill(255, 255, 0);
+        rect(this.x + 5, this.y + i * 30 + 5, 90, 25);
+        fill(0);
+      }
+      else {
+        fill(255);
+      }
+      text(this.options[i], this.x + 10, this.y + 22 + i * 30);
+    }
+  }
+
+  // Obtain the selected option
+  getSelectedOption() {
+    return this.options[this.selectedOption];
   }
 }
 
@@ -627,12 +710,10 @@ let tileImages = {}, tiles = [], tilePaths; // Tile assets, objects, and paths
 let sounds = {}, soundPaths; // Sound assets and paths
 let characterMapSpritePaths, characterAnimations = {}, characters = [], characterData, selectedCharacter; // Character assets and data
 let cursorImages = {}, cursorImageKey = "default", cursorPaths, locationCursor; // Cursor assets and location
-const MOVE_DELAY = 200; // Delay before cursor moves to the next tile
 const GAME_STATES = { TITLESCREEN: "TITLESCREEN", GAMEPLAY: "gameplay" }; // Possible game states
 let lastMoveTimeW = 0, lastMoveTimeA = 0, lastMoveTimeS = 0, lastMoveTimeD = 0; // Last move times for each direction
 let gameState = GAME_STATES.GAMEPLAY; // Current game state
-
-// let actionMenu = false; // Check if the action menu is open
+let actionMenu; // Action menu object
 
 function preload() {
   // Preload map information
