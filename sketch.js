@@ -593,14 +593,26 @@ class ActionMenu {
     this.isVisible = false;
     this.x = 0;
     this.y = 0;
+    this.actionMenuWidth = 250;
+    this.actionMenuHeight = 75;
   }
 
   // Show the action menu
-  show(x, y) {
-    this.x = x * tilesWidth + tilesWidth; // Calculate x location
-    this.y = y * tilesHeight; // Calculate y location
-    this.isVisible = true; // Set action menu to be visible
-    this.selectedOption = 0; // Set option to the very top most option
+  show(x) {
+    // Calculate the half way point of the map (width-wise)
+    const mapWidthMidpoint = tilesWide / 2;
+
+    // Position on right side of canvas if x is less than half,  position on left if x is more than half
+    this.x = (x < mapWidthMidpoint) ? width - (this.actionMenuWidth * 1.2) :  this.actionMenuWidth * 0.2; 
+
+    // Center the menu vertically
+    this.y = (height / 2) - (this.actionMenuHeight * 1.3);
+
+    // Set action menu to be visible
+    this.isVisible = true; 
+
+    // Set option to the very top most option
+    this.selectedOption = 0;
   }
 
   // Hide the action menu
@@ -626,25 +638,19 @@ class ActionMenu {
       return;
     }
 
-    // Menu background
-    fill(50, 50, 50);
-    stroke(255);
-    strokeWeight(2);
-    rect(this.x, this.y, 100, this.options.length * 30);
-    noStroke();
-
-    // Text of menu
-    textSize(16);
+    // Display menu options using images
     for (let i = 0; i < this.options.length; i++) {
-      if (i === this.selectedOption) {
-        fill(255, 255, 0);
-        rect(this.x + 5, this.y + i * 30 + 5, 90, 25);
-        fill(0);
+      const option = this.options[i].toLowerCase();
+      const isSelected = i === this.selectedOption;
+      const imageKey = option === "item" ? "item" + (isSelected ? "Selected" : "") : option + (isSelected ? "Selected" : "");
+      
+      // Spacing between images
+      const yOffset = i * this.actionMenuHeight * 1.2; 
+
+      // Draw the menu image
+      if (actionMenuImages[imageKey]) {
+        image(actionMenuImages[imageKey], this.x, this.y + yOffset, this.actionMenuWidth, this.actionMenuHeight);
       }
-      else {
-        fill(255);
-      }
-      text(this.options[i], this.x + 10, this.y + 22 + i * 30);
     }
   }
 
@@ -719,7 +725,7 @@ let cursorImages = {}, cursorImageKey = "default", cursorPaths, locationCursor; 
 const GAME_STATES = { TITLESCREEN: "TITLESCREEN", GAMEPLAY: "gameplay" }; // Possible game states
 let lastMoveTimeW = 0, lastMoveTimeA = 0, lastMoveTimeS = 0, lastMoveTimeD = 0; // Last move times for each direction
 let gameState = GAME_STATES.GAMEPLAY; // Current game state
-let actionMenu, actionMenuImages; // Action menu object
+let actionMenu, actionMenuImages = {}; // Action menu object and images
 
 function preload() {
   // Preload map information
@@ -740,6 +746,9 @@ function preload() {
 
   // Preload cursor images from JSON
   cursorPaths = loadJSON("Assets/Cursor/cursorImages.json", setupCursorImages);
+
+  // Preload action menu images from JSON
+  actionMenuImages = loadJSON("Assets/ActionMenu/actionMenuPaths.json", setupActionMenuImages);
 }
 
 function setup() {

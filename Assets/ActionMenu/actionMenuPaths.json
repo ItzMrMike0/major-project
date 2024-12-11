@@ -1,8 +1,8 @@
 {
     "attack": "Assets/ActionMenu/attack.png",
-    "attackselected": "Assets/ActionMenu/attackselected.png",
-    "item": "Assets/ActionMenu/item.png",
-    "itemselected": "Assets/ActionMenu/itemselected.png",
+    "attackSelected": "Assets/ActionMenu/attackselected.png",
+    "item": "Assets/ActionMenu/items.png",
+    "itemSelected": "Assets/ActionMenu/itemsselected.png",
     "wait": "Assets/ActionMenu/wait.png",
-    "waitselected": "Assets/ActionMenu/waitselected.png"
+    "waitSelected": "Assets/ActionMenu/waitselected.png"
 }
