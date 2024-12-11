@@ -1,4 +1,3 @@
-
 // Fire Emblem
 // Michael Yang
 // 2024-11-21
@@ -126,6 +125,7 @@ class Character {
     this.width = width; // Width of character
     this.height = height; // Height of character
     this.currentState = "standing"; // Current animation state
+    this.isMoving = false; // Whether the character is currently moving
 
     // Movement and attack calculations
     this.animation = null; // Character visual sprite
@@ -358,6 +358,9 @@ class Character {
       return;
     }
  
+    // Character is now moving 
+    this.isMoving = true;
+ 
     // characterWait = false;
     const moveStep = (index) => {
       // If the path is complete, set the final position and stop the movement
@@ -367,6 +370,7 @@ class Character {
 
         // Keep the character selected and show the action menu
         this.isSelected = true;
+        this.isMoving = false;
         actionMenu.show(this.x, this.y);
         return;
       }
@@ -715,7 +719,7 @@ let cursorImages = {}, cursorImageKey = "default", cursorPaths, locationCursor; 
 const GAME_STATES = { TITLESCREEN: "TITLESCREEN", GAMEPLAY: "gameplay" }; // Possible game states
 let lastMoveTimeW = 0, lastMoveTimeA = 0, lastMoveTimeS = 0, lastMoveTimeD = 0; // Last move times for each direction
 let gameState = GAME_STATES.GAMEPLAY; // Current game state
-let actionMenu; // Action menu object
+let actionMenu, actionMenuImages; // Action menu object
 
 function preload() {
   // Preload map information
@@ -800,6 +804,14 @@ function setupCursorImages(data) {
   for (let key in data) {
     // Load each cursor image
     cursorImages[key] = loadImage(data[key]);
+  }
+}
+
+// Initialize actionMenuImages after the action menu paths JSON is loaded
+function setupActionMenuImages(data) {
+  for (let type in data) {
+    // Load the image for each menu element
+    actionMenuImages[type] = loadImage(data[type]);
   }
 }
 
@@ -905,8 +917,8 @@ function keyPressed() {
 
 // Allows user to hold down movement keys for continuous movement
 function holdCursorMovement() {
-  // Don't move cursor if action menu is open
-  if (actionMenu.isVisible) {
+  // Don't move cursor if action menu is open or character is moving
+  if (actionMenu.isVisible || selectedCharacter?.isMoving) {
     return;
   }
 
