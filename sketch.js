@@ -918,8 +918,8 @@ function keyPressed() {
       Character.selectCharacter();
     }
   }
-  // If k is pressed unselect character
-  else if (key === "k") {
+  // If k is pressed and character is not moving, unselect character 
+  else if (key === "k" && !selectedCharacter.isMoving) {
     Character.unselectCharacter(true);
   }
 }
