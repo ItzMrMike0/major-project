@@ -1,3 +1,4 @@
+
 // Fire Emblem
 // Michael Yang
 // 2024-11-21
@@ -151,27 +152,27 @@ class Character {
     // Calculate the character's drawing dimensions
     let drawWidth = this.width;
     let drawHeight = this.height;
-  
+
     // Set isSelectedAnimation to true if the character is selected
     const isSelectedAnimation = this.currentState === "selected";
-  
+
     // Only increase width for left/right walking animations for Lord and Cavalier
     const isHorizontalWalking = this.currentState === "walkleft" || this.currentState === "walkright";
     if (isHorizontalWalking && (this.classType === "Lord" || this.classType === "Cavalier")) {
       drawWidth = 65;  // Larger width for walking animations
     }
-  
+
     // If the character is selected and has the selected animation, increase the size slightly for visual effect
     if (this.isSelected && isSelectedAnimation) {
       console.log("increase size");
       drawWidth += 15;
       drawHeight += 15;
     }
-     
+   
     // Calculate the character's position on the map, centering it within the grid cell
     let drawX = this.x * tilesWidth + (tilesWidth - drawWidth) / 2;
     let drawY = this.y * tilesHeight + (tilesHeight - drawHeight) / 2;
-  
+
     // Adjust Y-position if the character is selected and has isSelectedAnimation so the character won't display under their grid cell
     if (this.isSelected && isSelectedAnimation) {
       drawY -= 7;
@@ -179,33 +180,33 @@ class Character {
       if (this.classType === "Cavalier") {
         drawY -= 7;
       }
-  
+
       // Draw a yellow border around the selected character to indicate selection
       noFill();
       stroke(255, 255, 0);
       strokeWeight(3);
       rect(drawX, drawY, drawWidth, drawHeight);
     }
-  
+
     // If the character is not selected but is a Cavalier, adjust the Y-position as their base height is taller
     else if (this.classType === "Cavalier") {
       drawY -= 7;
     }
-  
+
     // If the character has already moved or acted, apply a grey tint to show it's inactive
     if (this.isGreyedOut) {
       tint(100);
     }
-     
+   
     // If the character is active, ensure no tint is applied
     else {
       noTint();
     }
-  
+
     // Draw the character's animation at the calculated position
     image(this.animation, drawX, drawY, drawWidth, drawHeight);
   }
-  
+
   // Selects a character at the cursor's position
   static selectCharacter() {
     // Check for valid character selection at cursor position
@@ -248,7 +249,7 @@ class Character {
       selectedCharacter.isSelected = false;
       selectedCharacter = null;
  
-      // Play unselect sound effect if playSound is true
+      // Play unselect sound effect
       if (playSound) {
         sounds.unselectCharacter.amp(0.5);
         sounds.unselectCharacter.play();
@@ -344,13 +345,12 @@ class Character {
       }
     }
   }
-
+ 
   // Move the character to a new location gradually
   moveTo(newX, newY) {
-    // Already repeated in moveSelectedCharacter function may not be needed!
-    // Save the previous position before moving
-    // this.previousX = this.x;
-    // this.previousY = this.y;
+    // Save the previous position
+    this.previousX = this.x;
+    this.previousY = this.y;
 
     const path = Character.findPath({ x: this.x, y: this.y }, { x: newX, y: newY }, tiles);
     if (!path) {
@@ -441,7 +441,7 @@ class Character {
     // Begin the movement sequence
     moveStep(0);
   }
-
+ 
   // Move the selected character to a new location
   static moveSelectedCharacter(cursor, tiles) {
     if (selectedCharacter && selectedCharacter.canMove) {
@@ -454,12 +454,13 @@ class Character {
 
         // Ensure the target tile is walkable and not occupied
         if (tile.type !== "W" && tile.type !== "M" && !Tile.isTileOccupied(cursor.x, cursor.y)) {
-          // Store previous position of character before moving
+          // Store previous position before moving
           selectedCharacter.previousX = selectedCharacter.x;
           selectedCharacter.previousY = selectedCharacter.y;
 
           // Move the character to the new location
           selectedCharacter.moveTo(cursor.x, cursor.y);
+
           console.log(`${selectedCharacter.name} moved to (${cursor.x}, ${cursor.y})`);
 
           // When character is walking, set isSelected to false so width and height don't increase
@@ -478,6 +479,7 @@ class Character {
       }
     }
   }
+
 
   // Use A* algorithm to find a path to the selected tile
   static findPath(start, goal, tiles) {
@@ -582,11 +584,11 @@ class Character {
 // Action Menu class: Handles the menu that appears after moving a character
 class ActionMenu {
   constructor() {
-    this.options = ["Attack", "Item", "Wait"]; // Option of menu
-    this.selectedOption = 0; // What option is being selected
-    this.isVisible = false; // If the action menu is visible
-    this.x = 0; // Menu's x location
-    this.y = 0; // Menu's y location
+    this.options = ["Attack", "Item", "Wait"];
+    this.selectedOption = 0;
+    this.isVisible = false;
+    this.x = 0;
+    this.y = 0;
   }
 
   // Show the action menu
@@ -608,7 +610,7 @@ class ActionMenu {
     if (direction === "up") {
       this.selectedOption = (this.selectedOption - 1 + this.options.length) % this.options.length;
     }
-    // If user presses w move option down
+    // If user presses S move option up
     else if (direction === "down") {
       this.selectedOption = (this.selectedOption + 1) % this.options.length;
     }
@@ -627,7 +629,7 @@ class ActionMenu {
     rect(this.x, this.y, 100, this.options.length * 30);
     noStroke();
 
-    // Option text 
+    // Text of menu
     textSize(16);
     for (let i = 0; i < this.options.length; i++) {
       if (i === this.selectedOption) {
@@ -764,6 +766,9 @@ function setup() {
 
   // Initialize the cursor
   locationCursor = new Cursor();
+
+  // Initialize the action menu
+  actionMenu = new ActionMenu();
 }
 
 // Initialize tileImages after the tile path JSON is loaded
@@ -820,7 +825,7 @@ function animationManager(character, state) {
     // Load the animation
     character.animation = loadImage(statePaths[state]);
     // Update the current state
-    character.currentState = state; 
+    character.currentState = state;
   }
   else {
     console.warn(`Unknown animation state: ${state}`);
@@ -832,49 +837,86 @@ function keyPressed() {
   // Reset cursor image to default on key press
   cursorImageKey = "default";
 
-  // If "j" is pressed, select or move a character
-  if (key === "j") {
-    // Reset selectedCharacter variable
-    let selectedCharacter;
-
-    // Check if a character is selected
-    for (let character of characters) {
-      if (character.isSelected) {
-        // If selected, store the character
-        selectedCharacter = character;
-        break;
+  // Handle action menu navigation first if menu is visible
+  if (actionMenu.isVisible) {
+    if (key === "w") {
+      // If w is pressed move selection up and play sound
+      actionMenu.moveSelection("up");
+      sounds.cursorSelection.play();
+    }
+    else if (key === "s") {
+      // If s is pressed move selection down and play sound
+      actionMenu.moveSelection("down");
+      sounds.cursorSelection.play();
+    }
+    else if (key === "j") {
+      // If j is pressed select the highlighted option
+      let selectedCharacter = Character.getSelectedCharacter();
+      if (selectedCharacter) {
+        const selectedOption = actionMenu.getSelectedOption();
+       
+        // If the option was "Wait"
+        if (selectedOption === "Wait") {
+          selectedCharacter.canMove = false;
+          selectedCharacter.isGreyedOut = true;
+          selectedCharacter.action = "wait";
+          actionMenu.hide();
+          Character.unselectCharacter(false);
+          sounds.selectOption.play();
+        }
       }
     }
+    else if (key === "k") {
+      // If k is pressed cancel the action menu and move character back to their previous location
+      const selectedCharacter = Character.getSelectedCharacter();
+      if (selectedCharacter) {
+        sounds.unselectCharacter.play();
+        selectedCharacter.x = selectedCharacter.previousX;
+        selectedCharacter.y = selectedCharacter.previousY;
+        selectedCharacter.isSelected = true;
+        selectedCharacter.canMove = true;
+        selectedCharacter.isGreyedOut = false;
+        animationManager(selectedCharacter, "selected");
+        actionMenu.hide();
+      }
+    }
+    // Prevent any other keys from working while menu is open
+    return; 
+  }
 
-    // If there is a selected character and j is pressed, move them
+  // If menu is not visible, handle normal game controls
+  if (key === "j") {
+    const selectedCharacter = Character.getSelectedCharacter();
+   
+    // If there is a selected character and j is pressed move the character
     if (selectedCharacter) {
       Character.moveSelectedCharacter(locationCursor, tiles);
     }
-    // If no character is selected, select a new character
+    // If there is not a selected character and j is pressed select character
     else {
       Character.selectCharacter();
     }
   }
-
-  // If "k" is pressed, unselect the character
+  // If k is pressed unselect character
   else if (key === "k") {
-    Character.unselectCharacter();
+    Character.unselectCharacter(true);
   }
-  // // If "1" is pressed, set character action to wait
-  // else if (key === "1") {
-  //   characterWait = true;
-  // }
 }
-
-// let characterWait = false;
 
 // Allows user to hold down movement keys for continuous movement
 function holdCursorMovement() {
+  // Don't move cursor if action menu is open
+  if (actionMenu.isVisible) {
+    return;
+  }
+
   // Get the current time
-  let currentTime = millis();
+  const currentTime = millis();
+  // Delay before cursor moves to the next tile
+  const moveDelay = 200;
 
   // 'W' key - Move up
-  if (keyIsDown(87) && currentTime - lastMoveTimeW > MOVE_DELAY) {
+  if (keyIsDown(87) && currentTime - lastMoveTimeW > moveDelay) {
     // Send input to move up
     locationCursor.move("up");
 
@@ -882,7 +924,7 @@ function holdCursorMovement() {
     lastMoveTimeW = currentTime;
   }
   // 'A' key - Move left
-  if (keyIsDown(65) && currentTime - lastMoveTimeA > MOVE_DELAY) {  
+  if (keyIsDown(65) && currentTime - lastMoveTimeA > moveDelay) {  
     // Send input to move left
     locationCursor.move("left");
    
@@ -890,7 +932,7 @@ function holdCursorMovement() {
     lastMoveTimeA = currentTime;
   }
   // 'S' key - Move down
-  if (keyIsDown(83) && currentTime - lastMoveTimeS > MOVE_DELAY) {  
+  if (keyIsDown(83) && currentTime - lastMoveTimeS > moveDelay) {  
     // Send input to move down
     locationCursor.move("down");
 
@@ -898,7 +940,7 @@ function holdCursorMovement() {
     lastMoveTimeS = currentTime;
   }
   // 'D' key - Move right
-  if (keyIsDown(68) && currentTime - lastMoveTimeD > MOVE_DELAY) {  
+  if (keyIsDown(68) && currentTime - lastMoveTimeD > moveDelay) {  
     // Send input to move right
     locationCursor.move("right");
    
@@ -927,5 +969,8 @@ function draw() {
 
     // Render the cursor
     locationCursor.renderCursor();
+
+    // Display the action menu
+    actionMenu.display();
   }
 }
