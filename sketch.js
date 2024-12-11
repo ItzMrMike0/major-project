@@ -387,15 +387,17 @@ class Character {
       let walkSound;
       if (this.classType === "Cavalier") {
         walkSound = sounds.horseWalking;
+        walkSound.amp(0.6);
       }
       else if (this.classType === "Knight") {
         walkSound = sounds.armorWalking;
+        walkSound.amp(0.6);
       }
       else {
         walkSound = sounds.regularWalking;
+        walkSound.amp(1);
       }
       if (walkSound && walkSound.isLoaded()) {
-        walkSound.amp(0.4);
         walkSound.play();
       }
  
@@ -469,10 +471,6 @@ class Character {
 
           // When character is walking, set isSelected to false so width and height don't increase
           selectedCharacter.isSelected = false;
-
-          // Play move sound effect
-          sounds.selectCharacter.amp(0.1);
-          sounds.selectCharacter.play();
         }
         else {
           console.log("Cannot move to this tile.");
@@ -603,10 +601,10 @@ class ActionMenu {
     const mapWidthMidpoint = tilesWide / 2;
 
     // Position on right side of canvas if x is less than half,  position on left if x is more than half
-    this.x = (x < mapWidthMidpoint) ? width - (this.actionMenuWidth * 1.2) :  this.actionMenuWidth * 0.2; 
+    this.x = x < mapWidthMidpoint ? width - this.actionMenuWidth * 1.2 :  this.actionMenuWidth * 0.2; 
 
     // Center the menu vertically
-    this.y = (height / 2) - (this.actionMenuHeight * 1.3);
+    this.y = height / 2 - this.actionMenuHeight * 1.3;
 
     // Set action menu to be visible
     this.isVisible = true; 
@@ -672,7 +670,7 @@ class Cursor {
   // Move the cursor based on input (WASD)
   move(direction) {
     // Plays cursor moving sound effect
-    sounds.cursorMoving.amp(0.1);
+    sounds.cursorMoving.amp(0.3);
     sounds.cursorMoving.play();
 
     // Change x or y depending on direction input, ensuring the cursor stays within bounds
@@ -860,6 +858,7 @@ function keyPressed() {
 
   // Handle action menu navigation first if menu is visible
   if (actionMenu.isVisible) {
+    sounds.cursorSelection.amp(0.7);
     if (key === "w") {
       // If w is pressed move selection up and play sound
       actionMenu.moveSelection("up");
