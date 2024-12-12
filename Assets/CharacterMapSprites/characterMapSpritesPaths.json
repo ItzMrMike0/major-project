@@ -30,5 +30,9 @@
   "MageWalkingUp": "Assets/CharacterMapSprites/WalkingGifs/magewalkup.gif",
   "MageWalkingLeft": "Assets/CharacterMapSprites/WalkingGifs/magewalkleft.gif",
   "MageWalkingRight": "Assets/CharacterMapSprites/WalkingGifs/magewalkright.gif",
-  "MageWalkingDown": "Assets/CharacterMapSprites/WalkingGifs/magewalkdown.gif"
+  "MageWalkingDown": "Assets/CharacterMapSprites/WalkingGifs/magewalkdown.gif",
+  "BrigandWalkingUp": "Assets/CharacterMapSprites/WalkingGifs/brigandwalkup.gif",
+  "BrigandWalkingLeft": "Assets/CharacterMapSprites/WalkingGifs/brigandwalkleft.gif",
+  "BrigandWalkingRight": "Assets/CharacterMapSprites/WalkingGifs/brigandwalkright.gif",
+  "BrigandWalkingDown": "Assets/CharacterMapSprites/WalkingGifs/brigandwalkdown.gif"
   }

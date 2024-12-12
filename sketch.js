@@ -585,7 +585,9 @@ class Character {
   // Draw movement preview for the selected character
   drawMovementPreview() {
     // Skip drawing if the action menu is visible or the character is moving
-    if (actionMenu.isVisible || this.isMoving) return;
+    if (actionMenu.isVisible || this.isMoving) {
+      return;
+    }
 
     // Check if the cursor is on a tile that the character can reach
     const isReachableTile = this.reachableTiles.some(
@@ -601,22 +603,40 @@ class Character {
       );
 
       if (path) {
-        // Draw continuous line
+        // Draw continuous line for all segments except the last one
         stroke(255, 255, 0, 200);
-        strokeWeight(5);
+        strokeWeight(10);
         noFill();
-        
+        strokeCap(PROJECT); // Use square end caps instead of round
+       
         // Start drawing the shape from the character's current position
         beginShape();
         const startX = this.x * tilesWidth + tilesWidth / 2;
         const startY = this.y * tilesHeight + tilesHeight / 2;
         vertex(startX, startY);
-        
-        // Add vertices for each point in the path
-        for (let point of path) {
-          const x = point.x * tilesWidth + tilesWidth / 2;
-          const y = point.y * tilesHeight + tilesHeight / 2;
+       
+        // Add vertices for each point in the path except the last one where the arrowhead is drawn
+        for (let i = 0; i < path.length - 1; i++) {
+          const x = path[i].x * tilesWidth + tilesWidth / 2;
+          const y = path[i].y * tilesHeight + tilesHeight / 2;
           vertex(x, y);
+        }
+
+        // For the last segment, draw it slightly shorter
+        if (path.length > 0) {
+          const lastPoint = path[path.length - 1];
+          const prevPoint = path.length > 1 ? path[path.length - 2] : { x: this.x, y: this.y };
+         
+          // Calculate direction vector
+          const dx = lastPoint.x - prevPoint.x;
+          const dy = lastPoint.y - prevPoint.y;
+         
+          // Calculate the endpoint to make sure line does not go into arrowhead
+          const shortenAmount = Math.abs(dy) > 0 && dx === 0 ? 0.4 : 0.28; // Use 0.4 for vertical arrows, 0.28 for horizontal arrows
+          const endX = lastPoint.x * tilesWidth + tilesWidth / 2 - dx * tilesWidth * shortenAmount;
+          const endY = lastPoint.y * tilesHeight + tilesHeight / 2 - dy * tilesHeight * shortenAmount;
+         
+          vertex(endX, endY);
         }
         endShape();
 
@@ -627,7 +647,7 @@ class Character {
 
           // Determine the previous point in the path, or if there's only one point, use the character's position
           const prevPoint = path.length > 1 ? path[path.length - 2] : { x: this.x, y: this.y };
-          
+         
           // Calculate the difference in x and y coordinates between the last point and the previous point
           const dx = lastPoint.x - prevPoint.x;
           const dy = lastPoint.y - prevPoint.y;
@@ -636,15 +656,17 @@ class Character {
           const endX = lastPoint.x * tilesWidth + tilesWidth / 2;
           const endY = lastPoint.y * tilesHeight + tilesHeight / 2;
 
-          // Align path to the map
+          // Align path to the map and move arrowhead further into the tile
           push();
-          translate(endX, endY);
+          // How many pixels to move the arrowhead forward
+          const arrowOffset = 15;
+          translate(endX + dx * arrowOffset, endY + dy * arrowOffset);
           rotate(atan2(dy, dx));
 
           // Draw the arrowhead
           fill(255, 255, 0, 200);
           noStroke();
-          const arrowSize = 16;
+          const arrowSize = 30;
           triangle(0, 0, -arrowSize, -arrowSize/2, -arrowSize, arrowSize/2);
           pop();
         }
@@ -990,7 +1012,9 @@ function handleTurnSystem() {
 // Handle all inputs
 function keyPressed() {
   // Only handle inputs during player turn
-  if (!isPlayerTurn) return;
+  if (!isPlayerTurn) {
+    return;
+  }
 
   // Reset cursor image to default on key press
   cursorImageKey = "default";

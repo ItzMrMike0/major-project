@@ -24,7 +24,6 @@ Winning will rely not only on combat prowess but also on strategic planning and 
   - Move: Select a tile to move to. 🟢
   - Attack: Choose a target within attack range. 🔴
   - Items: Use or equip items during a turn. 🔴
-  - End Turn: Manually end the player's turn. 🔴
 - Undo move option (before confirming an action). 🟡
 - Win condition (Completely defeat all enemy characters) 🔴
 
@@ -54,6 +53,7 @@ Winning will rely not only on combat prowess but also on strategic planning and 
 - Include sound effects for movement, attacks, and menu interactions. 🟡
 
 ## Nice to Have List
+- Options Menu which contains settings including (End Turn: Manually end the player's turn.) 🔴
 - Difficulty levels (e.g., aggressive, defensive, balanced). 🔴
 - Adaptive AI that evaluates tile advantages or target vulnerabilities. 🔴
 - Different enemy types with varying priorities (e.g., targeting low-health units). 🔴
