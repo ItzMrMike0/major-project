@@ -581,6 +581,76 @@ class Character {
   attack() {
     // Logic for attacking
   }
+
+  // Draw movement preview for the selected character
+  drawMovementPreview() {
+    // Skip drawing if the action menu is visible or the character is moving
+    if (actionMenu.isVisible || this.isMoving) return;
+
+    // Check if the cursor is on a tile that the character can reach
+    const isReachableTile = this.reachableTiles.some(
+      tile => tile.x === locationCursor.x && tile.y === locationCursor.y
+    );
+
+    if (isReachableTile) {
+      // Find the path from the character's current position to the cursor position
+      const path = Character.findPath(
+        { x: this.x, y: this.y },
+        { x: locationCursor.x, y: locationCursor.y },
+        tiles
+      );
+
+      if (path) {
+        // Draw continuous line
+        stroke(255, 255, 0, 200);
+        strokeWeight(5);
+        noFill();
+        
+        // Start drawing the shape from the character's current position
+        beginShape();
+        const startX = this.x * tilesWidth + tilesWidth / 2;
+        const startY = this.y * tilesHeight + tilesHeight / 2;
+        vertex(startX, startY);
+        
+        // Add vertices for each point in the path
+        for (let point of path) {
+          const x = point.x * tilesWidth + tilesWidth / 2;
+          const y = point.y * tilesHeight + tilesHeight / 2;
+          vertex(x, y);
+        }
+        endShape();
+
+        // Draw arrowhead at cursor position
+        if (path.length > 0) {
+          // Get the last point in the path
+          const lastPoint = path[path.length - 1];
+
+          // Determine the previous point in the path, or if there's only one point, use the character's position
+          const prevPoint = path.length > 1 ? path[path.length - 2] : { x: this.x, y: this.y };
+          
+          // Calculate the difference in x and y coordinates between the last point and the previous point
+          const dx = lastPoint.x - prevPoint.x;
+          const dy = lastPoint.y - prevPoint.y;
+
+          // Calculate the x and y coordinates for the endpoint of the path, adjusted for tile size
+          const endX = lastPoint.x * tilesWidth + tilesWidth / 2;
+          const endY = lastPoint.y * tilesHeight + tilesHeight / 2;
+
+          // Align path to the map
+          push();
+          translate(endX, endY);
+          rotate(atan2(dy, dx));
+
+          // Draw the arrowhead
+          fill(255, 255, 0, 200);
+          noStroke();
+          const arrowSize = 16;
+          triangle(0, 0, -arrowSize, -arrowSize/2, -arrowSize, arrowSize/2);
+          pop();
+        }
+      }
+    }
+  }
 }
 
 // Action Menu class: Handles the menu that appears after moving a character
@@ -917,8 +987,8 @@ function keyPressed() {
       Character.selectCharacter();
     }
   }
-  // If k is pressed and character is not moving, unselect character 
-  else if (key === "k" && !selectedCharacter.isMoving) {
+  // If k is pressed and there is a selected character that's not moving, unselect them
+  else if (key === "k" && selectedCharacter && !selectedCharacter.isMoving) {
     Character.unselectCharacter(true);
   }
 }
@@ -981,6 +1051,11 @@ function draw() {
 
     // Highlight reachable tiles in blue and attackable tiles in red
     Tile.displayActionableTiles();
+
+    // Draw movement preview for selected character
+    if (selectedCharacter) {
+      selectedCharacter.drawMovementPreview();
+    }
 
     // Display all characters on the map
     for (let character of characters) {
