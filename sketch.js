@@ -371,7 +371,7 @@ class Character {
         // Keep the character selected and show the action menu
         this.isSelected = true;
         this.isMoving = false;
-        actionMenu.show(this.x, this.y);
+        actionMenu.show(this.x);
         return;
       }
  
@@ -653,6 +653,13 @@ class Character {
   }
 }
 
+// EnemyCharacter Class: Extends Character with enemy-specific behavior
+class EnemyCharacter extends Character {
+  constructor(name, classType, x, y, level, hp, strength, skill, speed, luck, defense, resistance, isEnemy, width = 50, height = 50) {
+    super(name, classType, x, y, level, hp, strength, skill, speed, luck, defense, resistance, isEnemy, width, height);
+  }
+}
+
 // Action Menu class: Handles the menu that appears after moving a character
 class ActionMenu {
   constructor() {
@@ -794,7 +801,9 @@ const GAME_STATES = { TITLESCREEN: "TITLESCREEN", GAMEPLAY: "gameplay" }; // Pos
 let lastMoveTimeW = 0, lastMoveTimeA = 0, lastMoveTimeS = 0, lastMoveTimeD = 0; // Last move times for each direction
 let gameState = GAME_STATES.GAMEPLAY; // Current game state
 let actionMenu, actionMenuImages = {}; // Action menu object and images
+let isPlayerTurn = true; // Track whose turn it is
 
+// Preload all information and images
 function preload() {
   // Preload map information
   levelToLoad = "Assets/Levels/0.txt"; // Path to the level file
@@ -921,8 +930,68 @@ function animationManager(character, state) {
   }
 }
 
+// Check if all non-enemy characters have used their turn
+function checkAllPlayerCharactersUsed() {
+  for (let character of characters) {
+    if (!character.isEnemy && !character.isGreyedOut) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// Check if all enemy characters have used their turn
+function checkAllEnemyCharactersUsed() {
+  for (let character of characters) {
+    if (character.isEnemy && !character.isGreyedOut) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// Handle turn transitions
+function handleTurnSystem() {
+  // Display current turn
+  textSize(24);
+  fill(0);
+  text(isPlayerTurn ? "Player Turn" : "Enemy Turn", 20, 30);
+
+  if (isPlayerTurn) {
+    // Check if all player characters have moved
+    if (checkAllPlayerCharactersUsed()) {
+      // Switch to enemy turn
+      isPlayerTurn = false;
+      console.log("Switching to Enemy Turn");
+      
+      // Reset ALL characters
+      for (let character of characters) {
+        character.isGreyedOut = false;
+        character.canMove = true;
+      }
+    }
+  } 
+  else {
+    // Check if all enemy characters have moved
+    if (checkAllEnemyCharactersUsed()) {
+      // Switch back to player turn
+      isPlayerTurn = true;
+      console.log("Switching to Player Turn");
+      
+      // Reset ALL characters
+      for (let character of characters) {
+        character.isGreyedOut = false;
+        character.canMove = true;
+      }
+    }
+  }
+}
+
 // Handle all inputs
 function keyPressed() {
+  // Only handle inputs during player turn
+  if (!isPlayerTurn) return;
+
   // Reset cursor image to default on key press
   cursorImageKey = "default";
 
@@ -995,8 +1064,8 @@ function keyPressed() {
 
 // Allows user to hold down movement keys for continuous movement
 function holdCursorMovement() {
-  // Don't move cursor if action menu is open or character is moving
-  if (actionMenu.isVisible || selectedCharacter?.isMoving) {
+  // Don't move cursor if action menu is open, character is moving, or during enemy turn
+  if (actionMenu.isVisible || selectedCharacter?.isMoving || !isPlayerTurn) {
     return;
   }
 
@@ -1062,10 +1131,15 @@ function draw() {
       character.displayOnMap();
     }
 
-    // Render the cursor
-    locationCursor.renderCursor();
+    // Only display cursor during player turn
+    if (isPlayerTurn) {
+      locationCursor.renderCursor();
+    }
 
     // Display the action menu
     actionMenu.display();
+    
+    // Check and handle turn system
+    handleTurnSystem();
   }
 }
