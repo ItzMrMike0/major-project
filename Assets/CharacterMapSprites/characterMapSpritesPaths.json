@@ -11,6 +11,7 @@
   "KnightSelected": "Assets/CharacterMapSprites/SelectedGifs/knightselected.gif",
   "ArcherSelected": "Assets/CharacterMapSprites/SelectedGifs/archerselected.gif",
   "MageSelected": "Assets/CharacterMapSprites/SelectedGifs/mageselected.gif",
+  "BrigandSelected": "Assets/CharacterMapSprites/SelectedGifs/brigandselected.gif",
   "RoyWalkingUp": "Assets/CharacterMapSprites/WalkingGifs/lordwalkup.gif",
   "RoyWalkingLeft": "Assets/CharacterMapSprites/WalkingGifs/lordwalkleft.gif",
   "RoyWalkingRight": "Assets/CharacterMapSprites/WalkingGifs/lordwalkright.gif",
@@ -34,5 +35,9 @@
   "BrigandWalkingUp": "Assets/CharacterMapSprites/WalkingGifs/brigandwalkup.gif",
   "BrigandWalkingLeft": "Assets/CharacterMapSprites/WalkingGifs/brigandwalkleft.gif",
   "BrigandWalkingRight": "Assets/CharacterMapSprites/WalkingGifs/brigandwalkright.gif",
-  "BrigandWalkingDown": "Assets/CharacterMapSprites/WalkingGifs/brigandwalkdown.gif"
+  "BrigandWalkingDown": "Assets/CharacterMapSprites/WalkingGifs/brigandwalkdown.gif",
+  "FighterWalkingUp": "Assets/CharacterMapSprites//WalkingGifs/fighterwalkup.gif",
+  "FighterWalkingLeft": "Assets/CharacterMapSprites//WalkingGifs/fighterwalkleft.gif",
+  "FighterWalkingRight": "Assets/CharacterMapSprites//WalkingGifs/fighterwalkright.gif",
+  "FighterWalkingDown": "Assets/CharacterMapSprites//WalkingGifs/fighterwalkdown.gif"
   }

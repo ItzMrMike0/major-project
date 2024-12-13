@@ -211,32 +211,49 @@ class Character {
   static selectCharacter() {
     // Check for valid character selection at cursor position
     for (let character of characters) {
-      if (character.x === locationCursor.x && character.y === locationCursor.y && !character.isEnemy && !character.isGreyedOut) {
-        // Play selection sound effect
-        sounds.selectCharacter.amp(0.4);
-        sounds.selectCharacter.play();
-   
-        // Update cursor to show selection state
-        cursorImageKey = "selectedCursor";
-
-        // Play character-specific voice line
-        const voiceKey = `${character.name}SelectVoice`;
-        if (sounds[voiceKey]) {
-          sounds[voiceKey].play();
+      if (character.x === locationCursor.x && character.y === locationCursor.y) {
+        // If it's an enemy character, only show range
+        if (character.isEnemy) {
+          // Play selection sound effect
+          sounds.selectCharacter.amp(0.4);
+          sounds.selectCharacter.play();
+       
+          // Update selection state and calculate range
+          selectedCharacter = character;
+          character.isSelected = true;
+          character.calculateActionableTiles();
+          console.log(`Showing range for enemy ${character.name}`);
+          return;
         }
-        else {
-          console.warn(`Select voice line for "${character.name}" not preloaded.`);
+     
+        // For non-enemy characters, proceed with normal selection if not greyed out
+        if (!character.isGreyedOut) {
+          // Play selection sound effect
+          sounds.selectCharacter.amp(0.4);
+          sounds.selectCharacter.play();
+       
+          // Update cursor to show selection state
+          cursorImageKey = "selectedCursor";
+
+          // Play character-specific voice line
+          const voiceKey = `${character.name}SelectVoice`;
+          if (sounds[voiceKey]) {
+            sounds[voiceKey].play();
+          }
+          else {
+            console.warn(`Select voice line for "${character.name}" not preloaded.`);
+          }
+
+          // Update selection state and animation
+          selectedCharacter = character;
+          character.isSelected = true;
+          animationManager(character, "selected");
+          console.log(`${character.name} is now selected.`);
+
+          // Calculate possible movement options
+          character.calculateActionableTiles();
+          break;
         }
-
-        // Update selection state and animation
-        selectedCharacter = character;
-        character.isSelected = true;
-        animationManager(character, "selected");
-        console.log(`${character.name} is now selected.`);
-
-        // Calculate possible movement options
-        character.calculateActionableTiles();
-        break;
       }
     }
   }
@@ -270,6 +287,8 @@ class Character {
       "Cavalier": 4,
       "Archer": 3,
       "Mage": 3,
+      "Fighter": 3,
+      "Brigand": 3
     };
     return movementRanges[this.classType];
   }
@@ -358,7 +377,7 @@ class Character {
       return;
     }
  
-    // Character is now moving 
+    // Character is now moving
     this.isMoving = true;
  
     // characterWait = false;
@@ -700,13 +719,13 @@ class ActionMenu {
     const mapWidthMidpoint = tilesWide / 2;
 
     // Position on right side of canvas if x is less than half,  position on left if x is more than half
-    this.x = x < mapWidthMidpoint ? width - this.actionMenuWidth * 1.2 :  this.actionMenuWidth * 0.2; 
+    this.x = x < mapWidthMidpoint ? width - this.actionMenuWidth * 1.2 :  this.actionMenuWidth * 0.2;
 
     // Center the menu vertically
     this.y = height / 2 - this.actionMenuHeight * 1.3;
 
     // Set action menu to be visible
-    this.isVisible = true; 
+    this.isVisible = true;
 
     // Set option to the very top most option
     this.selectedOption = 0;
@@ -740,9 +759,9 @@ class ActionMenu {
       const option = this.options[i].toLowerCase();
       const isSelected = i === this.selectedOption;
       const imageKey = option === "item" ? "item" + (isSelected ? "Selected" : "") : option + (isSelected ? "Selected" : "");
-      
+     
       // Spacing between images
-      const yOffset = i * this.actionMenuHeight * 1.2; 
+      const yOffset = i * this.actionMenuHeight * 1.2;
 
       // Draw the menu image
       if (actionMenuImages[imageKey]) {
@@ -985,21 +1004,21 @@ function handleTurnSystem() {
       // Switch to enemy turn
       isPlayerTurn = false;
       console.log("Switching to Enemy Turn");
-      
+     
       // Reset ALL characters
       for (let character of characters) {
         character.isGreyedOut = false;
         character.canMove = true;
       }
     }
-  } 
+  }
   else {
     // Check if all enemy characters have moved
     if (checkAllEnemyCharactersUsed()) {
       // Switch back to player turn
       isPlayerTurn = true;
       console.log("Switching to Player Turn");
-      
+     
       // Reset ALL characters
       for (let character of characters) {
         character.isGreyedOut = false;
@@ -1064,19 +1083,19 @@ function keyPressed() {
       }
     }
     // Prevent any other keys from working while menu is open
-    return; 
+    return;
   }
 
   // If menu is not visible, handle normal game controls
   if (key === "j") {
     const selectedCharacter = Character.getSelectedCharacter();
    
-    // If there is a selected character and j is pressed move the character
-    if (selectedCharacter) {
+    // If there is a selected character and it's not an enemy, move the character
+    if (selectedCharacter && !selectedCharacter.isEnemy) {
       Character.moveSelectedCharacter(locationCursor, tiles);
     }
-    // If there is not a selected character and j is pressed select character
-    else {
+    // If there is not a selected character, select character
+    else if (!selectedCharacter) {
       Character.selectCharacter();
     }
   }
@@ -1145,8 +1164,8 @@ function draw() {
     // Highlight reachable tiles in blue and attackable tiles in red
     Tile.displayActionableTiles();
 
-    // Draw movement preview for selected character
-    if (selectedCharacter) {
+    // Draw movement preview for selected character only if it's not an enemy
+    if (selectedCharacter && !selectedCharacter.isEnemy) {
       selectedCharacter.drawMovementPreview();
     }
 
@@ -1162,7 +1181,7 @@ function draw() {
 
     // Display the action menu
     actionMenu.display();
-    
+   
     // Check and handle turn system
     handleTurnSystem();
   }
