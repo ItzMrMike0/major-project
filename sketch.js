@@ -165,8 +165,21 @@ class Character {
     // If the character is selected and has the selected animation, increase the size slightly for visual effect
     if (this.isSelected && isSelectedAnimation) {
       console.log("increase size");
-      drawWidth += 15;
-      drawHeight += 15;
+      // Smaller width increase for Fighter class
+      if (this.classType === "Fighter") {
+        drawWidth += 10;
+      } 
+      else {
+        drawWidth += 15;
+      }
+      
+      // Scale enemy characters much higher when selected
+      if (this.isEnemy) {
+        drawHeight += 35;
+      } 
+      else {
+        drawHeight += 15;
+      }
     }
    
     // Calculate the character's position on the map, centering it within the grid cell
@@ -175,7 +188,13 @@ class Character {
 
     // Adjust Y-position if the character is selected and has isSelectedAnimation so the character won't display under their grid cell
     if (this.isSelected && isSelectedAnimation) {
-      drawY -= 7;
+      // Adjust Y position more for enemy characters since they're scaled much higher
+      if (this.isEnemy) {
+        drawY -= 20;
+      } 
+      else {
+        drawY -= 7;
+      }
       // Further adjustment for Cavaliers if selected, as their base height is taller
       if (this.classType === "Cavalier") {
         drawY -= 7;
@@ -222,6 +241,7 @@ class Character {
           selectedCharacter = character;
           character.isSelected = true;
           character.calculateActionableTiles();
+          animationManager(character, "selected");
           console.log(`Showing range for enemy ${character.name}`);
           return;
         }

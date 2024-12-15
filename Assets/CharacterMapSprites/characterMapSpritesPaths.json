@@ -12,6 +12,7 @@
   "ArcherSelected": "Assets/CharacterMapSprites/SelectedGifs/archerselected.gif",
   "MageSelected": "Assets/CharacterMapSprites/SelectedGifs/mageselected.gif",
   "BrigandSelected": "Assets/CharacterMapSprites/SelectedGifs/brigandselected.gif",
+  "FighterSelected": "Assets/CharacterMapSprites/SelectedGifs/fighterselected.gif",
   "RoyWalkingUp": "Assets/CharacterMapSprites/WalkingGifs/lordwalkup.gif",
   "RoyWalkingLeft": "Assets/CharacterMapSprites/WalkingGifs/lordwalkleft.gif",
   "RoyWalkingRight": "Assets/CharacterMapSprites/WalkingGifs/lordwalkright.gif",
