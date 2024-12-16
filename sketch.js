@@ -168,15 +168,15 @@ class Character {
       // Smaller width increase for Fighter class
       if (this.classType === "Fighter") {
         drawWidth += 10;
-      } 
+      }
       else {
         drawWidth += 15;
       }
-      
+     
       // Scale enemy characters much higher when selected
       if (this.isEnemy) {
         drawHeight += 35;
-      } 
+      }
       else {
         drawHeight += 15;
       }
@@ -191,7 +191,7 @@ class Character {
       // Adjust Y position more for enemy characters since they're scaled much higher
       if (this.isEnemy) {
         drawY -= 20;
-      } 
+      }
       else {
         drawY -= 7;
       }
@@ -862,7 +862,10 @@ const GAME_STATES = { TITLESCREEN: "TITLESCREEN", GAMEPLAY: "gameplay" }; // Pos
 let lastMoveTimeW = 0, lastMoveTimeA = 0, lastMoveTimeS = 0, lastMoveTimeD = 0; // Last move times for each direction
 let gameState = GAME_STATES.GAMEPLAY; // Current game state
 let actionMenu, actionMenuImages = {}; // Action menu object and images
+let UIImages = {}, UIPaths; // UI images and paths
 let isPlayerTurn = true; // Track whose turn it is
+let showTurnImage = false; // Whether to show the turn image
+let turnImageTimer = 0; // Timer for turn image display
 
 // Preload all information and images
 function preload() {
@@ -887,6 +890,9 @@ function preload() {
 
   // Preload action menu images from JSON
   actionMenuImages = loadJSON("Assets/ActionMenu/actionMenuPaths.json", setupActionMenuImages);
+
+  // Preload UI images from JSON
+  UIPaths = loadJSON("Assets/UI/UIImages.json", setupUIImages);
 }
 
 function setup() {
@@ -920,6 +926,12 @@ function setup() {
 
   // Initialize the action menu
   actionMenu = new ActionMenu();
+
+  // Initialize turn image display for first player turn
+  showTurnImage = true;
+
+  // Start the timer for how long the image has been displayed for
+  turnImageTimer = millis();
 }
 
 // Initialize tileImages after the tile path JSON is loaded
@@ -959,6 +971,14 @@ function setupActionMenuImages(data) {
   for (let type in data) {
     // Load the image for each menu element
     actionMenuImages[type] = loadImage(data[type]);
+  }
+}
+
+// Initialize UIImages after the UI images JSON is loaded
+function setupUIImages(data) {
+  for (let key in data) {
+    // Load the image for each UI element
+    UIImages[key] = loadImage(data[key]);
   }
 }
 
@@ -1023,6 +1043,8 @@ function handleTurnSystem() {
     if (checkAllPlayerCharactersUsed()) {
       // Switch to enemy turn
       isPlayerTurn = false;
+      showTurnImage = true;
+      turnImageTimer = millis();
       console.log("Switching to Enemy Turn");
      
       // Reset ALL characters
@@ -1037,6 +1059,8 @@ function handleTurnSystem() {
     if (checkAllEnemyCharactersUsed()) {
       // Switch back to player turn
       isPlayerTurn = true;
+      showTurnImage = true;
+      turnImageTimer = millis();
       console.log("Switching to Player Turn");
      
       // Reset ALL characters
@@ -1048,10 +1072,10 @@ function handleTurnSystem() {
   }
 }
 
-// Handle all inputs
+// Handles all inputs
 function keyPressed() {
-  // Only handle inputs during player turn
-  if (!isPlayerTurn) {
+  // Only handle inputs if turn image is not showing and during player turn
+  if (showTurnImage || !isPlayerTurn) {
     return;
   }
 
@@ -1171,12 +1195,39 @@ function holdCursorMovement() {
   }
 }
 
+// Display turn phase image in the center of screen
+function displayTurnImage() {
+  // Image dimensions
+  let imgWidth = 600;  
+  let imgHeight = 125;
+
+  // Show image in the middle of the screen after 2 seconds
+  if (showTurnImage) {
+    if (millis() - turnImageTimer < 2000) {
+      if (isPlayerTurn) {
+        // Player turn 
+        image(UIImages["playerTurn"], width/2 - imgWidth/2, height/2 - imgHeight/2, imgWidth, imgHeight);
+      }
+      else {
+        // Enemy turn
+        image(UIImages["enemyTurn"], width/2 - imgWidth/2, height/2 - imgHeight/2, imgWidth, imgHeight);
+      }
+    }
+    else {
+      showTurnImage = false;
+    }
+  }
+}
+
 // Main game loop for rendering everything on the screen
 function draw() {
   // Only run if the game state is gameplay
   if (gameState === GAME_STATES.GAMEPLAY) {
-    // Handle cursor movement with WASD keys
-    holdCursorMovement();
+    // Only handle game actions if turn image is not showing
+    if (!showTurnImage) {
+      // Handle cursor movement with WASD keys
+      holdCursorMovement();
+    }
 
     // Display all maptiles
     Tile.displayAll(tiles);
@@ -1188,17 +1239,20 @@ function draw() {
     if (selectedCharacter && !selectedCharacter.isEnemy) {
       selectedCharacter.drawMovementPreview();
     }
-
+   
     // Display all characters on the map
     for (let character of characters) {
       character.displayOnMap();
     }
 
-    // Only display cursor during player turn
-    if (isPlayerTurn) {
+    // Display turn phase image
+    displayTurnImage();
+
+    // Only show cursor if turn image is not showing and is player turn
+    if (!showTurnImage && isPlayerTurn) {
       locationCursor.renderCursor();
     }
-
+   
     // Display the action menu
     actionMenu.display();
    
