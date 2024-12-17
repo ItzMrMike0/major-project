@@ -1,5 +1,5 @@
 {
-    "default": "Assets/Cursor/SelectorImages/tileSelector.gif",
-    "selectedCursor": "Assets/Cursor/SelectorImages/cursorSelectedCharacter.png"
+    "default": "Assets/Cursor/SelectorImages/tileselector.gif",
+    "selectedCursor": "Assets/Cursor/SelectorImages/cursorselectedcharacter.png"
   }
   

@@ -51,8 +51,14 @@ class Tile {
  
   // Check if a tile is occupied by another character
   static isTileOccupied(x, y) {
+    const selectedChar = Character.getSelectedCharacter();
+
     // Iterate through all character x and y
     for (let character of characters) {
+      // If the character is the selected one, skip the check (allow moving to own position)
+      if (selectedChar && character === selectedChar) {
+        continue;
+      }
       if (character.x === x && character.y === y) {
         return true;  
       }
@@ -497,19 +503,22 @@ class Character {
       if (distance <= selectedCharacter.getMovementRange() && selectedCharacter.reachableTiles.some(tile => tile.x === cursor.x && tile.y === cursor.y)) {
         const tile = tiles[cursor.y][cursor.x];
 
-        // Ensure the target tile is walkable and not occupied
-        if (tile.type !== "W" && tile.type !== "M" && !Tile.isTileOccupied(cursor.x, cursor.y)) {
-          // Store previous position before moving
-          selectedCharacter.previousX = selectedCharacter.x;
-          selectedCharacter.previousY = selectedCharacter.y;
+        // Allow moving to own position or check if tile is walkable and not occupied
+        if (cursor.x === selectedCharacter.x && cursor.y === selectedCharacter.y ||
+            tile.type !== "W" && tile.type !== "M" && !Tile.isTileOccupied(cursor.x, cursor.y)) {
+         
+          // Only store previous position and set isSelected to false if actually moving
+          if (cursor.x !== selectedCharacter.x || cursor.y !== selectedCharacter.y) {
+            selectedCharacter.previousX = selectedCharacter.x;
+            selectedCharacter.previousY = selectedCharacter.y;
+            // When character is walking, set isSelected to false so width and height don't increase
+            selectedCharacter.isSelected = false;
+          }
 
           // Move the character to the new location
           selectedCharacter.moveTo(cursor.x, cursor.y);
 
           console.log(`${selectedCharacter.name} moved to (${cursor.x}, ${cursor.y})`);
-
-          // When character is walking, set isSelected to false so width and height don't increase
-          selectedCharacter.isSelected = false;
         }
         else {
           console.log("Cannot move to this tile.");
@@ -520,7 +529,6 @@ class Character {
       }
     }
   }
-
 
   // Use A* algorithm to find a path to the selected tile
   static findPath(start, goal, tiles) {
@@ -1038,6 +1046,7 @@ function handleTurnSystem() {
   fill(0);
   text(isPlayerTurn ? "Player Turn" : "Enemy Turn", 20, 30);
 
+
   if (isPlayerTurn) {
     // Check if all player characters have moved
     if (checkAllPlayerCharactersUsed()) {
@@ -1045,6 +1054,8 @@ function handleTurnSystem() {
       isPlayerTurn = false;
       showTurnImage = true;
       turnImageTimer = millis();
+      sounds.enemyPhase.amp(2);
+      sounds.playerPhase.play();
       console.log("Switching to Enemy Turn");
      
       // Reset ALL characters
@@ -1061,6 +1072,8 @@ function handleTurnSystem() {
       isPlayerTurn = true;
       showTurnImage = true;
       turnImageTimer = millis();
+      sounds.enemyPhase.amp(2);
+      sounds.enemyPhase.play();
       console.log("Switching to Player Turn");
      
       // Reset ALL characters
