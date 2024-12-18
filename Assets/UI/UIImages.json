@@ -1,4 +1,4 @@
 {
-    "enemyTurn": "Assets/UI/enemyphase.png",
-    "playerTurn": "Assets/UI/playerphase.png"
+    "enemyTurn": "Assets/UI/enemy_phase.png",
+    "playerTurn": "Assets/UI/player_phase.png"
 }

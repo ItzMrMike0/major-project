@@ -14,7 +14,6 @@
       "defense": 5,
       "resistance": 0,
       "isSelected": false,
-      "animation": "RoyIdle",
       "isEnemy": false
     },
     {
@@ -31,7 +30,6 @@
       "defense": 11,
       "resistance": 0,
       "isSelected": false,
-      "animation": "KnightIdle",
       "isEnemy": false
     },
     {
@@ -48,7 +46,6 @@
       "defense": 6,
       "resistance": 0,
       "isSelected": false,
-      "animation": "CavalierIdle",
       "isEnemy": false,
       "height" : 65
     },
@@ -66,7 +63,6 @@
       "defense": 6,
       "resistance": 0,
       "isSelected": false,
-      "animation": "CavalierIdle",
       "isEnemy": false,
       "height": 65
     },
@@ -84,7 +80,6 @@
       "defense": 4,
       "resistance": 0,
       "isSelected": false,
-      "animation": "ArcherIdle",
       "isEnemy": false
     },
     {
@@ -101,7 +96,6 @@
       "defense": 3,
       "resistance": 5,
       "isSelected": false,
-      "animation": "MageIdle",
       "isEnemy": false
     },
     {
@@ -118,7 +112,6 @@
       "defense": 3,
       "resistance": 0,
       "isSelected": false,
-      "animation": "EnemyFighterIdle",
       "isEnemy": true
     },
     {
@@ -135,7 +128,6 @@
       "defense": 3,
       "resistance": 0,
       "isSelected": false,
-      "animation": "EnemyFighterIdle",
       "isEnemy": true
     },
     {
@@ -152,7 +144,6 @@
       "defense": 3,
       "resistance": 0,
       "isSelected": false,
-      "animation": "EnemyFighterIdle",
       "isEnemy": true
     },
     {
@@ -169,7 +160,6 @@
       "defense": 3,
       "resistance": 0,
       "isSelected": false,
-      "animation": "EnemyBrigandIdle",
       "isEnemy": true
     },
     {
@@ -186,7 +176,6 @@
       "defense": 3,
       "resistance": 0,
       "isSelected": false,
-      "animation": "EnemyFighterIdle",
       "isEnemy": true
     },
     {
@@ -203,7 +192,6 @@
       "defense": 3,
       "resistance": 0,
       "isSelected": false,
-      "animation": "EnemyFighterIdle",
       "isEnemy": true
     },
     {
@@ -220,7 +208,6 @@
       "defense": 3,
       "resistance": 0,
       "isSelected": false,
-      "animation": "EnemyFighterIdle",
       "isEnemy": true
     },
     {
@@ -237,7 +224,6 @@
       "defense": 3,
       "resistance": 0,
       "isSelected": false,
-      "animation": "EnemyFighterIdle",
       "isEnemy": true
     },
     {
@@ -254,7 +240,6 @@
       "defense": 3,
       "resistance": 0,
       "isSelected": false,
-      "animation": "EnemyFighterIdle",
       "isEnemy": true
     },
     {
@@ -271,7 +256,6 @@
       "defense": 3,
       "resistance": 0,
       "isSelected": false,
-      "animation": "EnemyFighterIdle",
       "isEnemy": true
     },
     {
@@ -288,7 +272,6 @@
       "defense": 3,
       "resistance": 0,
       "isSelected": false,
-      "animation": "EnemyFighterIdle",
       "isEnemy": true
     }      
   ]

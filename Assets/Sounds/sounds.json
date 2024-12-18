@@ -1,20 +1,19 @@
 {
-    "backgroundMusic": "Assets/Sounds/Music/backgroundmusic.mp3",
-    "cursorMoving": "Assets/Sounds/Effects/cursormoving.mp3",
-    "cursorSelection": "Assets/Sounds/Effects/cursorselection.mp3",
-    "selectOption": "Assets/Sounds/Effects/selectoption.mp3",
-    "selectCharacter": "Assets/Sounds/Effects/selectcharacter.mp3",
-    "unselectCharacter": "Assets/Sounds/Effects/unselectcharacter.mp3",
-    "RoySelectVoice": "Assets/Sounds/SelectVoiceLines/royselect.wav",
-    "LanceSelectVoice": "Assets/Sounds/SelectVoiceLines/lanceselect.wav",
-    "AllenSelectVoice": "Assets/Sounds/SelectVoiceLines/allenselect.wav",
-    "BorsSelectVoice": "Assets/Sounds/SelectVoiceLines/borsselect.wav",
-    "LughSelectVoice": "Assets/Sounds/SelectVoiceLines/lughselect.wav",
-    "WoltSelectVoice": "Assets/Sounds/SelectVoiceLines/woltselect.wav",
-    "armorWalking": "Assets/Sounds/Walking/armorwalking.mp3",
-    "horseWalking": "Assets/Sounds/Walking/horsewalking.mp3",
-    "regularWalking": "Assets/Sounds/Walking/regularwalking.mp3",
-    "playerPhase": "Assets/Sounds/Effects/playerphase.mp3",
-    "enemyPhase": "Assets/Sounds/Effects/enemyphase.mp3"
-  }
-  
+    "backgroundMusic": "Assets/Sounds/Music/background_music.mp3",
+    "cursorMoving": "Assets/Sounds/Effects/cursor_moving.mp3",
+    "cursorSelection": "Assets/Sounds/Effects/cursor_selection.mp3",
+    "selectOption": "Assets/Sounds/Effects/select_option.mp3",
+    "selectCharacter": "Assets/Sounds/Effects/select_character.mp3",
+    "unselectCharacter": "Assets/Sounds/Effects/unselect_character.mp3",
+    "roySelectVoice": "Assets/Sounds/SelectVoiceLines/roy_select.wav",
+    "lanceSelectVoice": "Assets/Sounds/SelectVoiceLines/lance_select.wav",
+    "allenSelectVoice": "Assets/Sounds/SelectVoiceLines/allen_select.wav",
+    "borsSelectVoice": "Assets/Sounds/SelectVoiceLines/bors_select.wav",
+    "lughSelectVoice": "Assets/Sounds/SelectVoiceLines/lugh_select.wav",
+    "woltSelectVoice": "Assets/Sounds/SelectVoiceLines/wolt_select.wav",
+    "armorWalking": "Assets/Sounds/Walking/armor_walking.mp3",
+    "horseWalking": "Assets/Sounds/Walking/horse_walking.mp3",
+    "regularWalking": "Assets/Sounds/Walking/regular_walking.mp3",
+    "playerPhase": "Assets/Sounds/Effects/player_phase.mp3",
+    "enemyPhase": "Assets/Sounds/Effects/enemy_phase.mp3"
+}

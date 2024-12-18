@@ -172,8 +172,8 @@ class Character {
       data.resistance, data.isEnemy, data.width, data.height
     );
 
-    // Set character's animation provided in character JSON
-    character.animation = characterAnimations[data.animation];
+    // Set initial animation to standing
+    animationManager(character, "standing");
 
     return character;
   }
@@ -287,7 +287,7 @@ class Character {
           cursorImageKey = "selectedCursor";
 
           // Play character-specific voice line
-          const voiceKey = `${character.name}SelectVoice`;
+          const voiceKey = `${character.name.toLowerCase()}SelectVoice`;
           if (sounds[voiceKey]) {
             sounds[voiceKey].play();
           }
@@ -880,7 +880,7 @@ class ActionMenu {
     for (let i = 0; i < this.options.length; i++) {
       const option = this.options[i].toLowerCase();
       const isSelected = i === this.selectedOption;
-      const imageKey = option === "item" ? "item" + (isSelected ? "Selected" : "") : option + (isSelected ? "Selected" : "");
+      const imageKey = option === "item" ? "items" + (isSelected ? "Selected" : "") : option + (isSelected ? "Selected" : "");
      
       // Spacing between images
       const yOffset = i * this.actionMenuHeight * 1.2;
@@ -966,7 +966,7 @@ let gameState = GAME_STATES.GAMEPLAY; // Current game state
 let actionMenu, actionMenuImages = {}; // Action menu object and images
 let UIImages = {}, UIPaths; // UI images and paths
 let isPlayerTurn = true; // Track whose turn it is
-let showTurnImage = false; // Whether to show the turn image
+let showTurnImage = true; // Whether to show the turn image
 let turnImageTimer = 0; // Timer for turn image display
 
 // Preload all information and images
@@ -1031,6 +1031,12 @@ function setup() {
 
   // Initialize turn image display for first player turn
   showTurnImage = true;
+  if (isPlayerTurn) {
+    currentTurnImage = UIImages["playerTurn"];
+  } 
+  else {
+    currentTurnImage = UIImages["enemyTurn"];
+  }
 
   // Start the timer for how long the image has been displayed for
   turnImageTimer = millis();
@@ -1093,12 +1099,12 @@ function animationManager(character, state) {
 
   // Map states to file paths for different animations (e.g., walking, standing)
   const statePaths = {
-    "standing": `Assets/CharacterMapSprites/StandingGifs/${character.classType.toLowerCase()}standing.gif`,
-    "selected": `Assets/CharacterMapSprites/SelectedGifs/${character.classType.toLowerCase()}selected.gif`,
-    "walkleft": `Assets/CharacterMapSprites/WalkingGifs/${character.classType.toLowerCase()}walkleft.gif`,
-    "walkright": `Assets/CharacterMapSprites/WalkingGifs/${character.classType.toLowerCase()}walkright.gif`,
-    "walkup": `Assets/CharacterMapSprites/WalkingGifs/${character.classType.toLowerCase()}walkup.gif`,
-    "walkdown": `Assets/CharacterMapSprites/WalkingGifs/${character.classType.toLowerCase()}walkdown.gif`,
+    "standing": `Assets/CharacterMapSprites/StandingGifs/${character.classType.toLowerCase()}_standing.gif`,
+    "selected": `Assets/CharacterMapSprites/SelectedGifs/${character.classType.toLowerCase()}_selected.gif`,
+    "walkleft": `Assets/CharacterMapSprites/WalkingGifs/${character.classType.toLowerCase()}_walk_left.gif`,
+    "walkright": `Assets/CharacterMapSprites/WalkingGifs/${character.classType.toLowerCase()}_walk_right.gif`,
+    "walkup": `Assets/CharacterMapSprites/WalkingGifs/${character.classType.toLowerCase()}_walk_up.gif`,
+    "walkdown": `Assets/CharacterMapSprites/WalkingGifs/${character.classType.toLowerCase()}_walk_down.gif`,
   };
 
   // If the state exists, load the corresponding animation
@@ -1139,7 +1145,6 @@ function handleTurnSystem() {
   textSize(24);
   fill(0);
   text(isPlayerTurn ? "Player Turn" : "Enemy Turn", 20, 30);
-
 
   if (isPlayerTurn) {
     // Check if all player characters have moved

@@ -1,5 +1,4 @@
 {
-    "default": "Assets/Cursor/SelectorImages/tileselector.gif",
-    "selectedCursor": "Assets/Cursor/SelectorImages/cursorselectedcharacter.png"
-  }
-  
+    "default": "Assets/Cursor/SelectorImages/tile_selector.gif",
+    "selectedCursor": "Assets/Cursor/SelectorImages/cursor_selected_character.png"
+}
