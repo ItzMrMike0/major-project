@@ -49,18 +49,43 @@ class Tile {
     }
   }
  
-  // Check if a tile is occupied by another character
-  static isTileOccupied(x, y) {
+  // Check if a tile is blocked by an enemy (for pathfinding and display)
+  static isTileBlockedByEnemy(x, y) {
     const selectedChar = Character.getSelectedCharacter();
 
-    // Iterate through all character x and y
+    if (!selectedChar) {
+      return true;
+    }
+
+    // Check each character
     for (let character of characters) {
-      // If the character is the selected one, skip the check (allow moving to own position)
-      if (selectedChar && character === selectedChar) {
+      if (character.x === x && character.y === y) {
+        // If it's an enemy, tile is blocked
+        if (character.isEnemy !== selectedChar.isEnemy) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  // Check if a tile is occupied by any character
+  static isTileOccupied(x, y) {
+    const selectedChar = Character.getSelectedCharacter();
+    if (!selectedChar) {
+      return true;
+    }
+
+    // Check each character
+    for (let character of characters) {
+      // Skip if it's the selected character
+      if (character === selectedChar) {
         continue;
       }
+
+      // If any character is at the location
       if (character.x === x && character.y === y) {
-        return true;  
+        return true;
       }
     }
     return false;
@@ -331,39 +356,36 @@ class Character {
 
   // Calculate reachable and attackable tiles using Dijkstra's algorithm
   calculateActionableTiles() {
-    // Arrays for reachable and attackable tiles
+    // Arrays to store reachable tiles (within movement range) and attackable tiles
     this.reachableTiles = [];
     this.attackableTiles = [];
 
-    // Get movement range and attack range of character
+    // Retrieve the character's movement and attack ranges
     const movementRange = this.getMovementRange();
     const attackRange = this.getAttackRange();
 
-    // Initialize visited set and queue for Dijkstra's algorithm, starting at the character's current position
+    // Initialize a set to track visited tiles and a queue for Dijkstra's algorithm, starting with the character's position
     const visited = new Set([`${this.x},${this.y}`]);
-    const queue = [{ x: this.x, y: this.y, cost: 0 }];
+    const movementQueue = [{ x: this.x, y: this.y, cost: 0 }];
 
-    while (queue.length > 0) {
-      // Sort by cost and get the lowest cost tile
-      queue.sort((a, b) => a.cost - b.cost);
-      const current = queue.shift();
+    // Calculate all tiles within movement range
+    while (movementQueue.length > 0) {
+      // Sort queue by movement cost to process the lowest cost tile first
+      movementQueue.sort((a, b) => a.cost - b.cost);
+      const current = movementQueue.shift(); // Dequeue the current tile
       const { x, y, cost } = current;
 
-      // Check if tile is within movement range and add to reachable tiles
-      if (cost <= movementRange) {
+      // Add the tile to reachable tiles if within movement range and not blocked by an enemy
+      if (cost <= movementRange && !Tile.isTileBlockedByEnemy(x, y)) {
         this.reachableTiles.push({ x, y });
       }
-      // Check if tile is within attack range and walkable, then add to attackable tiles
-      else if (cost <= movementRange + attackRange && tiles[y][x].isWalkable()) {
-        this.attackableTiles.push({ x, y });
-      }
 
-      // Skip exploring further tiles if we've exceeded the combined movement and attack range
-      if (cost > movementRange + attackRange) {
+      // Stop processing this path if the movement range is exceeded
+      if (cost >= movementRange) {
         continue;
       }
 
-      // Explore adjacent tiles (up, down, left, right)
+      // Define the four possible movement directions (up, down, left, right)
       const directions = [
         { x: x, y: y - 1 }, // up
         { x: x, y: y + 1 }, // down
@@ -371,26 +393,85 @@ class Character {
         { x: x - 1, y: y }  // left
       ];
 
-      // Process each adjacent tile
       for (const dir of directions) {
         const nextX = dir.x;
         const nextY = dir.y;
-        const nextKey = `${nextX},${nextY}`;
+        const nextKey = `${nextX},${nextY}`; // Unique key for the next position
 
-        // Skip if out of bounds, already visited, or not walkable
+        // Skip if the tile is out of bounds, already visited, not walkable, or blocked by an enemy
         if (!Tile.isWithinMapBounds(nextX, nextY) ||
             visited.has(nextKey) ||
-            !tiles[nextY][nextX].isWalkable()) {
+            !tiles[nextY][nextX].isWalkable() ||
+            Tile.isTileBlockedByEnemy(nextX, nextY)) {
           continue;
         }
 
-        // Add adjacent tile to queue and mark as visited
-        queue.push({ x: nextX, y: nextY, cost: cost + 1 });
+        // Queue the adjacent tile with updated movement cost and mark it as visited
+        movementQueue.push({ x: nextX, y: nextY, cost: cost + 1 });
         visited.add(nextKey);
       }
     }
+
+    // Calculate all tiles within attack range from every reachable tile
+    const attackVisited = new Set(); // Track visited tiles for attack range calculation
+
+    for (const pos of this.reachableTiles) {
+      // Initialize a queue for attack range exploration starting from the reachable position
+      const attackQueue = [{ x: pos.x, y: pos.y, cost: 0 }];
+      attackVisited.clear(); // Reset visited tiles for this reachable position
+      attackVisited.add(`${pos.x},${pos.y}`); // Mark the initial position as visited
+
+      while (attackQueue.length > 0) {
+        const current = attackQueue.shift(); // Dequeue the current tile
+        const { x, y, cost } = current;
+
+        // Add the tile to attackable tiles if within attack range and not already in reachable tiles
+        if (cost > 0 && cost <= attackRange &&
+            tiles[y][x].isWalkable() &&
+            !this.reachableTiles.some(tile => tile.x === x && tile.y === y)) {
+          this.attackableTiles.push({ x, y });
+        }
+
+        // Stop processing this path if the attack range is exceeded
+        if (cost >= attackRange) {
+          continue;
+        }
+
+        // Define the four possible attack directions (up, down, left, right)
+        const directions = [
+          { x: x, y: y - 1 }, // up
+          { x: x, y: y + 1 }, // down
+          { x: x + 1, y: y }, // right
+          { x: x - 1, y: y }  // left
+        ];
+
+        for (const dir of directions) {
+          const nextX = dir.x;
+          const nextY = dir.y;
+          const nextKey = `${nextX},${nextY}`; // Unique key for the next position
+
+          // Skip if the tile is out of bounds, already visited, or not walkable
+          if (!Tile.isWithinMapBounds(nextX, nextY) ||
+              attackVisited.has(nextKey) ||
+              !tiles[nextY][nextX].isWalkable()) {
+            continue;
+          }
+
+          // Queue the adjacent tile for attack range exploration and mark it as visited
+          attackQueue.push({ x: nextX, y: nextY, cost: cost + 1 });
+          attackVisited.add(nextKey);
+        }
+      }
+    }
+
+    // Remove duplicate entries from attackable tiles as reachable tiles takes precedence
+    this.attackableTiles = Array.from(new Set(this.attackableTiles.map(tile => `${tile.x},${tile.y}`)))
+      .map(key => {
+        const [x, y] = key.split(',').map(Number); // Convert string keys back to tile coordinates
+        return { x, y };
+      });
   }
- 
+
   // Move the character to a new location gradually
   moveTo(newX, newY) {
     // Save the previous position
@@ -402,16 +483,17 @@ class Character {
       console.log("No path found!");
       return;
     }
- 
+
     // Character is now moving
     this.isMoving = true;
- 
-    // characterWait = false;
+
     const moveStep = (index) => {
       // If the path is complete, set the final position and stop the movement
       if (index >= path.length) {
         this.x = newX;
         this.y = newY;
+        this.renderX = newX;
+        this.renderY = newY;
 
         // Keep the character selected and show the action menu
         this.isSelected = true;
@@ -419,11 +501,13 @@ class Character {
         actionMenu.show(this.x);
         return;
       }
- 
+
       // Current and target positions from the path
-      const { x: startX, y: startY } = this;
-      const { x: targetX, y: targetY } = path[index];
- 
+      const startX = this.x;
+      const startY = this.y;
+      const targetX = path[index].x;
+      const targetY = path[index].y;
+
       // Calculate direction for movement
       const dx = targetX - startX;
       const dy = targetY - startY;
@@ -445,7 +529,7 @@ class Character {
       if (walkSound && walkSound.isLoaded()) {
         walkSound.play();
       }
- 
+
       // Set walking animation based on direction
       if (dx === 1) {
         animationManager(this, "walkright");
@@ -459,159 +543,169 @@ class Character {
       else if (dy === -1) {
         animationManager(this, "walkup");
       }
- 
+
       // Duration and progress tracking for smooth movement
       const duration = 200; // ms to move between tiles
       let startTime = millis();
- 
+
       const animateStep = () => {
         let elapsed = millis() - startTime;
-        let progress = Math.min(elapsed / duration, 1); // Ensure progress doesn't exceed 1
- 
+        // Ensure progress doesn't exceed 1
+        let progress = Math.min(elapsed / duration, 1);
+
         // Calculate and update position for smooth animation
         this.renderX = startX + (targetX - startX) * progress;
         this.renderY = startY + (targetY - startY) * progress;
- 
-        // If step is complete, finalize position and proceed to the next step
+
         if (progress < 1) {
-          // Keep animating the current step
           requestAnimationFrame(animateStep);
         }
         else {
-          // Finalize position and move to the next step in the path
           this.x = targetX;
           this.y = targetY;
           moveStep(index + 1);
         }
       };
- 
+
       // Start the animation for the current step
       animateStep();
     };
- 
+
     // Begin the movement sequence
     moveStep(0);
   }
  
   // Move the selected character to a new location
   static moveSelectedCharacter(cursor, tiles) {
+    const selectedCharacter = Character.getSelectedCharacter();
     if (selectedCharacter && selectedCharacter.canMove) {
-      // Calculate the distance to the target tile
-      const distance = Math.abs(cursor.x - selectedCharacter.x) + Math.abs(cursor.y - selectedCharacter.y);
-
-      // Check if the target tile is within movement range
-      if (distance <= selectedCharacter.getMovementRange() && selectedCharacter.reachableTiles.some(tile => tile.x === cursor.x && tile.y === cursor.y)) {
+      // Check if the target tile is within movement range and reachable
+      if (selectedCharacter.reachableTiles.some(tile => tile.x === cursor.x && tile.y === cursor.y)) {
         const tile = tiles[cursor.y][cursor.x];
 
-        // Allow moving to own position or check if tile is walkable and not occupied
-        if (cursor.x === selectedCharacter.x && cursor.y === selectedCharacter.y ||
-            tile.type !== "W" && tile.type !== "M" && !Tile.isTileOccupied(cursor.x, cursor.y)) {
-         
-          // Only store previous position and set isSelected to false if actually moving
+        // Check if we can move to this tile
+        if (!Tile.isTileOccupied(cursor.x, cursor.y)) {
+          // Only store previous position if actually moving
           if (cursor.x !== selectedCharacter.x || cursor.y !== selectedCharacter.y) {
             selectedCharacter.previousX = selectedCharacter.x;
             selectedCharacter.previousY = selectedCharacter.y;
-            // When character is walking, set isSelected to false so width and height don't increase
-            selectedCharacter.isSelected = false;
           }
 
           // Move the character to the new location
           selectedCharacter.moveTo(cursor.x, cursor.y);
-
           console.log(`${selectedCharacter.name} moved to (${cursor.x}, ${cursor.y})`);
         }
         else {
-          console.log("Cannot move to this tile.");
+          console.log("Cannot move to this tile - occupied.");
         }
       }
       else {
-        console.log("Target location is out of range.");
+        console.log("Tile not reachable.");
       }
     }
   }
 
   // Use A* algorithm to find a path to the selected tile
   static findPath(start, goal, tiles) {
-    // Stores the tiles to be evaluated. Each tile contains its coordinates, g, and f values
-    const openSet = [{ x: start.x, y: start.y, g: 0, f: 0 }];
+    // Initialize the open set with the starting node, containing its position, g (cost from start), and f (estimated total cost)
+    const openSet = [{
+      x: start.x,
+      y: start.y,
+      g: 0, // Cost from start to current node
+      f: Character.heuristic(start, goal) // Estimated total cost (g + heuristic)
+    }];
 
-    // Used to reconstruct the path later (stores the parent of each tile)
-    const cameFrom = {};
+    // Closed set to track nodes that have already been calculated
+    const closedSet = new Set();
 
-    // Keeps track of visited tiles to avoid revisiting them
-    const visited = new Set();
-    visited.add(`${start.x},${start.y}`);
-   
-    // Define adjacent directions (up, right, down, left)
-    const directions = [
-      { x: 0, y: 1 }, { x: 1, y: 0 },
-      { x: 0, y: -1 }, { x: -1, y: 0 }
-    ];
-   
-    // Heuristic function for estimating the distance between two points using Manhattan distance
-    const heuristic = (x1, y1, x2, y2) => Math.abs(x1 - x2) + Math.abs(y1 - y2);
-   
-    // Process tiles by lowest f score
+    // Map to track the path (stores which node leads to another)
+    const cameFrom = new Map();
+
+    // Map to track the cost from start to each node
+    const gScore = new Map();
+    gScore.set(`${start.x},${start.y}`, 0); // Initial g-score for the starting node is 0
+
+    // While there are nodes to evaluate in the open set
     while (openSet.length > 0) {
-      // Sort by the lowest f score
-      openSet.sort((a, b) => a.f - b.f);
+      // Find the node in the open set with the lowest f-score
+      let current = openSet[0];
+      let currentIndex = 0;
+      for (let i = 1; i < openSet.length; i++) {
+        if (openSet[i].f < current.f) {
+          current = openSet[i];
+          currentIndex = i;
+        }
+      }
 
-      // Get the tile with the lowest f score
-      const current = openSet.shift();
-   
-      // If the goal is reached, reconstruct the path
+      // If the goal node is reached, reconstruct and return the path
       if (current.x === goal.x && current.y === goal.y) {
         const path = [];
-        let curr = `${goal.x},${goal.y}`;
-
-        // Reconstruct the path by following the "cameFrom" references back to the start
-        while (cameFrom[curr]) {
-          const [x, y] = curr.split(',').map(Number);
-          path.push({ x, y });
-          curr = cameFrom[curr];
+        let curr = current;
+        while (cameFrom.has(`${curr.x},${curr.y}`)) {
+          path.unshift(curr); // Add the current node to the path
+          curr = cameFrom.get(`${curr.x},${curr.y}`); // Move to the previous node in the path
         }
-
-        // Reverse the path so that it starts from the beginning
-        return path.reverse();
+        return path;
       }
-   
-      // Explore adjacent tiles
-      for (const { x: dx, y: dy } of directions) {
-        const neighborX = current.x + dx;
-        const neighborY = current.y + dy;
-        const tileKey = `${neighborX},${neighborY}`;
-   
-        // Skip tile is not on canvas
-        if (neighborX < 0 || neighborX >= tiles[0].length || neighborY < 0 || neighborY >= tiles.length) {
+
+      // Remove the current node from the open set and add it to the closed set
+      openSet.splice(currentIndex, 1);
+      closedSet.add(`${current.x},${current.y}`);
+
+      // Explore all valid neighbors (adjacent tiles)
+      const neighbors = [
+        { x: current.x, y: current.y - 1 }, // up
+        { x: current.x, y: current.y + 1 }, // down
+        { x: current.x + 1, y: current.y }, // right
+        { x: current.x - 1, y: current.y }  // left
+      ];
+
+      for (const neighbor of neighbors) {
+        const neighborKey = `${neighbor.x},${neighbor.y}`; // Create a unique key for the neighbor
+
+        // Skip the neighbor if it is; out of bounds, not walkable, blocked by an enemy or has already been evaluted
+        if (!Tile.isWithinMapBounds(neighbor.x, neighbor.y) ||
+            !tiles[neighbor.y][neighbor.x].isWalkable() ||
+            (Tile.isTileBlockedByEnemy(neighbor.x, neighbor.y) && (neighbor.x !== goal.x || neighbor.y !== goal.y)) ||
+            closedSet.has(neighborKey)) {
           continue;
         }
-   
-        // Skip tiles that aren't walkable and have already been visited
-        const tile = tiles[neighborY][neighborX];
-        if (tile.type === 'W' || tile.type === 'M' || visited.has(tileKey)) {
+
+        // Calculate the tentative g-score (cost of the path from start to this neighbor)
+        const tentativeGScore = gScore.get(`${current.x},${current.y}`) + 1;
+
+        // Check if the neighbor is already in the open set
+        let neighborNode = openSet.find(n => n.x === neighbor.x && n.y === neighbor.y);
+
+        // If the neighbor is not in the open set, add it
+        if (!neighborNode) {
+          neighborNode = {
+            x: neighbor.x,
+            y: neighbor.y,
+            g: tentativeGScore, // Set the g-score for this node
+            f: tentativeGScore + Character.heuristic(neighbor, goal) // Calculate the f-score (g + heuristic)
+          };
+          openSet.push(neighborNode); // Add to the open set for further evaluation
+        }
+        // If this path is not better than the one already known, skip it
+        else if (tentativeGScore >= neighborNode.g) {
           continue;
         }
 
-        // Calculate the movement cost to move to this tile
-        const g = current.g + 1;
-
-        // Calculate the heuristic estimate of how far the goal is from the current tile
-        const h = heuristic(neighborX, neighborY, goal.x, goal.y);
-
-        // f is the total estimated cost (f = g + h)
-        const f = g + h;
-
-        // Add the neighbor to the openSet to evaluate it next, with its updated g and f values
-        openSet.push({ x: neighborX, y: neighborY, g, f });
-
-        // Mark the neighbor as visited
-        visited.add(tileKey);
-
-        // Record the current tile as the parent of the neighbor (for path reconstruction)
-        cameFrom[tileKey] = `${current.x},${current.y}`;
+        // Update the best path to this neighbor
+        cameFrom.set(neighborKey, current); // Record the current node as the predecessor of this neighbor
+        neighborNode.g = tentativeGScore; // Update the g-score of the neighbor
+        neighborNode.f = tentativeGScore + Character.heuristic(neighbor, goal); // Recalculate the f-score
       }
     }
-    return null; // No path found
+
+    // Return null if no path to the goal was found
+    return null;
+  }
+
+  // Heuristic function for A* pathfinding (Manhattan distance)
+  static heuristic(a, b) {
+    return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
   }
 
   // Helper function to get the selected character
@@ -1218,7 +1312,7 @@ function displayTurnImage() {
   if (showTurnImage) {
     if (millis() - turnImageTimer < 2000) {
       if (isPlayerTurn) {
-        // Player turn 
+        // Player turn
         image(UIImages["playerTurn"], width/2 - imgWidth/2, height/2 - imgHeight/2, imgWidth, imgHeight);
       }
       else {
