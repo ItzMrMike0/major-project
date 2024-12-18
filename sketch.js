@@ -666,7 +666,7 @@ class Character {
         // Skip the neighbor if it is; out of bounds, not walkable, blocked by an enemy or has already been evaluted
         if (!Tile.isWithinMapBounds(neighbor.x, neighbor.y) ||
             !tiles[neighbor.y][neighbor.x].isWalkable() ||
-            (Tile.isTileBlockedByEnemy(neighbor.x, neighbor.y) && (neighbor.x !== goal.x || neighbor.y !== goal.y)) ||
+            Tile.isTileBlockedByEnemy(neighbor.x, neighbor.y) && (neighbor.x !== goal.x || neighbor.y !== goal.y) ||
             closedSet.has(neighborKey)) {
           continue;
         }
@@ -876,6 +876,9 @@ class ActionMenu {
       return;
     }
 
+    // Enable smoothing for UI elements
+    smooth();
+
     // Display menu options using images
     for (let i = 0; i < this.options.length; i++) {
       const option = this.options[i].toLowerCase();
@@ -890,6 +893,9 @@ class ActionMenu {
         image(actionMenuImages[imageKey], this.x, this.y + yOffset, this.actionMenuWidth, this.actionMenuHeight);
       }
     }
+
+    // Disable smoothing again for game elements
+    noSmooth();
   }
 
   // Obtain the selected option
@@ -998,12 +1004,17 @@ function preload() {
 }
 
 function setup() {
-  // 4:3 ratio
-  createCanvas(1000, 750);
-
-  // Calculate tile grid dimensions based on the canvas size and level layout
+  // Calculate tile grid dimensions based on level layout
   tilesHigh = lines.length;
   tilesWide = lines[0].length;
+
+  // Create a canvas that's 1000x750 pixels with a 4:3 ratio
+  createCanvas(1000, 750);
+
+  // Turn off any smoothing for shapes and images in p5.js to match the sharp look
+  noSmooth();
+
+  // Calculate tile sizes after canvas is created
   tilesWidth = width / tilesWide;
   tilesHeight = height / tilesHigh;
 
@@ -1031,12 +1042,6 @@ function setup() {
 
   // Initialize turn image display for first player turn
   showTurnImage = true;
-  if (isPlayerTurn) {
-    currentTurnImage = UIImages["playerTurn"];
-  } 
-  else {
-    currentTurnImage = UIImages["enemyTurn"];
-  }
 
   // Start the timer for how long the image has been displayed for
   turnImageTimer = millis();
@@ -1309,6 +1314,9 @@ function holdCursorMovement() {
 
 // Display turn phase image in the center of screen
 function displayTurnImage() {
+  // Enable smoothing for UI elements
+  smooth();
+
   // Image dimensions
   let imgWidth = 600;  
   let imgHeight = 125;
@@ -1329,6 +1337,9 @@ function displayTurnImage() {
       showTurnImage = false;
     }
   }
+
+  // Disable smoothing before returning to game
+  noSmooth();
 }
 
 // Main game loop for rendering everything on the screen
