@@ -19,19 +19,19 @@ Winning will rely not only on combat prowess but also on strategic planning and 
 
 ### 2: Turn-Based Actions
 - Select individual characters to view stats or perform actions. 🟡
-- Swap between player turn and enemy turn. 🔴
+- Swap between player turn and enemy turn. 🟢
 - Action options: 🟡
   - Move: Select a tile to move to. 🟢
   - Attack: Choose a target within attack range. 🔴
   - Items: Use or equip items during a turn. 🔴
-- Undo move option (before confirming an action). 🟡
+- Undo move option (before confirming an action). 🟢
 - Win condition (Completely defeat all enemy characters) 🔴
 
 ### 3: Characters
 - Characters with unique stats, animations, and abilities. 🟡
 - Core stats include HP, strength, skill, speed, luck, defense, resistance. 🟡
 - Derived stats like critical rate or hit rate. 🔴
-- Assign classes with unique traits (e.g., archers, mages, knights). 🟡
+- Assign classes with unique traits (e.g., archers, mages, knights). 🟢
 - Include movement, selection, and idle animations. 🟢
 
 ### 4: Battle System
@@ -43,13 +43,13 @@ Winning will rely not only on combat prowess but also on strategic planning and 
 - Show distinct effects for missed attacks. 🔴
 
 ### 5: Enemy AI
-- Implement enemy AI to make tactical decisions. 🔴
-- AI actions: 🔴
-  - Move toward player characters within range. 🔴
+- Implement enemy AI to make tactical decisions. 🟢
+- AI actions: 🟡
+  - Move toward player characters within range. 🟡
   - Attack player characters within range. 🔴
 
 ### 6: Sound Effects
-- Add background music with smooth transitions (e.g., calm and battle phases). 🟡
+- Add background music with smooth transitions. 🟡
 - Include sound effects for movement, attacks, and menu interactions. 🟡
 
 ## Nice to Have List

@@ -166,11 +166,22 @@ class Character {
 
   // Helper function to create new characters based on provided data in character JSON
   static createCharacter(data) {
-    // Create a new character with the data attributes
-    let character = new Character(data.name, data.classType, data.x, data.y, data.level, data.hp,
-      data.strength, data.skill, data.speed, data.luck, data.defense,
-      data.resistance, data.isEnemy, data.width, data.height
-    );
+    // Create either an EnemyCharacter or regular Character based on isEnemy flag
+    let character;
+    if (data.isEnemy) {
+      character = new EnemyCharacter(
+        data.name, data.classType, data.x, data.y, data.level, data.hp,
+        data.strength, data.skill, data.speed, data.luck, data.defense,
+        data.resistance, data.isEnemy, data.width, data.height
+      );
+    }
+    else {
+      character = new Character(
+        data.name, data.classType, data.x, data.y, data.level, data.hp,
+        data.strength, data.skill, data.speed, data.luck, data.defense,
+        data.resistance, data.isEnemy, data.width, data.height
+      );
+    }
 
     // Set initial animation to standing
     animationManager(character, "standing");
@@ -193,9 +204,9 @@ class Character {
       drawWidth += 5;
       drawHeight += 7;
     }
-    
+   
     // Only increase width for left/right walking animations for Lord and Cavalier
-    else if ((this.currentState === "walkleft" || this.currentState === "walkright") && 
+    else if ((this.currentState === "walkleft" || this.currentState === "walkright") &&
         (this.classType === "Lord" || this.classType === "Cavalier")) {
       drawWidth = 65;  // Larger width for walking animations
     }
@@ -258,14 +269,12 @@ class Character {
     if (this.isGreyedOut) {
       tint(100);
     }
-    
-    // If the character is active, ensure no tint is applied
-    else {
-      noTint();
-    }
 
     // Draw the character's animation at the calculated position
     image(this.animation, drawX, drawY, drawWidth, drawHeight);
+
+    // Reset tint after drawing
+    noTint();
   }
 
   // Selects a character at the cursor's position
@@ -832,6 +841,299 @@ class EnemyCharacter extends Character {
   constructor(name, classType, x, y, level, hp, strength, skill, speed, luck, defense, resistance, isEnemy, width = 50, height = 50) {
     super(name, classType, x, y, level, hp, strength, skill, speed, luck, defense, resistance, isEnemy, width, height);
   }
+
+  // Find the nearest player character
+  findNearestPlayer() {
+    let nearestPlayer = null;
+    let shortestDistance = Infinity;
+
+    // Calculate closest non-enemy character
+    for (let character of characters) {
+      if (!character.isEnemy) {
+        const distance = Math.abs(this.x - character.x) + Math.abs(this.y - character.y);
+        if (distance < shortestDistance) {
+          shortestDistance = distance;
+          nearestPlayer = character;
+        }
+      }
+    }
+    return nearestPlayer;
+  }
+
+  // Tile blocking check for enemy characters
+  static isTileBlockedForEnemy(x, y) {
+    // Check if tile is within map bounds
+    if (!Tile.isWithinMapBounds(x, y)) {
+      return true;
+    }
+   
+    // Check if tile is walkable
+    if (!tiles[y][x].isWalkable()) {
+      return true;
+    }
+
+    // Check for player characters only - enemies can move through other enemies
+    for (let character of characters) {
+      if (character.x === x && character.y === y &&
+          !character.isEnemy && character !== this) {
+        return true; // Only player characters block enemy movement
+      }
+    }
+    return false;
+  }
+
+  // Custom findPath method for enemy movement
+  findPath(start, goal) {
+    // First check if the start or goal positions are invalid
+    if (!Tile.isWithinMapBounds(start.x, start.y) || !Tile.isWithinMapBounds(goal.x, goal.y)) {
+      console.log("Start or goal position is out of bounds");
+      return null;
+    }
+
+    // Check if start or goal is walkable
+    if (!tiles[start.y][start.x].isWalkable()) {
+      console.log("Start position is not walkable");
+      return null;
+    }
+
+    // For goal position, we allow it even if blocked by a player (since we want to move towards players)
+    if (!tiles[goal.y][goal.x].isWalkable() && !this.isPositionBlockedByPlayer(goal.x, goal.y)) {
+      console.log("Goal position is not walkable");
+      return null;
+    }
+
+    const openSet = [{
+      x: start.x,
+      y: start.y,
+      g: 0,
+      f: Math.abs(start.x - goal.x) + Math.abs(start.y - goal.y)
+    }];
+
+    const closedSet = new Set();
+    const cameFrom = new Map();
+    const gScore = new Map();
+    gScore.set(`${start.x},${start.y}`, 0);
+
+    while (openSet.length > 0) {
+      let current = openSet[0];
+      let currentIndex = 0;
+      for (let i = 1; i < openSet.length; i++) {
+        if (openSet[i].f < current.f) {
+          current = openSet[i];
+          currentIndex = i;
+        }
+      }
+
+      // If we reached the goal or are adjacent to it
+      if (current.x === goal.x && current.y === goal.y ||
+          Math.abs(current.x - goal.x) + Math.abs(current.y - goal.y) === 1) {
+        const path = [];
+        let curr = current;
+        while (cameFrom.has(`${curr.x},${curr.y}`)) {
+          path.unshift(curr);
+          curr = cameFrom.get(`${curr.x},${curr.y}`);
+        }
+        path.unshift(start);
+        return path;
+      }
+
+      openSet.splice(currentIndex, 1);
+      closedSet.add(`${current.x},${current.y}`);
+
+      const neighbors = [
+        { x: current.x, y: current.y - 1 }, // up
+        { x: current.x, y: current.y + 1 }, // down
+        { x: current.x + 1, y: current.y }, // right
+        { x: current.x - 1, y: current.y }  // left
+      ];
+
+      for (const neighbor of neighbors) {
+        const neighborKey = `${neighbor.x},${neighbor.y}`;
+
+        if (closedSet.has(neighborKey)) {
+          continue;
+        }
+
+        if (!Tile.isWithinMapBounds(neighbor.x, neighbor.y) ||
+            !tiles[neighbor.y][neighbor.x].isWalkable()) {
+          continue;
+        }
+
+        // Allow moving through other enemies
+        let isBlocked = false;
+        for (let character of characters) {
+          if (character.x === neighbor.x && character.y === neighbor.y &&
+              !character.isEnemy && character !== this) {
+            isBlocked = true;
+            break;
+          }
+        }
+        if (isBlocked) {
+          continue;
+        }
+
+        const tentativeGScore = gScore.get(`${current.x},${current.y}`) + 1;
+        let neighborNode = openSet.find(n => n.x === neighbor.x && n.y === neighbor.y);
+
+        if (!neighborNode) {
+          neighborNode = {
+            x: neighbor.x,
+            y: neighbor.y,
+            g: tentativeGScore,
+            f: tentativeGScore + Math.abs(neighbor.x - goal.x) + Math.abs(neighbor.y - goal.y)
+          };
+          openSet.push(neighborNode);
+          gScore.set(neighborKey, tentativeGScore);
+          cameFrom.set(neighborKey, current);
+        }
+        else if (tentativeGScore < gScore.get(neighborKey)) {
+          neighborNode.g = tentativeGScore;
+          neighborNode.f = tentativeGScore + Math.abs(neighbor.x - goal.x) + Math.abs(neighbor.y - goal.y);
+          gScore.set(neighborKey, tentativeGScore);
+          cameFrom.set(neighborKey, current);
+        }
+      }
+    }
+    return null;
+  }
+
+  // Helper method to check if a position is blocked by a player
+  isPositionBlockedByPlayer(x, y) {
+    for (let character of characters) {
+      if (character.x === x && character.y === y && !character.isEnemy) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Override moveTo for enemy characters to use their own pathfinding
+  moveTo(newX, newY) {
+    // Save the previous position
+    this.previousX = this.x;
+    this.previousY = this.y;
+
+    // Enemy characters use their own pathfinding
+    const path = this.findPath(
+      { x: this.x, y: this.y },
+      { x: newX, y: newY }
+    );
+
+    if (!path) {
+      console.log(`Enemy ${this.name} could not find path to (${newX}, ${newY})`);
+      return;
+    }
+
+    // Character is now moving
+    this.isMoving = true;
+   
+    // Start the movement animation
+    this.moveStep(0, path, newX, newY);
+  }
+
+  // Animate movement step by step
+  moveStep(index, path, finalX, finalY) {
+    if (index >= path.length) {
+      // Movement complete
+      this.x = finalX;
+      this.y = finalY;
+      this.isMoving = false;
+      this.canMove = false;
+      this.isGreyedOut = true;
+      animationManager(this, "standing");
+      return;
+    }
+
+    const nextPos = path[index];
+   
+    // Update animation state based on movement direction
+    if (nextPos.y < this.y) {
+      animationManager(this, "walkup");
+    }
+    else if (nextPos.y > this.y) {
+      animationManager(this, "walkdown");
+    }
+    else if (nextPos.x < this.x) {
+      animationManager(this, "walkleft");
+    }
+    else if (nextPos.x > this.x) {
+      animationManager(this, "walkright");
+    }
+
+    // Play regular walking sound effect
+    if (sounds.regularWalking && sounds.regularWalking.isLoaded()) {
+      sounds.regularWalking.amp(1);
+      sounds.regularWalking.play();
+    }
+
+    // Move to next position
+    this.x = nextPos.x;
+    this.y = nextPos.y;
+
+    // Schedule next step
+    setTimeout(() => {
+      this.moveStep(index + 1, path, finalX, finalY);
+    }, 200); // Adjust timing as needed
+  }
+
+  // Execute AI movement
+  executeAIMove() {
+    if (!this.canMove) {
+      return;
+    }
+    console.log(`Executing AI move for ${this.name}`);
+
+    const nearestPlayer = this.findNearestPlayer();
+    if (!nearestPlayer) {
+      console.log("No player characters found");
+      return;
+    }
+
+    console.log(`Found nearest player: ${nearestPlayer.name} at (${nearestPlayer.x}, ${nearestPlayer.y})`);
+
+    const path = this.findPath(
+      {x: this.x, y: this.y},
+      {x: nearestPlayer.x, y: nearestPlayer.y}
+    );
+
+    if (path && path.length > 0) {
+      const movementRange = this.getMovementRange();
+     
+      // Try each position in the path until we find one that's not blocked
+      let targetPos = null;
+      for (let i = Math.min(movementRange, path.length - 1); i >= 0; i--) {
+        const pos = path[i];
+        let isBlocked = false;
+        for (let character of characters) {
+          if (character !== this && character.x === pos.x && character.y === pos.y) {
+            isBlocked = true;
+            break;
+          }
+        }
+        if (!isBlocked) {
+          targetPos = pos;
+          break;
+        }
+      }
+
+      // If we found a valid position, move there
+      if (targetPos) {
+        console.log(`Moving to (${targetPos.x}, ${targetPos.y})`);
+        this.previousX = this.x;
+        this.previousY = this.y;
+        this.moveTo(targetPos.x, targetPos.y);
+      }
+
+      else {
+        // If we couldn't find any valid position, mark as moved
+        console.log(`No valid position found for ${this.name}`);
+      }
+    }
+    else {
+      // If no path found, mark as moved
+      console.log("No valid path found to player");
+    }
+  }
 }
 
 // Action Menu class: Handles the menu that appears after moving a character
@@ -982,9 +1284,11 @@ let lastMoveTimeW = 0, lastMoveTimeA = 0, lastMoveTimeS = 0, lastMoveTimeD = 0; 
 let gameState = GAME_STATES.GAMEPLAY; // Current game state
 let actionMenu, actionMenuImages = {}; // Action menu object and images
 let UIImages = {}, UIPaths; // UI images and paths
-let isPlayerTurn = true; // Track whose turn it is
+let isPlayerTurn = true; // Track whose turn it is (enemy or player)
 let showTurnImage = true; // Whether to show the turn image
 let turnImageTimer = 0; // Timer for turn image display
+let enemyPhaseDelayTimer = 0;  // Timer for enemy phase delay
+let enemyPhaseStarted = false; // Flag to track if enemy phase has started
 
 // Preload all information and images
 function preload() {
@@ -1031,7 +1335,7 @@ function setup() {
 
   // Loop background music and set volume
   sounds.battleMusic.loop(true);
-  sounds.battleMusic.amp(0.9);
+  sounds.battleMusic.amp(0.5);
 
   // Disable right-click menu
   window.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -1157,53 +1461,164 @@ function checkAllEnemyCharactersUsed() {
 
 // Handle turn transitions
 function handleTurnSystem() {
-  // Display current turn
-  textSize(24);
-  fill(0);
-  text(isPlayerTurn ? "Player Turn" : "Enemy Turn", 20, 30);
-
   if (isPlayerTurn) {
-    // Check if all player characters have moved
-    if (checkAllPlayerCharactersUsed()) {
-      // Switch to enemy turn
+    enemyPhaseStarted = false; // Reset enemy phase flag
+   
+    // Check if all player characters have used their turn
+    let allPlayersMoved = true;
+    for (let character of characters) {
+      if (!character.isEnemy && !character.isGreyedOut) {
+        allPlayersMoved = false;
+        break;
+      }
+    }
+
+    // If all players have moved, switch to enemy turn
+    if (allPlayersMoved) {
+      // Reset ALL characters
+      for (let character of characters) {
+        character.isGreyedOut = false;
+        character.canMove = true;
+      }
       isPlayerTurn = false;
       showTurnImage = true;
       turnImageTimer = millis();
       sounds.enemyPhase.amp(2);
-      sounds.playerPhase.play();
-      console.log("Switching to Enemy Turn");
-     
-      // Reset ALL characters
-      for (let character of characters) {
-        character.isGreyedOut = false;
-        character.canMove = true;
-      }
+      sounds.enemyPhase.play();
+      console.log("All players have moved, switching to enemy turn");
     }
   }
   else {
-    // Check if all enemy characters have moved
-    if (checkAllEnemyCharactersUsed()) {
-      // Switch back to player turn
+    // Wait for turn image to finish
+    if (showTurnImage) {
+      enemyPhaseDelayTimer = millis(); // Set the delay timer when image disappears
+      return;
+    }
+
+    // Add delay after turn image disappears
+    if (!enemyPhaseStarted) {
+      if (millis() - enemyPhaseDelayTimer < 500) { // 500ms = 0.5 seconds
+        return;
+      }
+      enemyPhaseStarted = true;
+    }
+
+    // Check if any enemy is still moving
+    let enemyMoving = characters.some(char => char.isEnemy && char.isMoving);
+    if (enemyMoving) {
+      return;
+    }
+
+    // Find one unmoved enemy
+    let foundEnemy = characters.find(char => char.isEnemy && char.canMove);
+
+    // If we found an unmoved enemy, execute its move
+    if (foundEnemy) {
+      foundEnemy.executeAIMove();
+    }
+    // If no unmoved enemies are found and none are moving, switch back to player turn
+    else if (!enemyMoving) {
+      // Reset all characters for the new turn
+      for (let character of characters) {
+        character.canMove = true;
+        character.isGreyedOut = false;
+        character.action = null;
+      }
+      // Switch to player turn
       isPlayerTurn = true;
       showTurnImage = true;
       turnImageTimer = millis();
-      sounds.enemyPhase.amp(2);
-      sounds.enemyPhase.play();
-      console.log("Switching to Player Turn");
-     
-      // Reset ALL characters
-      for (let character of characters) {
-        character.isGreyedOut = false;
-        character.canMove = true;
+      sounds.playerPhase.amp(2);
+      sounds.playerPhase.play();
+    }
+  }
+}
+
+// Display turn phase image in the center of screen
+function displayTurnImage() {
+  // Enable smoothing for UI elements
+  smooth();
+
+  // Image dimensions
+  let imgWidth = 600;  
+  let imgHeight = 125;
+
+  // Show image in the middle of the screen after 2 seconds
+  if (showTurnImage) {
+    if (millis() - turnImageTimer < 2000) {
+      if (isPlayerTurn) {
+        // Player turn
+        image(UIImages["playerTurn"], width/2 - imgWidth/2, height/2 - imgHeight/2, imgWidth, imgHeight);
+      }
+      else {
+        // Enemy turn
+        image(UIImages["enemyTurn"], width/2 - imgWidth/2, height/2 - imgHeight/2, imgWidth, imgHeight);
       }
     }
+    else {
+      showTurnImage = false;
+    }
+  }
+
+  // Disable smoothing again for game elements
+  noSmooth();
+}
+
+// Allows user to hold down movement keys for continuous movement
+function holdCursorMovement() {
+  // Don't move cursor if action menu is open, character is moving, or during enemy turn
+  if (actionMenu.isVisible || selectedCharacter?.isMoving || !isPlayerTurn) {
+    return;
+  }
+
+  // Get the current time
+  const currentTime = millis();
+  // Delay before cursor moves to the next tile
+  const moveDelay = 200;
+
+  // 'W' key - Move up
+  if (keyIsDown(87) && currentTime - lastMoveTimeW > moveDelay) {
+    // Send input to move up
+    locationCursor.move("up");
+
+    // Update the last move times for up direction
+    lastMoveTimeW = currentTime;
+  }
+  // 'A' key - Move left
+  if (keyIsDown(65) && currentTime - lastMoveTimeA > moveDelay) {  
+    // Send input to move left
+    locationCursor.move("left");
+   
+    // Update the last move times for left direction
+    lastMoveTimeA = currentTime;
+  }
+  // 'S' key - Move down
+  if (keyIsDown(83) && currentTime - lastMoveTimeS > moveDelay) {  
+    // Send input to move down
+    locationCursor.move("down");
+
+    // Update the last move times for down direction
+    lastMoveTimeS = currentTime;
+  }
+  // 'D' key - Move right
+  if (keyIsDown(68) && currentTime - lastMoveTimeD > moveDelay) {  
+    // Send input to move right
+    locationCursor.move("right");
+   
+    // Update the last move times for right direction
+    lastMoveTimeD = currentTime;
   }
 }
 
 // Handles all inputs
 function keyPressed() {
-  // Only handle inputs if turn image is not showing and during player turn
-  if (showTurnImage || !isPlayerTurn) {
+  // Only handle keyboard input during gameplay
+  if (gameState !== GAME_STATES.GAMEPLAY) {
+    return;
+  }
+
+  // If turn image is showing, don't handle any input
+  if (showTurnImage) {
     return;
   }
 
@@ -1275,82 +1690,24 @@ function keyPressed() {
   else if (key === "k" && selectedCharacter && !selectedCharacter.isMoving) {
     Character.unselectCharacter(true);
   }
-}
-
-// Allows user to hold down movement keys for continuous movement
-function holdCursorMovement() {
-  // Don't move cursor if action menu is open, character is moving, or during enemy turn
-  if (actionMenu.isVisible || selectedCharacter?.isMoving || !isPlayerTurn) {
-    return;
-  }
-
-  // Get the current time
-  const currentTime = millis();
-  // Delay before cursor moves to the next tile
-  const moveDelay = 200;
-
-  // 'W' key - Move up
-  if (keyIsDown(87) && currentTime - lastMoveTimeW > moveDelay) {
-    // Send input to move up
-    locationCursor.move("up");
-
-    // Update the last move times for up direction
-    lastMoveTimeW = currentTime;
-  }
-  // 'A' key - Move left
-  if (keyIsDown(65) && currentTime - lastMoveTimeA > moveDelay) {  
-    // Send input to move left
-    locationCursor.move("left");
-   
-    // Update the last move times for left direction
-    lastMoveTimeA = currentTime;
-  }
-  // 'S' key - Move down
-  if (keyIsDown(83) && currentTime - lastMoveTimeS > moveDelay) {  
-    // Send input to move down
-    locationCursor.move("down");
-
-    // Update the last move times for down direction
-    lastMoveTimeS = currentTime;
-  }
-  // 'D' key - Move right
-  if (keyIsDown(68) && currentTime - lastMoveTimeD > moveDelay) {  
-    // Send input to move right
-    locationCursor.move("right");
-   
-    // Update the last move times for right direction
-    lastMoveTimeD = currentTime;
-  }
-}
-
-// Display turn phase image in the center of screen
-function displayTurnImage() {
-  // Enable smoothing for UI elements
-  smooth();
-
-  // Image dimensions
-  let imgWidth = 600;  
-  let imgHeight = 125;
-
-  // Show image in the middle of the screen after 2 seconds
-  if (showTurnImage) {
-    if (millis() - turnImageTimer < 2000) {
-      if (isPlayerTurn) {
-        // Player turn
-        image(UIImages["playerTurn"], width/2 - imgWidth/2, height/2 - imgHeight/2, imgWidth, imgHeight);
-      }
-      else {
-        // Enemy turn
-        image(UIImages["enemyTurn"], width/2 - imgWidth/2, height/2 - imgHeight/2, imgWidth, imgHeight);
+  // 'R' key - Skip to enemy turn
+  else if (key === "r" && isPlayerTurn) {
+    // Deselect any selected character
+    if (selectedCharacter) {
+      Character.unselectCharacter(false);
+    }
+    // Switch to enemy turn
+    isPlayerTurn = false;
+    showTurnImage = true;
+    turnImageTimer = millis();
+    // Grey out all player characters
+    for (let character of characters) {
+      if (!character.isEnemy) {
+        character.canMove = false;
+        character.isGreyedOut = true;
       }
     }
-    else {
-      showTurnImage = false;
-    }
   }
-
-  // Disable smoothing before returning to game
-  noSmooth();
 }
 
 // Main game loop for rendering everything on the screen
