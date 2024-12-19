@@ -186,16 +186,22 @@ class Character {
 
     // Set isSelectedAnimation to true if the character is selected
     const isSelectedAnimation = this.currentState === "selected";
+    const isWalkingAnimation = ["walkleft", "walkright", "walkup", "walkdown"].includes(this.currentState);
 
+    // Scale up enemy walking animations
+    if (this.isEnemy && isWalkingAnimation) {
+      drawWidth += 5;
+      drawHeight += 7;
+    }
+    
     // Only increase width for left/right walking animations for Lord and Cavalier
-    const isHorizontalWalking = this.currentState === "walkleft" || this.currentState === "walkright";
-    if (isHorizontalWalking && (this.classType === "Lord" || this.classType === "Cavalier")) {
+    else if ((this.currentState === "walkleft" || this.currentState === "walkright") && 
+        (this.classType === "Lord" || this.classType === "Cavalier")) {
       drawWidth = 65;  // Larger width for walking animations
     }
 
     // If the character is selected and has the selected animation, increase the size slightly for visual effect
     if (this.isSelected && isSelectedAnimation) {
-      console.log("increase size");
       // Smaller width increase for Fighter class
       if (this.classType === "Fighter") {
         drawWidth += 10;
@@ -217,7 +223,12 @@ class Character {
     let drawX = this.x * tilesWidth + (tilesWidth - drawWidth) / 2;
     let drawY = this.y * tilesHeight + (tilesHeight - drawHeight) / 2;
 
-    // Adjust Y-position if the character is selected and has isSelectedAnimation so the character won't display under their grid cell
+    // Adjust Y-position for walking animations if enemy
+    if (this.isEnemy && isWalkingAnimation) {
+      drawY -= 4;
+    }
+
+    // Adjust Y-position if the character is selected and has isSelectedAnimation
     if (this.isSelected && isSelectedAnimation) {
       // Adjust Y position more for enemy characters since they're scaled much higher
       if (this.isEnemy) {
@@ -247,7 +258,7 @@ class Character {
     if (this.isGreyedOut) {
       tint(100);
     }
-   
+    
     // If the character is active, ensure no tint is applied
     else {
       noTint();
@@ -1019,8 +1030,8 @@ function setup() {
   tilesHeight = height / tilesHigh;
 
   // Loop background music and set volume
-  sounds.backgroundMusic.loop(true);
-  sounds.backgroundMusic.amp(0.1);
+  sounds.battleMusic.loop(true);
+  sounds.battleMusic.amp(0.9);
 
   // Disable right-click menu
   window.addEventListener('contextmenu', (e) => e.preventDefault());
