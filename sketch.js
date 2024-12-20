@@ -493,12 +493,16 @@ class Character {
   }
 
   // Move the character to a new location gradually
-  moveTo(newX, newY) {
+  moveTo(newX, newY, isEnemy = false) {
     // Save the previous position
     this.previousX = this.x;
     this.previousY = this.y;
 
-    const path = Character.findPath({ x: this.x, y: this.y }, { x: newX, y: newY }, tiles);
+    // Get path based on character type
+    const path = isEnemy ?
+      this.findPath({ x: this.x, y: this.y }, { x: newX, y: newY }) :
+      Character.findPath({ x: this.x, y: this.y }, { x: newX, y: newY }, tiles);
+
     if (!path) {
       console.log("No path found!");
       return;
@@ -515,10 +519,19 @@ class Character {
         this.renderX = newX;
         this.renderY = newY;
 
-        // Keep the character selected and show the action menu
-        this.isSelected = true;
-        this.isMoving = false;
-        actionMenu.show(this.x);
+        // Different end behavior for enemy vs player
+        if (isEnemy) {
+          this.isMoving = false;
+          this.canMove = false;
+          this.isGreyedOut = true;
+          animationManager(this, "standing");
+        }
+        else {
+          // Keep the character selected and show the action menu
+          this.isSelected = true;
+          this.isMoving = false;
+          actionMenu.show(this.x);
+        }
         return;
       }
 
@@ -564,31 +577,14 @@ class Character {
         animationManager(this, "walkup");
       }
 
-      // Duration and progress tracking for smooth movement
-      const duration = 200; // ms to move between tiles
-      let startTime = millis();
+      // Move to next position
+      this.x = targetX;
+      this.y = targetY;
 
-      const animateStep = () => {
-        let elapsed = millis() - startTime;
-        // Ensure progress doesn't exceed 1
-        let progress = Math.min(elapsed / duration, 1);
-
-        // Calculate and update position for smooth animation
-        this.renderX = startX + (targetX - startX) * progress;
-        this.renderY = startY + (targetY - startY) * progress;
-
-        if (progress < 1) {
-          requestAnimationFrame(animateStep);
-        }
-        else {
-          this.x = targetX;
-          this.y = targetY;
-          moveStep(index + 1);
-        }
-      };
-
-      // Start the animation for the current step
-      animateStep();
+      // Schedule next step
+      setTimeout(() => {
+        moveStep(index + 1);
+      }, 200); // Adjust timing as needed
     };
 
     // Begin the movement sequence
@@ -626,13 +622,31 @@ class Character {
   }
 
   // Use A* algorithm to find a path to the selected tile
-  static findPath(start, goal, tiles) {
+  static findPath(start, goal, tiles, isEnemy = false) {
+    // First check if the start or goal positions are invalid
+    if (!Tile.isWithinMapBounds(start.x, start.y) || !Tile.isWithinMapBounds(goal.x, goal.y)) {
+      console.log("Start or goal position is out of bounds");
+      return null;
+    }
+
+    // Check if start or goal is walkable
+    if (!tiles[start.y][start.x].isWalkable()) {
+      console.log("Start position is not walkable");
+      return null;
+    }
+
+    // For enemy pathfinding, we allow moving towards player positions
+    if (!tiles[goal.y][goal.x].isWalkable() && (!isEnemy || !this.isPositionBlockedByPlayer?.(goal.x, goal.y))) {
+      console.log("Goal position is not walkable");
+      return null;
+    }
+
     // Initialize the open set with the starting node, containing its position, g (cost from start), and f (estimated total cost)
     const openSet = [{
       x: start.x,
       y: start.y,
-      g: 0, // Cost from start to current node
-      f: Character.heuristic(start, goal) // Estimated total cost (g + heuristic)
+      g: 0,
+      f: Character.heuristic(start, goal)
     }];
 
     // Closed set to track nodes that have already been calculated
@@ -647,9 +661,9 @@ class Character {
 
     // While there are nodes to evaluate in the open set
     while (openSet.length > 0) {
-      // Find the node in the open set with the lowest f-score
       let current = openSet[0];
       let currentIndex = 0;
+      // Find the node in the open set with the lowest f-score
       for (let i = 1; i < openSet.length; i++) {
         if (openSet[i].f < current.f) {
           current = openSet[i];
@@ -657,13 +671,17 @@ class Character {
         }
       }
 
-      // If the goal node is reached, reconstruct and return the path
-      if (current.x === goal.x && current.y === goal.y) {
+      // If the goal node is reached, reconstruct and return the path (For enemy pathfinding, allow stopping adjacent to the goal)
+      if (current.x === goal.x && current.y === goal.y ||
+          isEnemy && Math.abs(current.x - goal.x) + Math.abs(current.y - goal.y) === 1) {
         const path = [];
         let curr = current;
         while (cameFrom.has(`${curr.x},${curr.y}`)) {
           path.unshift(curr); // Add the current node to the path
           curr = cameFrom.get(`${curr.x},${curr.y}`); // Move to the previous node in the path
+        }
+        if (isEnemy) {
+          path.unshift(start);
         }
         return path;
       }
@@ -681,45 +699,100 @@ class Character {
       ];
 
       for (const neighbor of neighbors) {
-        const neighborKey = `${neighbor.x},${neighbor.y}`; // Create a unique key for the neighbor
+        // Create a unique key for the neighbor
+        const neighborKey = `${neighbor.x},${neighbor.y}`;
+
+        if (closedSet.has(neighborKey)) {
+          continue;
+        }
 
         // Skip the neighbor if it is; out of bounds, not walkable, blocked by an enemy or has already been evaluted
         if (!Tile.isWithinMapBounds(neighbor.x, neighbor.y) ||
-            !tiles[neighbor.y][neighbor.x].isWalkable() ||
-            Tile.isTileBlockedByEnemy(neighbor.x, neighbor.y) && (neighbor.x !== goal.x || neighbor.y !== goal.y) ||
-            closedSet.has(neighborKey)) {
+            !tiles[neighbor.y][neighbor.x].isWalkable()) {
           continue;
         }
 
-        // Calculate the tentative g-score (cost of the path from start to this neighbor)
-        const tentativeGScore = gScore.get(`${current.x},${current.y}`) + 1;
+        // Enemy-specific collision handling
+        if (isEnemy) {
+          let isBlocked = false;
+          let costModifier = 0;
+         
+          for (let character of characters) {
+            if (character.x === neighbor.x && character.y === neighbor.y) {
+              if (!character.isEnemy) {
+                // Player characters block the path unless it's the goal
+                if (neighbor.x !== goal.x || neighbor.y !== goal.y) {
+                  continue;
+                }
+                isBlocked = true;
+                break;
+              }
+              else if (character !== this) {
+                // Enemy characters add a movement penalty this allows for pathfinding around enemy characters
+                costModifier = 5;
+              }
+            }
+          }
 
-        // Check if the neighbor is already in the open set
-        let neighborNode = openSet.find(n => n.x === neighbor.x && n.y === neighbor.y);
+          if (isBlocked) {
+            continue;
+          }
 
-        // If the neighbor is not in the open set, add it
-        if (!neighborNode) {
-          neighborNode = {
-            x: neighbor.x,
-            y: neighbor.y,
-            g: tentativeGScore, // Set the g-score for this node
-            f: tentativeGScore + Character.heuristic(neighbor, goal) // Calculate the f-score (g + heuristic)
-          };
-          openSet.push(neighborNode); // Add to the open set for further evaluation
+          // Calculate score with enemy-specific cost modifier (cost of the path from start to this neighbor)
+          const tentativeGScore = gScore.get(`${current.x},${current.y}`) + 1 + costModifier;
+
+          // Check if the neighbor is already in the open set
+          let neighborNode = openSet.find(n => n.x === neighbor.x && n.y === neighbor.y);
+
+          // If the neighbor is not in the open set, add it
+          if (!neighborNode) {
+            neighborNode = {
+              x: neighbor.x,
+              y: neighbor.y,
+              g: tentativeGScore, // Set the g-score for this node
+              f: tentativeGScore + Character.heuristic(neighbor, goal) // Calculate the f-score (g + heuristic)
+            };
+            openSet.push(neighborNode); 
+            gScore.set(neighborKey, tentativeGScore);
+            cameFrom.set(neighborKey, current);
+          }
+          else if (tentativeGScore < gScore.get(neighborKey)) {
+            neighborNode.g = tentativeGScore;
+            neighborNode.f = tentativeGScore + Character.heuristic(neighbor, goal);
+            gScore.set(neighborKey, tentativeGScore);
+            cameFrom.set(neighborKey, current);
+          }
         }
-        // If this path is not better than the one already known, skip it
-        else if (tentativeGScore >= neighborNode.g) {
-          continue;
-        }
+        // Regular pathfinding for non-enemy characters
+        else {
+          if (Tile.isTileBlockedByEnemy(neighbor.x, neighbor.y) &&
+              (neighbor.x !== goal.x || neighbor.y !== goal.y)) {
+            continue;
+          }
 
-        // Update the best path to this neighbor
-        cameFrom.set(neighborKey, current); // Record the current node as the predecessor of this neighbor
-        neighborNode.g = tentativeGScore; // Update the g-score of the neighbor
-        neighborNode.f = tentativeGScore + Character.heuristic(neighbor, goal); // Recalculate the f-score
+          const tentativeGScore = gScore.get(`${current.x},${current.y}`) + 1;
+          let neighborNode = openSet.find(n => n.x === neighbor.x && n.y === neighbor.y);
+
+          if (!neighborNode) {
+            neighborNode = {
+              x: neighbor.x,
+              y: neighbor.y,
+              g: tentativeGScore,
+              f: tentativeGScore + Character.heuristic(neighbor, goal)
+            };
+            openSet.push(neighborNode);
+            gScore.set(neighborKey, tentativeGScore);
+            cameFrom.set(neighborKey, current);
+          }
+          else if (tentativeGScore < gScore.get(neighborKey)) {
+            neighborNode.g = tentativeGScore;
+            neighborNode.f = tentativeGScore + Character.heuristic(neighbor, goal);
+            gScore.set(neighborKey, tentativeGScore);
+            cameFrom.set(neighborKey, current);
+          }
+        }
       }
     }
-
-    // Return null if no path to the goal was found
     return null;
   }
 
@@ -860,149 +933,9 @@ class EnemyCharacter extends Character {
     return nearestPlayer;
   }
 
-  // Tile blocking check for enemy characters
-  static isTileBlockedForEnemy(x, y) {
-    // Check if tile is within map bounds
-    if (!Tile.isWithinMapBounds(x, y)) {
-      return true;
-    }
-   
-    // Check if tile is walkable
-    if (!tiles[y][x].isWalkable()) {
-      return true;
-    }
-
-    // Check for player characters only - enemies can move through other enemies
-    for (let character of characters) {
-      if (character.x === x && character.y === y &&
-          !character.isEnemy && character !== this) {
-        return true; // Only player characters block enemy movement
-      }
-    }
-    return false;
-  }
-
-  // Custom findPath method for enemy movement
+  // Use findPath for enemy-specific behavior
   findPath(start, goal) {
-    // First check if the start or goal positions are invalid
-    if (!Tile.isWithinMapBounds(start.x, start.y) || !Tile.isWithinMapBounds(goal.x, goal.y)) {
-      console.log("Start or goal position is out of bounds");
-      return null;
-    }
-
-    // Check if start or goal is walkable
-    if (!tiles[start.y][start.x].isWalkable()) {
-      console.log("Start position is not walkable");
-      return null;
-    }
-
-    // For goal position, we allow it even if blocked by a player (since we want to move towards players)
-    if (!tiles[goal.y][goal.x].isWalkable() && !this.isPositionBlockedByPlayer(goal.x, goal.y)) {
-      console.log("Goal position is not walkable");
-      return null;
-    }
-
-    const openSet = [{
-      x: start.x,
-      y: start.y,
-      g: 0,
-      f: Math.abs(start.x - goal.x) + Math.abs(start.y - goal.y)
-    }];
-
-    const closedSet = new Set();
-    const cameFrom = new Map();
-    const gScore = new Map();
-    gScore.set(`${start.x},${start.y}`, 0);
-
-    while (openSet.length > 0) {
-      let current = openSet[0];
-      let currentIndex = 0;
-      for (let i = 1; i < openSet.length; i++) {
-        if (openSet[i].f < current.f) {
-          current = openSet[i];
-          currentIndex = i;
-        }
-      }
-
-      // If we reached the goal or are adjacent to it
-      if (current.x === goal.x && current.y === goal.y ||
-          Math.abs(current.x - goal.x) + Math.abs(current.y - goal.y) === 1) {
-        const path = [];
-        let curr = current;
-        while (cameFrom.has(`${curr.x},${curr.y}`)) {
-          path.unshift(curr);
-          curr = cameFrom.get(`${curr.x},${curr.y}`);
-        }
-        path.unshift(start);
-        return path;
-      }
-
-      openSet.splice(currentIndex, 1);
-      closedSet.add(`${current.x},${current.y}`);
-
-      const neighbors = [
-        { x: current.x, y: current.y - 1 }, // up
-        { x: current.x, y: current.y + 1 }, // down
-        { x: current.x + 1, y: current.y }, // right
-        { x: current.x - 1, y: current.y }  // left
-      ];
-
-      for (const neighbor of neighbors) {
-        const neighborKey = `${neighbor.x},${neighbor.y}`;
-
-        if (closedSet.has(neighborKey)) {
-          continue;
-        }
-
-        if (!Tile.isWithinMapBounds(neighbor.x, neighbor.y) ||
-            !tiles[neighbor.y][neighbor.x].isWalkable()) {
-          continue;
-        }
-
-        // Check if the neighbor position is occupied by another character
-        let isBlocked = false;
-        let costModifier = 0;
-        
-        for (let character of characters) {
-          if (character.x === neighbor.x && character.y === neighbor.y) {
-            if (!character.isEnemy) {
-              // Player characters completely block the path
-              isBlocked = true;
-              break;
-            } else if (character !== this) {
-              // Enemy characters add a movement penalty but don't block
-              costModifier = 5; // Significant cost increase to encourage finding paths around allies
-            }
-          }
-        }
-
-        if (isBlocked) {
-          continue;
-        }
-
-        const tentativeGScore = gScore.get(`${current.x},${current.y}`) + 1 + costModifier;
-        let neighborNode = openSet.find(n => n.x === neighbor.x && n.y === neighbor.y);
-
-        if (!neighborNode) {
-          neighborNode = {
-            x: neighbor.x,
-            y: neighbor.y,
-            g: tentativeGScore,
-            f: tentativeGScore + Math.abs(neighbor.x - goal.x) + Math.abs(neighbor.y - goal.y)
-          };
-          openSet.push(neighborNode);
-          gScore.set(neighborKey, tentativeGScore);
-          cameFrom.set(neighborKey, current);
-        }
-        else if (tentativeGScore < gScore.get(neighborKey)) {
-          neighborNode.g = tentativeGScore;
-          neighborNode.f = tentativeGScore + Math.abs(neighbor.x - goal.x) + Math.abs(neighbor.y - goal.y);
-          gScore.set(neighborKey, tentativeGScore);
-          cameFrom.set(neighborKey, current);
-        }
-      }
-    }
-    return null;
+    return Character.findPath(start, goal, tiles, true);
   }
 
   // Helper method to check if a position is blocked by a player
@@ -1015,90 +948,22 @@ class EnemyCharacter extends Character {
     return false;
   }
 
-  // Override moveTo for enemy characters to use their own pathfinding
+  // Use moveTo for use enemy-specific behavior
   moveTo(newX, newY) {
-    // Save the previous position
-    this.previousX = this.x;
-    this.previousY = this.y;
-
-    // Enemy characters use their own pathfinding
-    const path = this.findPath(
-      { x: this.x, y: this.y },
-      { x: newX, y: newY }
-    );
-
-    if (!path) {
-      console.log(`Enemy ${this.name} could not find path to (${newX}, ${newY})`);
-      return;
-    }
-
-    // Character is now moving
-    this.isMoving = true;
-   
-    // Start the movement animation
-    this.moveStep(0, path, newX, newY);
-  }
-
-  // Animate movement step by step
-  moveStep(index, path, finalX, finalY) {
-    if (index >= path.length) {
-      // Movement complete
-      this.x = finalX;
-      this.y = finalY;
-      this.isMoving = false;
-      this.canMove = false;
-      this.isGreyedOut = true;
-      animationManager(this, "standing");
-      return;
-    }
-
-    const nextPos = path[index];
-   
-    // Update animation state based on movement direction
-    if (nextPos.y < this.y) {
-      animationManager(this, "walkup");
-    }
-    else if (nextPos.y > this.y) {
-      animationManager(this, "walkdown");
-    }
-    else if (nextPos.x < this.x) {
-      animationManager(this, "walkleft");
-    }
-    else if (nextPos.x > this.x) {
-      animationManager(this, "walkright");
-    }
-
-    // Play regular walking sound effect
-    if (sounds.regularWalking && sounds.regularWalking.isLoaded()) {
-      sounds.regularWalking.amp(1);
-      sounds.regularWalking.play();
-    }
-
-    // Move to next position
-    this.x = nextPos.x;
-    this.y = nextPos.y;
-
-    // Schedule next step
-    setTimeout(() => {
-      this.moveStep(index + 1, path, finalX, finalY);
-    }, 200); // Adjust timing as needed
+    super.moveTo(newX, newY, true);
   }
 
   // Execute AI movement
   executeAIMove() {
+    // Check if enemy can move
     if (!this.canMove) {
       return;
     }
-    console.log(`Executing AI move for ${this.name}`);
 
+    // Find nearest player character
     const nearestPlayer = this.findNearestPlayer();
-    if (!nearestPlayer) {
-      console.log("No player characters found");
-      return;
-    }
 
-    console.log(`Found nearest player: ${nearestPlayer.name} at (${nearestPlayer.x}, ${nearestPlayer.y})`);
-
+    // Find path to nearest player location
     const path = this.findPath(
       {x: this.x, y: this.y},
       {x: nearestPlayer.x, y: nearestPlayer.y}
