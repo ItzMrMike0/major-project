@@ -959,20 +959,28 @@ class EnemyCharacter extends Character {
           continue;
         }
 
-        // Allow moving through other enemies
+        // Check if the neighbor position is occupied by another character
         let isBlocked = false;
+        let costModifier = 0;
+        
         for (let character of characters) {
-          if (character.x === neighbor.x && character.y === neighbor.y &&
-              !character.isEnemy && character !== this) {
-            isBlocked = true;
-            break;
+          if (character.x === neighbor.x && character.y === neighbor.y) {
+            if (!character.isEnemy) {
+              // Player characters completely block the path
+              isBlocked = true;
+              break;
+            } else if (character !== this) {
+              // Enemy characters add a movement penalty but don't block
+              costModifier = 5; // Significant cost increase to encourage finding paths around allies
+            }
           }
         }
+
         if (isBlocked) {
           continue;
         }
 
-        const tentativeGScore = gScore.get(`${current.x},${current.y}`) + 1;
+        const tentativeGScore = gScore.get(`${current.x},${current.y}`) + 1 + costModifier;
         let neighborNode = openSet.find(n => n.x === neighbor.x && n.y === neighbor.y);
 
         if (!neighborNode) {
