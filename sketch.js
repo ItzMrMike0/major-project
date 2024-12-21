@@ -498,6 +498,9 @@ class Character {
     this.previousX = this.x;
     this.previousY = this.y;
 
+    // Check if character is actually moving to a new position
+    const isActuallyMoving = (newX !== this.x || newY !== this.y);
+
     // Get path based on character type
     const path = isEnemy ?
       this.findPath({ x: this.x, y: this.y }, { x: newX, y: newY }) :
@@ -541,40 +544,39 @@ class Character {
       const targetX = path[index].x;
       const targetY = path[index].y;
 
-      // Calculate direction for movement
-      const dx = targetX - startX;
-      const dy = targetY - startY;
-
-      // Play walking sound effect depending on the character class
-      let walkSound;
-      if (this.classType === "Cavalier") {
-        walkSound = sounds.horseWalking;
-        walkSound.amp(0.6);
-      }
-      else if (this.classType === "Knight") {
-        walkSound = sounds.armorWalking;
-        walkSound.amp(0.6);
-      }
-      else {
-        walkSound = sounds.regularWalking;
-        walkSound.amp(1);
-      }
-      if (walkSound && walkSound.isLoaded()) {
-        walkSound.play();
-      }
-
-      // Set walking animation based on direction
-      if (dx === 1) {
-        animationManager(this, "walkright");
-      }
-      else if (dx === -1) {
-        animationManager(this, "walkleft");
-      }
-      else if (dy === 1) {
-        animationManager(this, "walkdown");
-      }
-      else if (dy === -1) {
-        animationManager(this, "walkup");
+      // Only play walking sound and set animation if character actually moving to a new final position
+      if (isActuallyMoving) {
+        // Play walking sound effect depending on the character class
+        let walkSound;
+        if (this.classType === "Cavalier") {
+          walkSound = sounds.horseWalking;
+          walkSound.amp(0.6);
+        }
+        else if (this.classType === "Knight") {
+          walkSound = sounds.armorWalking;
+          walkSound.amp(0.6);
+        }
+        else {
+          walkSound = sounds.regularWalking;
+          walkSound.amp(1);
+        }
+        if (walkSound && walkSound.isLoaded()) {
+          walkSound.play();
+        }
+  
+        // Set walking animation based on direction
+        if (targetX > startX) {
+          animationManager(this, "walkright");
+        }
+        else if (targetX < startX) {
+          animationManager(this, "walkleft");
+        }
+        else if (targetY > startY) {
+          animationManager(this, "walkdown");
+        }
+        else if (targetY < startY) {
+          animationManager(this, "walkup");
+        }
       }
 
       // Move to next position
