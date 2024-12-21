@@ -752,10 +752,17 @@ class Character {
               g: tentativeGScore, // Set the g-score for this node
               f: tentativeGScore + Character.heuristic(neighbor, goal) // Calculate the f-score (g + heuristic)
             };
+            // Add the neighbor node to the open set
             openSet.push(neighborNode); 
+
+            // Track the g-score for this node
             gScore.set(neighborKey, tentativeGScore);
+          
+            // Set the current node as the previous node for this neighbor
             cameFrom.set(neighborKey, current);
           }
+
+          // If the tentative g-score is lower than the current g-score, update the neighbor's scores
           else if (tentativeGScore < gScore.get(neighborKey)) {
             neighborNode.g = tentativeGScore;
             neighborNode.f = tentativeGScore + Character.heuristic(neighbor, goal);
@@ -769,10 +776,11 @@ class Character {
               (neighbor.x !== goal.x || neighbor.y !== goal.y)) {
             continue;
           }
-
+           // Calculate the tentative g-score for the neighbor
           const tentativeGScore = gScore.get(`${current.x},${current.y}`) + 1;
           let neighborNode = openSet.find(n => n.x === neighbor.x && n.y === neighbor.y);
 
+          // If the neighbor is not in the open set, add it
           if (!neighborNode) {
             neighborNode = {
               x: neighbor.x,
@@ -784,6 +792,7 @@ class Character {
             gScore.set(neighborKey, tentativeGScore);
             cameFrom.set(neighborKey, current);
           }
+          // If the tentative g-score is lower than the current g-score, update the neighbor's scores
           else if (tentativeGScore < gScore.get(neighborKey)) {
             neighborNode.g = tentativeGScore;
             neighborNode.f = tentativeGScore + Character.heuristic(neighbor, goal);
@@ -915,22 +924,67 @@ class EnemyCharacter extends Character {
     super(name, classType, x, y, level, hp, strength, skill, speed, luck, defense, resistance, isEnemy, width, height);
   }
 
-  // Find the nearest player character
-  findNearestPlayer() {
-    let nearestPlayer = null;
-    let shortestDistance = Infinity;
+  // Check if a player has adjacent enemies
+  hasAdjacentEnemies(player) {
+    const adjacentPositions = [
+      { x: player.x, y: player.y - 1 }, // up
+      { x: player.x, y: player.y + 1 }, // down
+      { x: player.x + 1, y: player.y }, // right
+      { x: player.x - 1, y: player.y }  // left
+    ];
 
-    // Calculate closest non-enemy character
-    for (let character of characters) {
-      if (!character.isEnemy) {
-        const distance = Math.abs(this.x - character.x) + Math.abs(this.y - character.y);
-        if (distance < shortestDistance) {
-          shortestDistance = distance;
-          nearestPlayer = character;
+    // Count how many adjacent positions are occupied by enemies
+    let enemyCount = 0;
+    for (let pos of adjacentPositions) {
+      for (let character of characters) {
+        if (character.isEnemy && character.x === pos.x && character.y === pos.y) {
+          enemyCount++;
+          break;
         }
       }
     }
-    return nearestPlayer;
+
+    // Return true if all walkable adjacent positions are occupied by enemies
+    let walkableAdjacents = adjacentPositions.filter(pos => 
+      Tile.isWithinMapBounds(pos.x, pos.y) && tiles[pos.y][pos.x].isWalkable()
+    ).length;
+
+    return enemyCount >= walkableAdjacents;
+  }
+
+  // Find the nearest player character that isn't surrounded by enemies
+  findNearestPlayer() {
+    let playerDistances = [];
+
+    // Calculate distances to all non-enemy characters
+    for (let character of characters) {
+      if (!character.isEnemy) {
+        const distance = Math.abs(this.x - character.x) + Math.abs(this.y - character.y);
+        playerDistances.push({
+          player: character,
+          distance: distance
+        });
+      }
+    }
+
+    // Sort by distance
+    playerDistances.sort((a, b) => a.distance - b.distance);
+
+    // Find the first player that isn't surrounded by enemies
+    for (let playerDist of playerDistances) {
+      // If this is an adjacent player, return them regardless of surroundings
+      if (playerDist.distance === 1) {
+        return playerDist.player;
+      }
+      
+      // Otherwise, check if they're surrounded
+      if (!this.hasAdjacentEnemies(playerDist.player)) {
+        return playerDist.player;
+      }
+    }
+
+    // If all players are surrounded, return the nearest one anyway
+    return playerDistances[0]?.player || null;
   }
 
   // Use findPath for enemy-specific behavior
