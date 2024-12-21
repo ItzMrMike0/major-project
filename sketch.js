@@ -110,7 +110,7 @@ class Tile {
         for (let tile of character.reachableTiles) {
           let drawX = tile.x * tilesWidth;
           let drawY = tile.y * tilesHeight;
-          fill(0, 0, 255, 100);
+          fill(0, 0, 255, 150);  
           noStroke();
           rect(drawX, drawY, tilesWidth, tilesHeight);
         }
@@ -119,7 +119,7 @@ class Tile {
         for (let tile of character.attackableTiles) {
           let drawX = tile.x * tilesWidth;
           let drawY = tile.y * tilesHeight;
-          fill(255, 0, 0, 100);
+          fill(255, 0, 0, 150); 
           noStroke();
           rect(drawX, drawY, tilesWidth, tilesHeight);
         }

@@ -1,4 +1,8 @@
 {
-    "enemyTurn": "Assets/UI/enemy_phase.png",
-    "playerTurn": "Assets/UI/player_phase.png"
+    "enemyTurn": "Assets/UI/TurnImages/enemy_phase.png",
+    "playerTurn": "Assets/UI/TurnImages/player_phase.png",
+    "forest": "Assets/UI/TileLocationImages/forest.png",
+    "grassland": "Assets/UI/TileLocationImages/grassland.png",
+    "house": "Assets/UI/TileLocationImages/house.png",
+    "river": "Assets/UI/TileLocationImages/river.png"
 }
