@@ -4,5 +4,8 @@
     "forest": "Assets/UI/TileLocationImages/forest.png",
     "grassland": "Assets/UI/TileLocationImages/grassland.png",
     "house": "Assets/UI/TileLocationImages/house.png",
-    "river": "Assets/UI/TileLocationImages/river.png"
+    "river": "Assets/UI/TileLocationImages/river.png",
+    "plain": "Assets/UI/TileLocationImages/plain.png",
+    "cliff": "Assets/UI/TileLocationImages/cliff.png",
+    "stronghold": "Assets/UI/TileLocationImages/stronghold.png"
 }
