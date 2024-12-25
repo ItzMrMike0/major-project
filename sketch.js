@@ -126,6 +126,53 @@ class Tile {
       }
     }
   }
+
+  // Display tile location image based on cursor position
+  static displayTileLocationImage() {
+    const currentTile = tiles[locationCursor.y][locationCursor.x];
+    let imageKey;
+    
+    // Map tile types to their corresponding UI images
+    if (currentTile.type === 'G' || currentTile.type === 'g') {
+      imageKey = 'grassland';
+    }
+    else if (currentTile.type === 'P') {
+      imageKey = 'plain';
+    }
+    else if (currentTile.type === 'W') {
+      imageKey = 'river';
+    }
+    else if (currentTile.type === 'T') {
+      imageKey = 'forest';
+    }
+    else if (currentTile.type === 'H') {
+      imageKey = 'house';
+    }
+    else if (currentTile.type === 'M') {
+      imageKey = 'cliff';
+    }
+    else if (['7', '8', '9', '4', '5', '6', '1', '2', '3'].includes(currentTile.type)) {
+      imageKey = 'stronghold';
+    }
+    else {
+      return; // Don't display anything for unknown tile types
+    }
+
+    if (UIImages[imageKey]) {
+      // Enable smoothing for UI elements
+      smooth();
+      
+      // Image dimensions
+      const topPadding = 20;
+      const imageWidth = 275;
+      const imageHeight = 80;
+      
+      image(UIImages[imageKey], 0, topPadding, imageWidth, imageHeight);
+      
+      // Disable smoothing again for game elements
+      noSmooth();
+    }
+  }
 }  
 
 // Character Class: Represents a character on the map, including their properties, state, and actions
@@ -1671,6 +1718,9 @@ function draw() {
     // Only show cursor if turn image is not showing and is player turn
     if (!showTurnImage && isPlayerTurn) {
       locationCursor.renderCursor();
+
+      // Display tile location image 
+      Tile.displayTileLocationImage();
     }
    
     // Display the action menu
