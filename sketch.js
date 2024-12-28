@@ -1757,16 +1757,83 @@ function displayCharacterInfo(character) {
     let xOffset = 6;
     let yOffset = 3;
 
-    // Scale down fighter portrait by 15% 
+    // Scale down fighter portrait
     if (portraitKey === "fighterPortrait") {
-      finalWidth *= 0.9;  // 85% of original size
-      finalHeight *= 0.9;
-      xOffset = 15;  // Move more to the right
-      yOffset = 13;  // Move more down (increased from 10 to 15)
+      finalWidth *= 0.9;  
+      finalHeight *= 0.95;
+      // Adjust offset to keep centered
+      xOffset = 15; 
+      yOffset = 13;  
+    }
+    else {
+      // Scale up all other portraits by 1.1x
+      finalWidth *= 1.1;
+      finalHeight *= 1.1;
+      // Adjust offset to keep centered
+      xOffset = 3;  
+      yOffset = 0;  
     }
     
     // Display the portrait
     image(portraitImages[portraitKey], rectX + xOffset, rectY + yOffset, finalWidth, finalHeight);
+
+    // Display HP text
+    textSize(33);
+    textFont("Chiaro Std B Bold");
+    textAlign(LEFT, TOP);
+    stroke(0);  
+    strokeWeight(5);  
+    fill(255);  
+    const hpX = rectX + finalWidth + xOffset + 35; // Increased spacing from portrait
+    const hpY = rectY + 55; // Spacing from top
+    text("HP", hpX, hpY);
+
+    // Display HP fraction
+    const hpFractionX = hpX + 50; // Position to the right of "HP"
+    textSize(35);
+    stroke(255); 
+    strokeWeight(1); 
+    fill(0); 
+    text(character.hp + "/" + character.hp, hpFractionX, hpY);
+
+    // Draw HP bar
+    const barWidth = 220;
+    const barHeight = 20;
+    const barX = hpX - 30; 
+    const barY = hpY + 35;
+    const hpRatio = character.hp / character.hp; // Current HP / Max HP
+    const cornerRadius = 10; // Radius for rounded corners
+
+    // Draw bar fill - top half
+    noStroke();
+    fill(247, 247, 255);
+    rect(barX, barY, barWidth * hpRatio, barHeight/2, cornerRadius, cornerRadius, 0, 0);
+
+    // Draw bar fill - bottom half
+    fill(247, 239, 115);
+    rect(barX, barY + barHeight/2, barWidth * hpRatio, barHeight/2, 0, 0, cornerRadius, cornerRadius);
+
+    // Draw bar outline (on top of the fills)
+    stroke(140, 107, 49);
+    strokeWeight(4);
+    noFill();
+    rect(barX, barY, barWidth, barHeight, cornerRadius);
+
+    // Display character name
+    textSize(40);
+    textFont("Chiaro Std B Bold");
+    textAlign(LEFT, TOP);
+    stroke(0); 
+    strokeWeight(1);  
+    fill(0);
+    const nameX = rectX + finalWidth + xOffset + 60; // Spacing from portrait
+    const nameY = rectY + 10; // Spacing from top
+    if (character.isEnemy) {
+      text(character.classType, nameX, nameY);
+    }
+    else {
+      text(character.name, nameX, nameY);
+    }
   }
   
   // Disable smoothing again for game elements
