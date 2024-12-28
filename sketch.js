@@ -379,122 +379,143 @@ class Character {
     return attackRanges[this.classType] || 1;
   }
 
+  // Helper function to calculate attackable tiles from a position
+  calculateAttackTiles() {
+    // Get the attack range of the character
+    const attackRange = this.getAttackRange(); 
+
+    // Initialize a set to track visited tiles, starting with the current position
+    const attackVisited = new Set([`${this.x},${this.y}`]); 
+
+    // Initialize the queue for breadth-first search with the starting position and cost 0
+    const attackQueue = [{ x: this.x, y: this.y, cost: 0 }]; 
+    
+    // Set to store coordinates of attackable tiles
+    const attackableTiles = new Set(); 
+
+    // Process the queue until it's empty
+    while (attackQueue.length > 0) {
+      const current = attackQueue.shift(); // Remove the first element from the queue and set it as the current tile
+      const { x, y, cost } = current; // Destructure the current tile's coordinates and cost
+
+      // If the current tile is within attack range and walkable, add it to the attackable tiles set
+      if (cost > 0 && cost <= attackRange && tiles[y][x].isWalkable()) {
+        attackableTiles.add(`${x},${y}`); // Add the tile's coordinates as a string to the set
+      }
+
+      // Stop exploring further from this tile if the cost exceeds the attack range
+      if (cost >= attackRange) {
+        continue; // Continue to the next iteration of the loop
+      }
+
+      // Loop through the four possible directions to explore adjacent tiles
+      for (const dir of DIRECTIONS) {
+        const nextX = x + dir.x; // Calculate the x-coordinate of the adjacent tile
+        const nextY = y + dir.y; // Calculate the y-coordinate of the adjacent tile
+        const nextKey = `${nextX},${nextY}`; // Create a string key for the adjacent tile's coordinates
+
+        // Skip this adjacent tile if it is out of bounds, already visited, or not walkable
+        if (!Tile.isWithinMapBounds(nextX, nextY) ||
+            attackVisited.has(nextKey) ||
+            !tiles[nextY][nextX].isWalkable()) {
+          continue; // Continue to the next iteration of the loop
+        }
+
+        // Add the adjacent tile to the queue for further exploration and mark it as visited
+        attackQueue.push({ x: nextX, y: nextY, cost: cost + 1 }); // Add the adjacent tile to the queue with an incremented cost
+        attackVisited.add(nextKey); // Mark the adjacent tile as visited by adding it to the set
+      }
+    }
+
+    // Convert the set of attackable tiles to an array of coordinates
+    return Array.from(attackableTiles).map(key => {
+      const [x, y] = key.split(',').map(Number); // Split the key string into coordinates and convert them to numbers
+      return { x, y }; // Return the coordinates as an object
+    });
+  }
+
   // Calculate reachable and attackable tiles using Dijkstra's algorithm
   calculateActionableTiles() {
-    // Arrays to store reachable tiles (within movement range) and attackable tiles
-    this.reachableTiles = [];
-    this.attackableTiles = [];
+    this.reachableTiles = []; // Initialize an empty array to store reachable tiles
+    this.attackableTiles = []; // Initialize an empty array to store attackable tiles
 
-    // Retrieve the character's movement and attack ranges
-    const movementRange = this.getMovementRange();
-    const attackRange = this.getAttackRange();
+    // If the character is in attack mode, only calculate attackable tiles from the current position
+    if (this.action === "attack") {
+      this.attackableTiles = this.calculateAttackTiles(); // Call the helper function to calculate attackable tiles
+      return; // Exit the function early
+    }
 
-    // Initialize a set to track visited tiles and a queue for Dijkstra's algorithm, starting with the character's position
-    const visited = new Set([`${this.x},${this.y}`]);
-    const movementQueue = [{ x: this.x, y: this.y, cost: 0 }];
+    // Calculate the movement range for the character
+    const movementRange = this.getMovementRange(); // Get the movement range of the character
+    const visited = new Set([`${this.x},${this.y}`]); // Initialize a set to track visited tiles, starting with the current position
+    const movementQueue = [{ x: this.x, y: this.y, cost: 0 }]; // Initialize the queue for breadth-first search with the starting position and cost 0
+    const attackableTilesSet = new Set(); // Set to store coordinates of attackable tiles found during movement
 
-    // Calculate all tiles within movement range
+    // Process the queue until it's empty
     while (movementQueue.length > 0) {
-      // Sort queue by movement cost to process the lowest cost tile first
-      movementQueue.sort((a, b) => a.cost - b.cost);
-      const current = movementQueue.shift(); // Dequeue the current tile
-      const { x, y, cost } = current;
+      const current = movementQueue.shift(); // Remove the first element from the queue and set it as the current tile
+      const { x, y, cost } = current; // Destructure the current tile's coordinates and cost
 
-      // Add the tile to reachable tiles if within movement range and not blocked by an enemy
+      // If the current tile is within movement range and not blocked by an enemy, add it to reachable tiles
       if (cost <= movementRange && !Tile.isTileBlockedByEnemy(x, y)) {
-        this.reachableTiles.push({ x, y });
+        this.reachableTiles.push({ x, y }); // Add the tile's coordinates as an object to the reachable tiles array
       }
 
-      // Stop processing this path if the movement range is exceeded
+      // Stop exploring further from this tile if the cost exceeds the movement range
       if (cost >= movementRange) {
-        continue;
+        continue; // Continue to the next iteration of the loop
       }
 
-      // Define the four possible movement directions (up, down, left, right)
-      const directions = [
-        { x: x, y: y - 1 }, // up
-        { x: x, y: y + 1 }, // down
-        { x: x + 1, y: y }, // right
-        { x: x - 1, y: y }  // left
-      ];
+      // Loop through the four possible directions to explore adjacent tiles
+      for (const dir of DIRECTIONS) {
+        const nextX = x + dir.x; // Calculate the x-coordinate of the adjacent tile
+        const nextY = y + dir.y; // Calculate the y-coordinate of the adjacent tile
+        const nextKey = `${nextX},${nextY}`; // Create a string key for the adjacent tile's coordinates
 
-      for (const dir of directions) {
-        const nextX = dir.x;
-        const nextY = dir.y;
-        const nextKey = `${nextX},${nextY}`; // Unique key for the next position
-
-        // Skip if the tile is out of bounds, already visited, not walkable, or blocked by an enemy
+        // Skip this adjacent tile if it is out of bounds, already visited, not walkable, or blocked by an enemy
         if (!Tile.isWithinMapBounds(nextX, nextY) ||
             visited.has(nextKey) ||
             !tiles[nextY][nextX].isWalkable() ||
             Tile.isTileBlockedByEnemy(nextX, nextY)) {
-          continue;
+          continue; // Continue to the next iteration of the loop
         }
 
-        // Queue the adjacent tile with updated movement cost and mark it as visited
-        movementQueue.push({ x: nextX, y: nextY, cost: cost + 1 });
-        visited.add(nextKey);
+        // Add the adjacent tile to the queue for further exploration and mark it as visited
+        movementQueue.push({ x: nextX, y: nextY, cost: cost + 1 }); // Add the adjacent tile to the queue with an incremented cost
+        visited.add(nextKey); // Mark the adjacent tile as visited by adding it to the set
       }
     }
 
-    // Calculate all tiles within attack range from every reachable tile
-    const attackVisited = new Set(); // Track visited tiles for attack range calculation
-
+    // Calculate attack tiles from each reachable position
+    const originalX = this.x; // Store the original x-coordinate of the character
+    const originalY = this.y; // Store the original y-coordinate of the character
+    
+    // Loop through each reachable tile to calculate attackable tiles
     for (const pos of this.reachableTiles) {
-      // Initialize a queue for attack range exploration starting from the reachable position
-      const attackQueue = [{ x: pos.x, y: pos.y, cost: 0 }];
-      attackVisited.clear(); // Reset visited tiles for this reachable position
-      attackVisited.add(`${pos.x},${pos.y}`); // Mark the initial position as visited
-
-      while (attackQueue.length > 0) {
-        const current = attackQueue.shift(); // Dequeue the current tile
-        const { x, y, cost } = current;
-
-        // Add the tile to attackable tiles if within attack range and not already in reachable tiles
-        if (cost > 0 && cost <= attackRange &&
-            tiles[y][x].isWalkable() &&
-            !this.reachableTiles.some(tile => tile.x === x && tile.y === y)) {
-          this.attackableTiles.push({ x, y });
-        }
-
-        // Stop processing this path if the attack range is exceeded
-        if (cost >= attackRange) {
-          continue;
-        }
-
-        // Define the four possible attack directions (up, down, left, right)
-        const directions = [
-          { x: x, y: y - 1 }, // up
-          { x: x, y: y + 1 }, // down
-          { x: x + 1, y: y }, // right
-          { x: x - 1, y: y }  // left
-        ];
-
-        for (const dir of directions) {
-          const nextX = dir.x;
-          const nextY = dir.y;
-          const nextKey = `${nextX},${nextY}`; // Unique key for the next position
-
-          // Skip if the tile is out of bounds, already visited, or not walkable
-          if (!Tile.isWithinMapBounds(nextX, nextY) ||
-              attackVisited.has(nextKey) ||
-              !tiles[nextY][nextX].isWalkable()) {
-            continue;
-          }
-
-          // Queue the adjacent tile for attack range exploration and mark it as visited
-          attackQueue.push({ x: nextX, y: nextY, cost: cost + 1 });
-          attackVisited.add(nextKey);
+      this.x = pos.x; // Temporarily set the character's x-coordinate to the reachable tile's x-coordinate
+      this.y = pos.y; // Temporarily set the character's y-coordinate to the reachable tile's y-coordinate
+      
+      const attackTiles = this.calculateAttackTiles(); // Calculate attackable tiles from the current reachable tile
+      
+      // Loop through each attackable tile
+      for (const tile of attackTiles) {
+        const tileKey = `${tile.x},${tile.y}`; // Create a string key for the attackable tile's coordinates
+        // If the attackable tile is not in the reachable tiles array, add it to the attackable tiles set
+        if (!this.reachableTiles.some(reachable => 
+            reachable.x === tile.x && reachable.y === tile.y)) {
+          attackableTilesSet.add(tileKey); // Add the attackable tile's coordinates as a string to the set
         }
       }
     }
+    
+    this.x = originalX; // Restore the original x-coordinate of the character
+    this.y = originalY; // Restore the original y-coordinate of the character
 
-    // Remove duplicate entries from attackable tiles as reachable tiles takes precedence
-    this.attackableTiles = Array.from(new Set(this.attackableTiles.map(tile => `${tile.x},${tile.y}`)))
-      .map(key => {
-        const [x, y] = key.split(',').map(Number); // Convert string keys back to tile coordinates
-        return { x, y };
-      });
+    // Convert the set of attackable tiles to an array of coordinates
+    this.attackableTiles = Array.from(attackableTilesSet).map(key => {
+      const [x, y] = key.split(',').map(Number); // Split the key string into coordinates and convert them to numbers
+      return { x, y }; // Return the coordinates as an object
+    });
   }
 
   // Move the character to a new location gradually
@@ -698,14 +719,11 @@ class Character {
       closedSet.add(`${current.x},${current.y}`);
 
       // Explore all valid neighbors (adjacent tiles)
-      const neighbors = [
-        { x: current.x, y: current.y - 1 }, // up
-        { x: current.x, y: current.y + 1 }, // down
-        { x: current.x + 1, y: current.y }, // right
-        { x: current.x - 1, y: current.y }  // left
-      ];
-
-      for (const neighbor of neighbors) {
+      for (const dir of DIRECTIONS) {
+        const neighbor = {
+          x: current.x + dir.x,
+          y: current.y + dir.y
+        };
         // Create a unique key for the neighbor
         const neighborKey = `${neighbor.x},${neighbor.y}`;
 
@@ -923,6 +941,14 @@ class Character {
       }
     }
   }
+
+  // Check if there are any enemies within attack range
+  hasEnemiesInRange() {
+    const attackableTiles = this.calculateAttackTiles();
+    return attackableTiles.some(tile => 
+      characters.some(char => char.isEnemy && char.x === tile.x && char.y === tile.y)
+    );
+  }
 }
 
 // EnemyCharacter Class: Extends Character with enemy-specific behavior
@@ -933,12 +959,10 @@ class EnemyCharacter extends Character {
 
   // Check if a player has adjacent enemies
   hasAdjacentEnemies(player) {
-    const adjacentPositions = [
-      { x: player.x, y: player.y - 1 }, // up
-      { x: player.x, y: player.y + 1 }, // down
-      { x: player.x + 1, y: player.y }, // right
-      { x: player.x - 1, y: player.y }  // left
-    ];
+    const adjacentPositions = DIRECTIONS.map(dir => ({
+      x: player.x + dir.x,
+      y: player.y + dir.y
+    }));
 
     // Count how many adjacent positions are occupied by enemies
     let enemyCount = 0;
@@ -1430,6 +1454,13 @@ let turnImageTimer = 0; // Timer for turn image display
 let enemyPhaseDelayTimer = 0;  // Timer for enemy phase delay
 let enemyPhaseStarted = false; // Flag to track if enemy phase has started
 let uiManager; // UI Manager instance
+// Define directions once as a constant
+const DIRECTIONS = [
+  { x: 0, y: -1 }, // up
+  { x: 0, y: 1 },  // down
+  { x: 1, y: 0 },  // right
+  { x: -1, y: 0 }  // left
+];
 
 // Preload all information and images
 function preload() {
@@ -1778,6 +1809,26 @@ function keyPressed() {
           Character.unselectCharacter(false);
           sounds.selectOption.play();
         }
+        // If the option was "Attack"
+        else if (selectedOption === "Attack") {
+          // Only allow attack if there are enemies in range
+          if (selectedCharacter.hasEnemiesInRange()) {
+            // Set character's action to attack mode
+            selectedCharacter.action = "attack";
+            // Hide the action menu
+            actionMenu.hide();
+            // Keep character selected for attack target selection
+            selectedCharacter.isSelected = true;
+            // Calculate attackable tiles from current position
+            selectedCharacter.calculateActionableTiles();
+            // Play selection sound
+            sounds.selectOption.play();
+          }
+          else {
+            // Play error sound or some feedback that attack isn't possible
+            sounds.unselectCharacter.play();
+          }
+        }
       }
     }
     else if (key === "k") {
@@ -1802,8 +1853,31 @@ function keyPressed() {
   if (key === "j") {
     const selectedCharacter = Character.getSelectedCharacter();
    
+    // If there is a selected character in attack mode
+    if (selectedCharacter && selectedCharacter.action === "attack") {
+      // Check if cursor is over an attackable tile
+      const isAttackableTile = selectedCharacter.attackableTiles.some(
+        tile => tile.x === locationCursor.x && tile.y === locationCursor.y
+      );
+
+      // Check if there's an enemy at the cursor position
+      const targetEnemy = characters.find(
+        char => char.isEnemy && char.x === locationCursor.x && char.y === locationCursor.y
+      );
+
+      // If the tile is attackable and there's an enemy there
+      if (isAttackableTile && targetEnemy) {
+        // End the character's turn
+        selectedCharacter.canMove = false;
+        selectedCharacter.isGreyedOut = true;
+        selectedCharacter.action = null;
+        Character.unselectCharacter(false);
+        sounds.selectOption.play();
+      }
+      return;
+    }
     // If there is a selected character and it's not an enemy, move the character
-    if (selectedCharacter && !selectedCharacter.isEnemy) {
+    else if (selectedCharacter && !selectedCharacter.isEnemy) {
       Character.moveSelectedCharacter(locationCursor, tiles);
     }
     // If there is not a selected character, select character
@@ -1813,7 +1887,25 @@ function keyPressed() {
   }
   // If k is pressed and there is a selected character that's not moving, unselect them
   else if (key === "k" && selectedCharacter && !selectedCharacter.isMoving) {
-    Character.unselectCharacter(true);
+    // If in attack mode, cancel attack and return to original position
+    if (selectedCharacter.action === "attack") {
+      // Move character back to their original position
+      selectedCharacter.x = selectedCharacter.previousX;
+      selectedCharacter.y = selectedCharacter.previousY;
+      // Reset properties
+      selectedCharacter.action = null;
+      selectedCharacter.isSelected = true;
+      selectedCharacter.canMove = true;
+      selectedCharacter.isGreyedOut = false;
+      // Recalculate movement range from original position
+      selectedCharacter.calculateActionableTiles();
+      sounds.unselectCharacter.play();
+      animationManager(selectedCharacter, "selected");
+    }
+    // Otherwise unselect normally
+    else {
+      Character.unselectCharacter(true);
+    }
   }
   // 'R' key - Skip to enemy turn
   else if (key === "r" && isPlayerTurn) {
