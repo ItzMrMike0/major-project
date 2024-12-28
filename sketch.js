@@ -163,11 +163,17 @@ class Tile {
       smooth();
       
       // Image dimensions
-      const topPadding = 20;
       const imageWidth = 275;
       const imageHeight = 80;
       
-      image(UIImages[imageKey], 0, topPadding, imageWidth, imageHeight);
+      // Calculate Y position based on cursor position
+      const isAboveMiddle = locationCursor.y < tilesHigh / 2;
+
+      // 20 pixels from top or bottom
+      const yPosition = isAboveMiddle ? height - imageHeight - 20 : 20; 
+      
+      // Draw the image
+      image(UIImages[imageKey], 0, yPosition, imageWidth, imageHeight);
       
       // Disable smoothing again for game elements
       noSmooth();
@@ -1260,6 +1266,7 @@ let lastMoveTimeW = 0, lastMoveTimeA = 0, lastMoveTimeS = 0, lastMoveTimeD = 0; 
 let gameState = GAME_STATES.GAMEPLAY; // Current game state
 let actionMenu, actionMenuImages = {}; // Action menu object and images
 let UIImages = {}, UIPaths; // UI images and paths
+let portraitImages = {}, portraitPaths; // Portrait images and paths
 let isPlayerTurn = true; // Track whose turn it is (enemy or player)
 let showTurnImage = true; // Whether to show the turn image
 let turnImageTimer = 0; // Timer for turn image display
@@ -1292,6 +1299,9 @@ function preload() {
 
   // Preload UI images from JSON
   UIPaths = loadJSON("Assets/UI/UIImages.json", setupUIImages);
+
+  // Preload portrait images from JSON
+  portraitPaths = loadJSON("Assets/Portraits/portraits.json", setupPortraitImages);
 }
 
 function setup() {
@@ -1383,6 +1393,14 @@ function setupUIImages(data) {
   for (let key in data) {
     // Load the image for each UI element
     UIImages[key] = loadImage(data[key]);
+  }
+}
+
+// Initialize portraitImages after the portrait paths JSON is loaded
+function setupPortraitImages(data) {
+  for (let key in data) {
+    // Load each portrait image
+    portraitImages[key] = loadImage(data[key]);
   }
 }
 
@@ -1686,6 +1704,75 @@ function keyPressed() {
   }
 }
 
+// Check if cursor is over a character
+function isCursorOverCharacter(character) {
+  return locationCursor.x === character.x && locationCursor.y === character.y;
+}
+
+// Display character info when hovering
+function displayCharacterInfo(character) {
+  // Enable smoothing for UI elements
+  smooth();
+  
+  // Set up rectangle properties
+  const rectWidth = 400; 
+  const rectHeight = 120;
+  const rectX = width - rectWidth - 20; // 20 pixels from right edge
+  const rectY = 20; // 20 pixels from top
+  
+  // Draw outer border (white)
+  stroke(243, 255, 255);
+  strokeWeight(2);
+  noFill();
+  rect(rectX, rectY, rectWidth, rectHeight);
+  
+  // Draw inner border (blue-grey)
+  stroke(127, 148, 209);
+  strokeWeight(1);
+  rect(rectX + 2, rectY + 2, rectWidth - 4, rectHeight - 4);
+  
+  // Draw main rectangle (light blue)
+  fill(193, 214, 255, 180);
+  noStroke();
+  rect(rectX + 3, rectY + 3, rectWidth - 6, rectHeight - 6);
+
+  // Draw portrait of character
+  let portraitKey;
+  if (character.isEnemy) {
+    // For enemies, use their class type
+    portraitKey = character.classType.toLowerCase() + "Portrait";
+  } 
+  else {
+    // For player characters, use their name
+    portraitKey = character.name.toLowerCase() + "Portrait";
+  }
+
+  if (portraitImages[portraitKey]) {
+    const portraitHeight = rectHeight - 12;
+    const portraitWidth = portraitHeight * 1.2;
+    
+    // Set up variables for portrait position and size
+    let finalWidth = portraitWidth;
+    let finalHeight = portraitHeight;
+    let xOffset = 6;
+    let yOffset = 3;
+
+    // Scale down fighter portrait by 15% 
+    if (portraitKey === "fighterPortrait") {
+      finalWidth *= 0.9;  // 85% of original size
+      finalHeight *= 0.9;
+      xOffset = 15;  // Move more to the right
+      yOffset = 13;  // Move more down (increased from 10 to 15)
+    }
+    
+    // Display the portrait
+    image(portraitImages[portraitKey], rectX + xOffset, rectY + yOffset, finalWidth, finalHeight);
+  }
+  
+  // Disable smoothing again for game elements
+  noSmooth();
+}
+
 // Main game loop for rendering everything on the screen
 function draw() {
   // Only run if the game state is gameplay
@@ -1721,6 +1808,14 @@ function draw() {
 
       // Display tile location image 
       Tile.displayTileLocationImage();
+
+      // Check if cursor is over any character and display info
+      for (let character of characters) {
+        if (isCursorOverCharacter(character)) {
+          displayCharacterInfo(character);
+          break;
+        }
+      }
     }
    
     // Display the action menu
