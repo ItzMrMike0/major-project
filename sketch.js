@@ -128,60 +128,7 @@ class Tile {
       }
     }
   }
-
-  // Display tile location image based on cursor position
-  static displayTileLocationImage() {
-    const currentTile = tiles[locationCursor.y][locationCursor.x];
-    let imageKey;
-    
-    // Map tile types to their corresponding UI images
-    if (currentTile.type === 'G' || currentTile.type === 'g') {
-      imageKey = 'grassland';
-    }
-    else if (currentTile.type === 'P') {
-      imageKey = 'plain';
-    }
-    else if (currentTile.type === 'W') {
-      imageKey = 'river';
-    }
-    else if (currentTile.type === 'T') {
-      imageKey = 'forest';
-    }
-    else if (currentTile.type === 'H') {
-      imageKey = 'house';
-    }
-    else if (currentTile.type === 'M') {
-      imageKey = 'cliff';
-    }
-    else if (['7', '8', '9', '4', '5', '6', '1', '2', '3'].includes(currentTile.type)) {
-      imageKey = 'stronghold';
-    }
-    else {
-      return; // Don't display anything for unknown tile types
-    }
-
-    if (UIImages[imageKey]) {
-      // Enable smoothing for UI elements
-      smooth();
-      
-      // Image dimensions
-      const imageWidth = 275;
-      const imageHeight = 80;
-      
-      // Calculate Y position based on cursor position
-      const isAboveMiddle = locationCursor.y < tilesHigh / 2;
-
-      // 20 pixels from top or bottom
-      const yPosition = isAboveMiddle ? height - imageHeight - 20 : 20; 
-      
-      // Draw the image
-      image(UIImages[imageKey], 0, yPosition, imageWidth, imageHeight);
-      
-      // Disable smoothing again for game elements
-      noSmooth();
-    }
-  }
-}  
+}
 
 // Character Class: Represents a character on the map, including their properties, state, and actions
 class Character {
@@ -1259,6 +1206,211 @@ class Cursor {
   }
 }  
 
+// UIManager class: Handles all UI-related rendering and functionality
+class UIManager {
+  constructor() {
+    // Constants for character info display
+    this.characterInfoWidth = 400;
+    this.characterInfoHeight = 120;
+    this.characterInfoPadding = 20;
+
+    // Constants for turn image display
+    this.turnImageWidth = 600;
+    this.turnImageHeight = 125;
+  }
+
+  // Display character info when hovering over a character
+  displayCharacterInfo(character) {
+    // Enable smoothing for UI elements
+    smooth();
+    
+    // Set up rectangle properties
+    const rectX = width - this.characterInfoWidth - this.characterInfoPadding;
+    const rectY = this.characterInfoPadding;
+    
+    // Draw outer border (white)
+    stroke(243, 255, 255);
+    strokeWeight(2);
+    noFill();
+    rect(rectX, rectY, this.characterInfoWidth, this.characterInfoHeight);
+    
+    // Draw inner border (blue-grey)
+    stroke(127, 148, 209);
+    strokeWeight(1);
+    rect(rectX + 2, rectY + 2, this.characterInfoWidth - 4, this.characterInfoHeight - 4);
+    
+    // Draw main rectangle (light blue)
+    fill(193, 214, 255, 180);
+    noStroke();
+    rect(rectX + 3, rectY + 3, this.characterInfoWidth - 6, this.characterInfoHeight - 6);
+
+    // Draw portrait of character
+    let portraitKey = character.isEnemy ? 
+      character.classType.toLowerCase() + "Portrait" : 
+      character.name.toLowerCase() + "Portrait";
+
+    if (portraitImages[portraitKey]) {
+      const portraitHeight = this.characterInfoHeight - 12;
+      const portraitWidth = portraitHeight * 1.2;
+      
+      // Set up variables for portrait position and size
+      let finalWidth = portraitWidth;
+      let finalHeight = portraitHeight;
+      let xOffset = 6;
+      let yOffset = 3;
+
+      // Scale down fighter portrait
+      if (portraitKey === "fighterPortrait") {
+        finalWidth *= 0.9;  
+        finalHeight *= 0.95;
+        xOffset = 15; 
+        yOffset = 13;  
+      }
+      else {
+        // Scale up all other portraits by 1.1x
+        finalWidth *= 1.1;
+        finalHeight *= 1.1;
+        xOffset = 3;  
+        yOffset = 0;  
+      }
+      
+      // Display the portrait
+      image(portraitImages[portraitKey], rectX + xOffset, rectY + yOffset, finalWidth, finalHeight);
+
+      // Display HP text
+      textSize(33);
+      textFont("Chiaro Std B Bold");
+      textAlign(LEFT, TOP);
+      stroke(0);  
+      strokeWeight(5);  
+      fill(255);  
+      const hpX = rectX + finalWidth + xOffset + 35;
+      const hpY = rectY + 55;
+      text("HP", hpX, hpY);
+
+      // Display HP fraction
+      const hpFractionX = hpX + 50;
+      textSize(35);
+      stroke(255); 
+      strokeWeight(1); 
+      fill(0); 
+      text(character.hp + "/" + character.hp, hpFractionX, hpY);
+
+      // Draw HP bar
+      const barWidth = 220;
+      const barHeight = 20;
+      const barX = hpX - 30; 
+      const barY = hpY + 35;
+      const hpRatio = character.hp / character.hp;
+      const cornerRadius = 10;
+
+      // Draw bar fill - top half
+      noStroke();
+      fill(247, 247, 255);
+      rect(barX, barY, barWidth * hpRatio, barHeight/2, cornerRadius, cornerRadius, 0, 0);
+
+      // Draw bar fill - bottom half
+      fill(247, 239, 115);
+      rect(barX, barY + barHeight/2, barWidth * hpRatio, barHeight/2, 0, 0, cornerRadius, cornerRadius);
+
+      // Draw bar outline
+      stroke(140, 107, 49);
+      strokeWeight(4);
+      noFill();
+      rect(barX, barY, barWidth, barHeight, cornerRadius);
+
+      // Display character name
+      textSize(40);
+      textFont("Chiaro Std B Bold");
+      textAlign(LEFT, TOP);
+      stroke(0); 
+      strokeWeight(1);  
+      fill(0);
+      const nameX = rectX + finalWidth + xOffset + 60;
+      const nameY = rectY + 10;
+      text(character.isEnemy ? character.classType : character.name, nameX, nameY);
+    }
+    
+    // Disable smoothing again for game elements
+    noSmooth();
+  }
+
+  // Display turn phase image in the center of screen
+  displayTurnImage() {
+    // Enable smoothing for UI elements
+    smooth();
+
+    // Show image in the middle of the screen after 2 seconds
+    if (showTurnImage && millis() - turnImageTimer < 2000) {
+      const imageKey = isPlayerTurn ? "playerTurn" : "enemyTurn";
+      image(
+        UIImages[imageKey], 
+        width/2 - this.turnImageWidth/2, 
+        height/2 - this.turnImageHeight/2, 
+        this.turnImageWidth, 
+        this.turnImageHeight
+      );
+    }
+    else {
+      showTurnImage = false;
+    }
+
+    // Disable smoothing again for game elements
+    noSmooth();
+  }
+
+  // Display tile location image based on cursor position
+  displayTileLocationImage() {
+    const currentTile = tiles[locationCursor.y][locationCursor.x];
+    let imageKey;
+    
+    // Map tile types to their corresponding UI images
+    if (currentTile.type === 'G' || currentTile.type === 'g') {
+      imageKey = 'grassland';
+    }
+    else if (currentTile.type === 'P') {
+      imageKey = 'plain';
+    }
+    else if (currentTile.type === 'W') {
+      imageKey = 'river';
+    }
+    else if (currentTile.type === 'T') {
+      imageKey = 'forest';
+    }
+    else if (currentTile.type === 'H') {
+      imageKey = 'house';
+    }
+    else if (currentTile.type === 'M') {
+      imageKey = 'cliff';
+    }
+    else if (['7', '8', '9', '4', '5', '6', '1', '2', '3'].includes(currentTile.type)) {
+      imageKey = 'stronghold';
+    }
+    else {
+      return; // Don't display anything for unknown tile types
+    }
+
+    if (UIImages[imageKey]) {
+      // Enable smoothing for UI elements
+      smooth();
+      
+      // Image dimensions
+      const imageWidth = 275;
+      const imageHeight = 80;
+      
+      // Calculate Y position based on cursor position
+      const isAboveMiddle = locationCursor.y < tilesHigh / 2;
+      const yPosition = isAboveMiddle ? height - imageHeight - 20 : 20;
+      
+      // Draw the image
+      image(UIImages[imageKey], 0, yPosition, imageWidth, imageHeight);
+      
+      // Disable smoothing again for game elements
+      noSmooth();
+    }
+  }
+}
+
 // GLOBAL VARIABLES
 let levelToLoad, lines; // Level file to load and its content (lines)
 let tilesHigh, tilesWide, tilesWidth, tilesHeight; // Tile grid dimensions and sizes
@@ -1277,6 +1429,7 @@ let showTurnImage = true; // Whether to show the turn image
 let turnImageTimer = 0; // Timer for turn image display
 let enemyPhaseDelayTimer = 0;  // Timer for enemy phase delay
 let enemyPhaseStarted = false; // Flag to track if enemy phase has started
+let uiManager; // UI Manager instance
 
 // Preload all information and images
 function preload() {
@@ -1345,6 +1498,9 @@ function setup() {
 
   // Initialize the action menu
   actionMenu = new ActionMenu();
+
+  // Initialize the UI manager
+  uiManager = new UIManager();
 
   // Initialize turn image display for first player turn
   showTurnImage = true;
@@ -1533,36 +1689,6 @@ function handleTurnSystem() {
   }
 }
 
-// Display turn phase image in the center of screen
-function displayTurnImage() {
-  // Enable smoothing for UI elements
-  smooth();
-
-  // Image dimensions
-  let imgWidth = 600;  
-  let imgHeight = 125;
-
-  // Show image in the middle of the screen after 2 seconds
-  if (showTurnImage) {
-    if (millis() - turnImageTimer < 2000) {
-      if (isPlayerTurn) {
-        // Player turn
-        image(UIImages["playerTurn"], width/2 - imgWidth/2, height/2 - imgHeight/2, imgWidth, imgHeight);
-      }
-      else {
-        // Enemy turn
-        image(UIImages["enemyTurn"], width/2 - imgWidth/2, height/2 - imgHeight/2, imgWidth, imgHeight);
-      }
-    }
-    else {
-      showTurnImage = false;
-    }
-  }
-
-  // Disable smoothing again for game elements
-  noSmooth();
-}
-
 // Allows user to hold down movement keys for continuous movement
 function holdCursorMovement() {
   // Don't move cursor if action menu is open, character is moving, or during enemy turn
@@ -1714,137 +1840,6 @@ function isCursorOverCharacter(character) {
   return locationCursor.x === character.x && locationCursor.y === character.y;
 }
 
-// Display character info when hovering
-function displayCharacterInfo(character) {
-  // Enable smoothing for UI elements
-  smooth();
-  
-  // Set up rectangle properties
-  const rectWidth = 400; 
-  const rectHeight = 120;
-  const rectX = width - rectWidth - 20; // 20 pixels from right edge
-  const rectY = 20; // 20 pixels from top
-  
-  // Draw outer border (white)
-  stroke(243, 255, 255);
-  strokeWeight(2);
-  noFill();
-  rect(rectX, rectY, rectWidth, rectHeight);
-  
-  // Draw inner border (blue-grey)
-  stroke(127, 148, 209);
-  strokeWeight(1);
-  rect(rectX + 2, rectY + 2, rectWidth - 4, rectHeight - 4);
-  
-  // Draw main rectangle (light blue)
-  fill(193, 214, 255, 180);
-  noStroke();
-  rect(rectX + 3, rectY + 3, rectWidth - 6, rectHeight - 6);
-
-  // Draw portrait of character
-  let portraitKey;
-  if (character.isEnemy) {
-    // For enemies, use their class type
-    portraitKey = character.classType.toLowerCase() + "Portrait";
-  } 
-  else {
-    // For player characters, use their name
-    portraitKey = character.name.toLowerCase() + "Portrait";
-  }
-
-  if (portraitImages[portraitKey]) {
-    const portraitHeight = rectHeight - 12;
-    const portraitWidth = portraitHeight * 1.2;
-    
-    // Set up variables for portrait position and size
-    let finalWidth = portraitWidth;
-    let finalHeight = portraitHeight;
-    let xOffset = 6;
-    let yOffset = 3;
-
-    // Scale down fighter portrait
-    if (portraitKey === "fighterPortrait") {
-      finalWidth *= 0.9;  
-      finalHeight *= 0.95;
-      // Adjust offset to keep centered
-      xOffset = 15; 
-      yOffset = 13;  
-    }
-    else {
-      // Scale up all other portraits by 1.1x
-      finalWidth *= 1.1;
-      finalHeight *= 1.1;
-      // Adjust offset to keep centered
-      xOffset = 3;  
-      yOffset = 0;  
-    }
-    
-    // Display the portrait
-    image(portraitImages[portraitKey], rectX + xOffset, rectY + yOffset, finalWidth, finalHeight);
-
-    // Display HP text
-    textSize(33);
-    textFont("Chiaro Std B Bold");
-    textAlign(LEFT, TOP);
-    stroke(0);  
-    strokeWeight(5);  
-    fill(255);  
-    const hpX = rectX + finalWidth + xOffset + 35; // Increased spacing from portrait
-    const hpY = rectY + 55; // Spacing from top
-    text("HP", hpX, hpY);
-
-    // Display HP fraction
-    const hpFractionX = hpX + 50; // Position to the right of "HP"
-    textSize(35);
-    stroke(255); 
-    strokeWeight(1); 
-    fill(0); 
-    text(character.hp + "/" + character.hp, hpFractionX, hpY);
-
-    // Draw HP bar
-    const barWidth = 220;
-    const barHeight = 20;
-    const barX = hpX - 30; 
-    const barY = hpY + 35;
-    const hpRatio = character.hp / character.hp; // Current HP / Max HP
-    const cornerRadius = 10; // Radius for rounded corners
-
-    // Draw bar fill - top half
-    noStroke();
-    fill(247, 247, 255);
-    rect(barX, barY, barWidth * hpRatio, barHeight/2, cornerRadius, cornerRadius, 0, 0);
-
-    // Draw bar fill - bottom half
-    fill(247, 239, 115);
-    rect(barX, barY + barHeight/2, barWidth * hpRatio, barHeight/2, 0, 0, cornerRadius, cornerRadius);
-
-    // Draw bar outline (on top of the fills)
-    stroke(140, 107, 49);
-    strokeWeight(4);
-    noFill();
-    rect(barX, barY, barWidth, barHeight, cornerRadius);
-
-    // Display character name
-    textSize(40);
-    textFont("Chiaro Std B Bold");
-    textAlign(LEFT, TOP);
-    stroke(0); 
-    strokeWeight(1);  
-    fill(0);
-    const nameX = rectX + finalWidth + xOffset + 60; // Spacing from portrait
-    const nameY = rectY + 10; // Spacing from top
-    if (character.isEnemy) {
-      text(character.classType, nameX, nameY);
-    }
-    else {
-      text(character.name, nameX, nameY);
-    }
-  }
-  
-  // Disable smoothing again for game elements
-  noSmooth();
-}
-
 // Main game loop for rendering everything on the screen
 function draw() {
   // Only run if the game state is gameplay
@@ -1872,19 +1867,19 @@ function draw() {
     }
 
     // Display turn phase image
-    displayTurnImage();
+    uiManager.displayTurnImage();
 
     // Only show cursor if turn image is not showing and is player turn
     if (!showTurnImage && isPlayerTurn) {
       locationCursor.renderCursor();
 
       // Display tile location image 
-      Tile.displayTileLocationImage();
+      uiManager.displayTileLocationImage();
 
       // Check if cursor is over any character and display info
       for (let character of characters) {
         if (isCursorOverCharacter(character)) {
-          displayCharacterInfo(character);
+          uiManager.displayCharacterInfo(character);
           break;
         }
       }
