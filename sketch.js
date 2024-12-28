@@ -9,6 +9,8 @@
 // Cursor moving sound acquired from https://www.youtube.com/watch?v=fkmp_YR9RXc
 // Select character sound acquired from https://www.youtube.com/watch?v=7Z2sxm7CkPw
 // Deselect character sound acquired from https://www.youtube.com/watch?v=U8wAHIaW4S0
+// Other sounds acquired from Fire Emblem: Three Houses
+// Formulas for combat and stats taken from https://www.fe3h.com/calculations
 
 // Tile Class: Represents individual tiles on the map, including their type, position, and dimensions
 class Tile {
@@ -183,23 +185,26 @@ class Tile {
 
 // Character Class: Represents a character on the map, including their properties, state, and actions
 class Character {
-  constructor(name, classType, x, y, level, hp, strength, skill, speed, luck, defense, resistance, isEnemy, width = 50, height = 50) {
+  constructor(name, classType, x, y, level, hp, strength, magic, dexterity, speed, luck, defense, resistance, might, hit, isEnemy, width = 50, height = 50) {
     // Basic properties
     this.name = name; // Name of character
     this.classType = classType; // Character class (Lord, Knight, etc)
     this.x = x; // X position on the tile grid
     this.y = y; // Y position on the tile grid
     this.level = level; // Character's level
-    this.hp = hp; // HP stat
-    this.strength = strength; // Strength stat
-    this.skill = skill; // Skill stat
-    this.speed = speed; // Speed stat
-    this.luck = luck; // Luck stat
-    this.defense = defense; // Physical defense stat
-    this.resistance = resistance; // Magical defense stat
-    this.isEnemy = isEnemy; // Is this character an enemy
-
+    this.hp = hp; // HP stat (Health points)
+    this.strength = strength; // Strength stat (Attack for physical attacks)
+    this.magic = magic; // Magic stat (Attack for magical attacks)
+    this.dexterity = dexterity; // Dexterity stat (Affects hit chance, critical hit chance, and evasion)
+    this.speed = speed; // Speed stat (Determine whether a unit can double attack)
+    this.luck = luck; // Luck stat (Affects critical hit chance, avoiding critical hits, and hit chance)
+    this.defense = defense; // Physical defense stat (Reduces damage from physical attacks)
+    this.resistance = resistance; // Magical defense stat (Reduces damage from magical attacks)
+    this.might = might; // Attack power (Base damage a weapon or spell)
+    this.hit = hit; // Hit chance (Base accuracy of a weapon or spell)
+    
     // Visual and gameplay properties
+    this.isEnemy = isEnemy; // Is this character an enemy
     this.isSelected = false; // Whether the character is selected
     this.canMove = true; // Whether the character can move or not
     this.isGreyedOut = false; // Whether the character is greyed out or not
@@ -224,15 +229,15 @@ class Character {
     if (data.isEnemy) {
       character = new EnemyCharacter(
         data.name, data.classType, data.x, data.y, data.level, data.hp,
-        data.strength, data.skill, data.speed, data.luck, data.defense,
-        data.resistance, data.isEnemy, data.width, data.height
+        data.strength, data.magic, data.dexterity, data.speed, data.luck, data.defense,
+        data.resistance, data.might, data.hit, data.isEnemy, data.width, data.height
       );
     }
     else {
       character = new Character(
         data.name, data.classType, data.x, data.y, data.level, data.hp,
-        data.strength, data.skill, data.speed, data.luck, data.defense,
-        data.resistance, data.isEnemy, data.width, data.height
+        data.strength, data.magic, data.dexterity, data.speed, data.luck, data.defense,
+        data.resistance, data.might, data.hit, data.isEnemy, data.width, data.height
       );
     }
 
@@ -975,8 +980,8 @@ class Character {
 
 // EnemyCharacter Class: Extends Character with enemy-specific behavior
 class EnemyCharacter extends Character {
-  constructor(name, classType, x, y, level, hp, strength, skill, speed, luck, defense, resistance, isEnemy, width = 50, height = 50) {
-    super(name, classType, x, y, level, hp, strength, skill, speed, luck, defense, resistance, isEnemy, width, height);
+  constructor(name, classType, x, y, level, hp, strength, magic, dexterity, speed, luck, defense, resistance, might, hit, isEnemy, width = 50, height = 50) {
+    super(name, classType, x, y, level, hp, strength, magic, dexterity, speed, luck, defense, resistance, might, hit, isEnemy, width, height);
   }
 
   // Check if a player has adjacent enemies
