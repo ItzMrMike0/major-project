@@ -389,7 +389,7 @@ class Character {
 
     // Initialize the queue for breadth-first search with the starting position and cost 0
     const attackQueue = [{ x: this.x, y: this.y, cost: 0 }]; 
-    
+
     // Set to store coordinates of attackable tiles
     const attackableTiles = new Set(); 
 
@@ -845,11 +845,6 @@ class Character {
     return null;
   }
 
-  // Attack logic for the character
-  attack() {
-    // Logic for attacking
-  }
-
   // Draw movement preview for the selected character
   drawMovementPreview() {
     // Skip drawing if the action menu is visible or the character is moving
@@ -948,6 +943,43 @@ class Character {
     return attackableTiles.some(tile => 
       characters.some(char => char.isEnemy && char.x === tile.x && char.y === tile.y)
     );
+  }
+
+  // Attack logic for the character
+  attack() {
+    // Attack formula
+    const attack = this.strength + this.might;
+
+    // Protection and resistance formula
+    const protection = this.defense;
+    const resistance = this.resistance;
+
+    // Damage Per Attack formula - use protection for physical attacks, resistance for magical attacks
+    const damagePerAttack = this.classType === "Mage" ? attack - resistance : attack - protection;
+
+    // Attack Speed Formula
+    const attackSpeed = this.speed - (6 - (this.strength/5));
+
+    // Hit Chance Formula
+    const hit = this.classType === "Mage" ? this.hit + ((this.dexterity+this.luck)/2) : this.hit + this.dexterity;
+
+    // Avoid Formula
+    const avoid = this.classType === "Mage" ? ((this.speed+this.luck)/2) : attackSpeed;
+
+    // Displayed Hit Chance
+    const displayedHit = hit - avoid;
+
+    // Crit Chance Formula
+    const crit = ((this.dexterity+this.luck)/2)
+
+    // Crit Avoidance Formula
+    const critAvoid = this.luck;
+
+    // Displayed Crit Chance
+    const displayedCrit = crit - critAvoid;
+
+    // Critical Damage Formula
+    const critDamage = damagePerAttack * 3;
   }
 }
 
@@ -1243,6 +1275,79 @@ class UIManager {
     this.turnImageHeight = 125;
   }
 
+  // Battle info preview function to show combat forecast
+  battleInfoPreview() {
+    // Enable smoothing for UI elements
+    smooth();
+    
+    // Scale down the images to 80% of their original size
+    const scaledWidth = UIImages.allyBox.width * 0.8;
+    const scaledHeight = UIImages.allyBox.height * 0.8;
+    
+    // Move Ally Box 65% down the screen
+    const yPosition = height * 0.65;
+    
+    // Draw the ally box image on the left
+    image(UIImages.allyBox, 0, yPosition, scaledWidth, scaledHeight);
+
+    // Draw character name above the line for ally
+    textSize(30);
+    textFont("DMT Shuei MGo Std Bold");
+    textAlign(CENTER, CENTER);
+    stroke(0);
+    strokeWeight(3);
+    fill(255);
+    text(selectedCharacter.name, scaledWidth/2, yPosition + scaledHeight/3);
+
+    // Draw white line through middle of ally box 
+    stroke(255);
+    strokeWeight(1.5);  
+    const lineWidth = scaledWidth * 0.6  
+    const lineStart = (scaledWidth - lineWidth) / 2;  // Center the line
+    line(lineStart, yPosition + scaledHeight/2, lineStart + lineWidth, yPosition + scaledHeight/2);
+
+    // Draw the enemy box image on the right, flipped horizontally
+    translate(width, yPosition); // Move to right side
+    scale(-1, 1); // Flip horizontally
+    // Draw enemy box image on the right
+    image(UIImages.enemyBox, 0, 0, scaledWidth, scaledHeight); 
+
+    // Draw white line through middle of enemy box
+    line(lineStart, scaledHeight/2, lineStart + lineWidth, scaledHeight/2);
+
+    // Find enemy at cursor position
+    const targetEnemy = characters.find(
+      char => char.isEnemy && char.x === locationCursor.x && char.y === locationCursor.y
+    );
+
+    // Draw white line through middle of enemy box
+    line(lineStart, scaledHeight/2, lineStart + lineWidth, scaledHeight/2);
+
+    // Reset scale before drawing text
+    scale(-1, 1);
+    
+    // Draw class name above the line for enemy
+    textSize(30);
+    textFont("DMT Shuei MGo Std Bold");
+    textAlign(CENTER, CENTER);
+    stroke(0);
+    strokeWeight(3);
+    fill(255);
+    text(targetEnemy.classType, -scaledWidth/2, scaledHeight/3);
+
+    // Calculate the remaining vertical space
+    const remainingHeight = height - (yPosition + scaledHeight);
+    
+    // Draw the calculation box below both boxes
+    resetMatrix(); // Reset any transformations
+    const calcBoxWidth = width * 1.2; // Width is 120% of screen width
+    const calcBoxX = (width - calcBoxWidth) / 2; // Center the box by offsetting by half the extra width
+    image(UIImages.calculationBox, calcBoxX, yPosition + scaledHeight, calcBoxWidth, remainingHeight);
+
+    // Disable smoothing again for game elements
+    noSmooth();
+  }
+
   // Display character info when hovering over a character
   displayCharacterInfo(character) {
     // Enable smoothing for UI elements
@@ -1303,7 +1408,7 @@ class UIManager {
 
       // Display HP text
       textSize(33);
-      textFont("Chiaro Std B Bold");
+      textFont("DMT Shuei MGo Std Bold");
       textAlign(LEFT, TOP);
       stroke(0);  
       strokeWeight(5);  
@@ -1345,7 +1450,6 @@ class UIManager {
 
       // Display character name
       textSize(40);
-      textFont("Chiaro Std B Bold");
       textAlign(LEFT, TOP);
       stroke(0); 
       strokeWeight(1);  
@@ -1454,6 +1558,7 @@ let turnImageTimer = 0; // Timer for turn image display
 let enemyPhaseDelayTimer = 0;  // Timer for enemy phase delay
 let enemyPhaseStarted = false; // Flag to track if enemy phase has started
 let uiManager; // UI Manager instance
+let enemySelectedForAttack = false; // Track if an enemy has been selected for attack
 // Define directions once as a constant
 const DIRECTIONS = [
   { x: 0, y: -1 }, // up
@@ -1722,8 +1827,8 @@ function handleTurnSystem() {
 
 // Allows user to hold down movement keys for continuous movement
 function holdCursorMovement() {
-  // Don't move cursor if action menu is open, character is moving, or during enemy turn
-  if (actionMenu.isVisible || selectedCharacter?.isMoving || !isPlayerTurn) {
+  // Don't move cursor if action menu is open, character is moving, during enemy turn, or enemy is selected for attack
+  if (actionMenu.isVisible || selectedCharacter?.isMoving || !isPlayerTurn || enemySelectedForAttack) {
     return;
   }
 
@@ -1823,6 +1928,7 @@ function keyPressed() {
             selectedCharacter.calculateActionableTiles();
             // Play selection sound
             sounds.selectOption.play();
+
           }
           else {
             // Play error sound or some feedback that attack isn't possible
@@ -1867,11 +1973,10 @@ function keyPressed() {
 
       // If the tile is attackable and there's an enemy there
       if (isAttackableTile && targetEnemy) {
+        // Set the enemy selected flag
+        enemySelectedForAttack = true;
         // End the character's turn
         selectedCharacter.canMove = false;
-        selectedCharacter.isGreyedOut = true;
-        selectedCharacter.action = null;
-        Character.unselectCharacter(false);
         sounds.selectOption.play();
       }
       return;
@@ -1897,6 +2002,8 @@ function keyPressed() {
       selectedCharacter.isSelected = true;
       selectedCharacter.canMove = true;
       selectedCharacter.isGreyedOut = false;
+      // Reset enemy selection flag
+      enemySelectedForAttack = false;
       // Recalculate movement range from original position
       selectedCharacter.calculateActionableTiles();
       sounds.unselectCharacter.play();
@@ -1965,14 +2072,17 @@ function draw() {
     if (!showTurnImage && isPlayerTurn) {
       locationCursor.renderCursor();
 
-      // Display tile location image 
-      uiManager.displayTileLocationImage();
+      // Only show tile and character info if no enemy is selected for attack
+      if (!enemySelectedForAttack) {
+        // Display tile location image 
+        uiManager.displayTileLocationImage();
 
-      // Check if cursor is over any character and display info
-      for (let character of characters) {
-        if (isCursorOverCharacter(character)) {
-          uiManager.displayCharacterInfo(character);
-          break;
+        // Check if cursor is over any character and display info
+        for (let character of characters) {
+          if (isCursorOverCharacter(character)) {
+            uiManager.displayCharacterInfo(character);
+            break;
+          }
         }
       }
     }
@@ -1980,6 +2090,11 @@ function draw() {
     // Display the action menu
     actionMenu.display();
    
+    // Display battle info preview if in attack mode and enemy is selected
+    if (selectedCharacter && selectedCharacter.action === "attack" && enemySelectedForAttack) {
+      uiManager.battleInfoPreview();
+    }
+
     // Check and handle turn system
     handleTurnSystem();
   }
