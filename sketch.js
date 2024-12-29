@@ -1302,30 +1302,22 @@ class UIManager {
     // Draw white line through middle of ally box 
     stroke(255);
     strokeWeight(1.5);  
-    const lineWidth = scaledWidth * 0.6  
+    const lineWidth = scaledWidth * 0.6;
     const lineStart = (scaledWidth - lineWidth) / 2;  // Center the line
     line(lineStart, yPosition + scaledHeight/2, lineStart + lineWidth, yPosition + scaledHeight/2);
 
-    // Draw the enemy box image on the right, flipped horizontally
-    translate(width, yPosition); // Move to right side
-    scale(-1, 1); // Flip horizontally
-    // Draw enemy box image on the right
-    image(UIImages.enemyBox, 0, 0, scaledWidth, scaledHeight); 
+    // Draw the enemy box image on the right
+    const enemyBoxX = width - scaledWidth;
+    image(UIImages.enemyBox, enemyBoxX, yPosition, scaledWidth, scaledHeight);
 
     // Draw white line through middle of enemy box
-    line(lineStart, scaledHeight/2, lineStart + lineWidth, scaledHeight/2);
+    line(enemyBoxX + lineStart, yPosition + scaledHeight/2, enemyBoxX + lineStart + lineWidth, yPosition + scaledHeight/2);
 
     // Find enemy at cursor position
     const targetEnemy = characters.find(
       char => char.isEnemy && char.x === locationCursor.x && char.y === locationCursor.y
     );
 
-    // Draw white line through middle of enemy box
-    line(lineStart, scaledHeight/2, lineStart + lineWidth, scaledHeight/2);
-
-    // Reset scale before drawing text
-    scale(-1, 1);
-    
     // Draw class name above the line for enemy
     textSize(30);
     textFont("DMT Shuei MGo Std Bold");
@@ -1333,16 +1325,75 @@ class UIManager {
     stroke(0);
     strokeWeight(3);
     fill(255);
-    text(targetEnemy.classType, -scaledWidth/2, scaledHeight/3);
+    text(targetEnemy.classType, enemyBoxX + scaledWidth/2, yPosition + scaledHeight/3);
 
     // Calculate the remaining vertical space
     const remainingHeight = height - (yPosition + scaledHeight);
     
-    // Draw the calculation box below both boxes
-    resetMatrix(); // Reset any transformations
-    const calcBoxWidth = width * 1.2; // Width is 120% of screen width
-    const calcBoxX = (width - calcBoxWidth) / 2; // Center the box by offsetting by half the extra width
-    image(UIImages.calculationBox, calcBoxX, yPosition + scaledHeight, calcBoxWidth, remainingHeight);
+    // Draw the calculation box below both boxes using full screen width
+    image(UIImages.calculationBox, 0, yPosition + scaledHeight, width, remainingHeight);
+
+    // Draw HP text for player side (left)
+    textSize(33);
+    textFont("DMT Shuei MGo Std Bold");
+    textAlign(LEFT, TOP);
+    stroke(0);
+    strokeWeight(5);
+    fill(244, 235, 215);
+    text("HP", 35, yPosition + scaledHeight + 20);
+    // Draw HP text for enemy side (right)
+    text("HP", (width/2) + 35, yPosition + scaledHeight + 20);
+    
+    // Draw current HP for player and enemy
+    textSize(40);
+    fill(255);
+    text(selectedCharacter.hp, 100, yPosition + scaledHeight + 15);
+    text(targetEnemy.hp, (width/2) + 100, yPosition + scaledHeight + 15);
+
+    // HP bar constants
+    const barWidth = 300;
+    const barHeight = 20;
+    const cornerRadius = 10;
+
+    // Draw player HP bar
+    const playerBarX = 150;
+    const playerBarY = yPosition + scaledHeight + 23;
+    const playerHPRatio = selectedCharacter.hp / selectedCharacter.hp;
+
+    // Draw bar fill - top half (player)
+    noStroke();
+    fill(210, 255, 255);
+    rect(playerBarX, playerBarY, barWidth * playerHPRatio, barHeight/2, cornerRadius, cornerRadius, 0, 0);
+
+    // Draw bar fill - bottom half (player)
+    fill(146, 251, 254);
+    rect(playerBarX, playerBarY + barHeight/2, barWidth * playerHPRatio, barHeight/2, 0, 0, cornerRadius, cornerRadius);
+
+    // Draw bar outline (player)
+    stroke(140, 107, 49);
+    strokeWeight(4);
+    noFill();
+    rect(playerBarX, playerBarY, barWidth, barHeight, cornerRadius);
+
+    // Draw enemy HP bar
+    const enemyBarX = (width/2) + 150;
+    const enemyBarY = yPosition + scaledHeight + 23;
+    const enemyHPRatio = targetEnemy.hp / targetEnemy.hp;
+
+    // Draw bar fill - top half (enemy)
+    noStroke();
+    fill(248, 202, 126);
+    rect(enemyBarX, enemyBarY, barWidth * enemyHPRatio, barHeight/2, cornerRadius, cornerRadius, 0, 0);
+
+    // Draw bar fill - bottom half (enemy)
+    fill(242, 118, 105);
+    rect(enemyBarX, enemyBarY + barHeight/2, barWidth * enemyHPRatio, barHeight/2, 0, 0, cornerRadius, cornerRadius);
+
+    // Draw bar outline (enemy)
+    stroke(140, 107, 49);
+    strokeWeight(4);
+    noFill();
+    rect(enemyBarX, enemyBarY, barWidth, barHeight, cornerRadius);
 
     // Disable smoothing again for game elements
     noSmooth();
