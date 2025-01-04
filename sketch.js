@@ -946,40 +946,88 @@ class Character {
   }
 
   // Attack logic for the character
-  attack() {
-    // Attack formula
-    const attack = this.strength + this.might;
+  attack(opponent) {
+    // Attack formula - use magic for mages
+    let attack;
+    if (this.classType === "Mage") {
+        attack = this.magic + this.might;
+    } 
+    else {
+        attack = this.strength + this.might;
+    }
 
     // Protection and resistance formula
-    const protection = this.defense;
-    const resistance = this.resistance;
+    let protection, resistance;
+    if (opponent) {
+        protection = opponent.defense;
+        resistance = opponent.resistance;
+    } 
+    else {
+        protection = this.defense;
+        resistance = this.resistance;
+    }
 
-    // Damage Per Attack formula - use protection for physical attacks, resistance for magical attacks
-    const damagePerAttack = this.classType === "Mage" ? attack - resistance : attack - protection;
+    // Damage Per Attack formula - use resistance for mage
+    if (this.classType === "Mage") {
+        this.displayedDamage = Math.max(0, attack - resistance);
+    } 
+    else {
+        this.displayedDamage = Math.max(0, attack - protection);
+    }
 
     // Attack Speed Formula
     const attackSpeed = this.speed - (6 - (this.strength/5));
 
     // Hit Chance Formula
-    const hit = this.classType === "Mage" ? this.hit + ((this.dexterity+this.luck)/2) : this.hit + this.dexterity;
+    let hit;
+    if (this.classType === "Mage") {
+        hit = this.hit + ((this.dexterity + this.luck)/2);
+    } 
+    else {
+        hit = this.hit + this.dexterity;
+    }
 
     // Avoid Formula
-    const avoid = this.classType === "Mage" ? ((this.speed+this.luck)/2) : attackSpeed;
+    let avoid;
+    if (opponent) {
+        const opponentSpeed = opponent.speed - (6 - (opponent.strength/5));
+        if (opponent.classType === "Mage") {
+            avoid = ((opponent.speed + opponent.luck)/2);
+        } 
+        else {
+            avoid = opponentSpeed;
+        }
+    } 
+    // If mage use different avoid formula
+    else {
+        if (this.classType === "Mage") {
+            avoid = ((this.speed + this.luck)/2);
+        } 
+        else {
+            avoid = attackSpeed;
+        }
+    }
 
     // Displayed Hit Chance
-    const displayedHit = hit - avoid;
+    this.displayedHit = Math.max(0, hit - avoid);
 
     // Crit Chance Formula
-    const crit = ((this.dexterity+this.luck)/2)
+    const crit = this.dexterity + this.luck;
 
     // Crit Avoidance Formula
-    const critAvoid = this.luck;
+    let critAvoid;
+    if (opponent) {
+        critAvoid = opponent.luck;
+    } 
+    else {
+        critAvoid = this.luck;
+    }
 
     // Displayed Crit Chance
-    const displayedCrit = crit - critAvoid;
+    this.displayedCrit = Math.max(0, crit - critAvoid);
 
     // Critical Damage Formula
-    const critDamage = damagePerAttack * 3;
+    const critDamage = this.displayedDamage * 3;
   }
 }
 
@@ -1284,8 +1332,8 @@ class UIManager {
     const scaledWidth = UIImages.allyBox.width * 0.8;
     const scaledHeight = UIImages.allyBox.height * 0.8;
     
-    // Move Ally Box 65% down the screen
-    const yPosition = height * 0.65;
+    // Move ally and enemy boxes 55% down the screen
+    const yPosition = height * 0.55;
     
     // Draw the ally box image on the left
     image(UIImages.allyBox, 0, yPosition, scaledWidth, scaledHeight);
@@ -1344,7 +1392,7 @@ class UIManager {
     // Draw HP text for enemy side (right)
     text("HP", (width/2) + 35, yPosition + scaledHeight + 20);
     
-    // Draw current HP for player and enemy
+    // Draw current HP number for player and enemy
     textSize(40);
     fill(255);
     text(selectedCharacter.hp, 100, yPosition + scaledHeight + 15);
@@ -1394,6 +1442,85 @@ class UIManager {
     strokeWeight(4);
     noFill();
     rect(enemyBarX, enemyBarY, barWidth, barHeight, cornerRadius);
+
+    // Draw three lines below player HP bar
+    stroke(255, 255, 200); 
+    strokeWeight(1.5);
+    for (let i = 0; i < 3; i++) {
+      const lineY = playerBarY + barHeight + 50 + (i * 35);
+      line(playerBarX - 50, lineY, playerBarX + barWidth - 50, lineY);
+    }
+
+    // Draw three lines below enemy HP bar
+    for (let i = 0; i < 3; i++) {
+      const lineY = enemyBarY + barHeight + 50 + (i * 35);
+      line(enemyBarX - 50, lineY, enemyBarX + barWidth - 50, lineY);
+    }
+
+    // Draw DMG, HIT, and CRIT text for player side on each line 
+    textSize(25);
+    textFont("DMT Shuei MGo Std Bold");
+    textAlign(LEFT, BOTTOM);
+    stroke(0);
+    strokeWeight(5);
+    fill(244, 235, 215);
+    text("DMG", playerBarX - 15, playerBarY + barHeight + 50); 
+    text("HIT", playerBarX - 15, playerBarY + barHeight + 85); 
+    text("CRIT", playerBarX - 15, playerBarY + barHeight + 121); 
+
+    // Draw DMG, HIT, and CRIT text for player side on each line 
+    textSize(25);
+    textFont("DMT Shuei MGo Std Bold");
+    textAlign(LEFT, BOTTOM);
+    stroke(0);
+    strokeWeight(5);
+    fill(244, 235, 215);
+    text("DMG", enemyBarX - 15, enemyBarY + barHeight + 50); 
+    text("HIT", enemyBarX - 15, enemyBarY + barHeight + 85); 
+    text("CRIT", enemyBarX - 15, enemyBarY + barHeight + 121); 
+
+    // Draw hit, crit, and damage values
+    fill(255);
+    textAlign(RIGHT, BOTTOM);
+
+    // Calculate attacking values first
+    selectedCharacter.attack(targetEnemy);
+    targetEnemy.attack(selectedCharacter);
+
+    // Check speed differences and adjust damage
+    const playerSpeedDiff = selectedCharacter.speed - targetEnemy.speed;
+    const enemySpeedDiff = targetEnemy.speed - selectedCharacter.speed;
+
+    // Double damage if speed difference is 4 or more
+    if (playerSpeedDiff >= 4) {
+        selectedCharacter.displayedDamage *= 2;
+    }
+    if (enemySpeedDiff >= 4) {
+        targetEnemy.displayedDamage *= 2;
+    }
+
+    // Then display them
+    text(selectedCharacter.displayedDamage, playerBarX + barWidth - 70, playerBarY + barHeight + 50);  // DMG
+    text(Math.floor(selectedCharacter.displayedHit) + "%", playerBarX + barWidth - 70, playerBarY + barHeight + 85);  // HIT
+    text(Math.floor(selectedCharacter.displayedCrit) + "%", playerBarX + barWidth - 70, playerBarY + barHeight + 121);  // CRIT
+
+    // Calculate distance between attacker and target
+    const distance = Math.abs(selectedCharacter.x - targetEnemy.x) + Math.abs(selectedCharacter.y - targetEnemy.y);
+
+    // Check if attacker at 2 tiles distance
+    const isRangedAttack = distance === 2;
+
+    // Display enemy values
+    if (isRangedAttack) {
+        text("-", enemyBarX + barWidth - 70, enemyBarY + barHeight + 50);  // DMG
+        text("-", enemyBarX + barWidth - 70, enemyBarY + barHeight + 85);  // HIT
+        text("-", enemyBarX + barWidth - 70, enemyBarY + barHeight + 121);  // CRIT
+    } 
+    else {
+        text(targetEnemy.displayedDamage, enemyBarX + barWidth - 70, enemyBarY + barHeight + 50);  // DMG
+        text(Math.floor(targetEnemy.displayedHit) + "%", enemyBarX + barWidth - 70, enemyBarY + barHeight + 85);  // HIT
+        text(Math.floor(targetEnemy.displayedCrit) + "%", enemyBarX + barWidth - 70, enemyBarY + barHeight + 121);  // CRIT
+    }
 
     // Disable smoothing again for game elements
     noSmooth();
