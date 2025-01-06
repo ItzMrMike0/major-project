@@ -1381,6 +1381,83 @@ class UIManager {
     // Draw the calculation box below both boxes using full screen width
     image(UIImages.calculationBox, 0, yPosition + scaledHeight, width, remainingHeight);
 
+    // Add arrows to show attack order
+    const arrowSpacing = 45;  // Spacing between arrows
+    const scaledArrowWidth = UIImages.playerArrow.width * 0.7;  // Scaled width
+    const scaledArrowHeight = UIImages.playerArrow.height * 0.7;  // Scaled height
+    const centerX = width / 2 - scaledArrowWidth / 2;  // Center position accounting for arrow width
+    const arrowYOffset = 80;  // Increased Y offset for arrows
+
+    // Calculate speed differences to determine if there double attacks
+    const playerSpeedDiff = selectedCharacter.speed - targetEnemy.speed;
+    const enemySpeedDiff = targetEnemy.speed - selectedCharacter.speed;
+
+    // Calculate distance between attacker and target
+    const distance = Math.abs(selectedCharacter.x - targetEnemy.x) + Math.abs(selectedCharacter.y - targetEnemy.y);
+    const isRangedAttack = distance === 2;
+
+    // Setup text style for damage numbers
+    textSize(30);
+    textFont("DMT Shuei MGo Std Bold");
+    textAlign(LEFT, CENTER);
+    stroke(255, 0, 0);
+    strokeWeight(1);
+    fill(255);
+
+    // Calculate player character's individual hit damage if double attack
+    let hitDamage;
+    if (playerSpeedDiff >= 4) {
+      // If character will double attack, half the damage
+        hitDamage = selectedCharacter.displayedDamage / 2;
+    } 
+    else {
+        hitDamage = selectedCharacter.displayedDamage;
+    }
+
+    // Calculate enemy's individual hit damage if double attack
+    let enemyHitDamage;
+    if (enemySpeedDiff >= 4) {
+        enemyHitDamage = targetEnemy.displayedDamage / 2;
+    } 
+    else {
+        enemyHitDamage = targetEnemy.displayedDamage;
+    }
+
+    // Draw player arrow
+    image(UIImages.playerArrow, centerX, yPosition + scaledHeight + arrowYOffset, 
+          scaledArrowWidth, scaledArrowHeight);
+
+    // Draw first attack damage to the right of the player arrow
+    text(hitDamage, centerX + scaledArrowWidth + 20, yPosition + scaledHeight + arrowYOffset + scaledArrowHeight/2);
+
+    // If attack is over 2 tiles, do not show enemy counterattack arrow
+    if (!isRangedAttack) {
+        // Enemy counterattack arrow
+        image(UIImages.enemyArrow, centerX, yPosition + scaledHeight + arrowYOffset + arrowSpacing,
+              scaledArrowWidth, scaledArrowHeight);
+        // Draw enemy attack damage to the left of the enemy arrow
+        text(enemyHitDamage, centerX - 40, yPosition + scaledHeight + arrowYOffset + arrowSpacing + scaledArrowHeight/2);
+        
+        // If player is 4 or more speed faster, show second player arrow with individual hit damage
+        if (playerSpeedDiff >= 4) {
+            image(UIImages.playerArrow, centerX, yPosition + scaledHeight + arrowYOffset + arrowSpacing * 2,
+                  scaledArrowWidth, scaledArrowHeight);
+                  
+            // Draw second attack damage (same individual hit damage)
+            text(hitDamage, centerX + scaledArrowWidth + 20, 
+                 yPosition + scaledHeight + arrowYOffset + arrowSpacing * 2 + scaledArrowHeight/2);
+        }
+        // If enemy is 4 or more speed faster, show second enemy arrow
+        else if (enemySpeedDiff >= 4) {
+            image(UIImages.enemyArrow, centerX, yPosition + scaledHeight + arrowYOffset + arrowSpacing * 2,
+                  scaledArrowWidth, scaledArrowHeight);
+
+            // Draw second enemy attack damage to the left of the arrow
+            text(enemyHitDamage, centerX - 40, 
+                 yPosition + scaledHeight + arrowYOffset + arrowSpacing * 2 + scaledArrowHeight/2);
+        }
+    }
+
     // Draw HP text for player side (left)
     textSize(33);
     textFont("DMT Shuei MGo Std Bold");
@@ -1395,8 +1472,8 @@ class UIManager {
     // Draw current HP number for player and enemy
     textSize(40);
     fill(255);
-    text(selectedCharacter.hp, 100, yPosition + scaledHeight + 15);
-    text(targetEnemy.hp, (width/2) + 100, yPosition + scaledHeight + 15);
+    text(selectedCharacter.hp, 90, yPosition + scaledHeight + 15);
+    text(targetEnemy.hp, (width/2) + 90, yPosition + scaledHeight + 15);
 
     // HP bar constants
     const barWidth = 300;
@@ -1448,13 +1525,13 @@ class UIManager {
     strokeWeight(1.5);
     for (let i = 0; i < 3; i++) {
       const lineY = playerBarY + barHeight + 50 + (i * 35);
-      line(playerBarX - 50, lineY, playerBarX + barWidth - 50, lineY);
+      line(playerBarX - 120, lineY, playerBarX + barWidth - 120, lineY);
     }
 
     // Draw three lines below enemy HP bar
     for (let i = 0; i < 3; i++) {
       const lineY = enemyBarY + barHeight + 50 + (i * 35);
-      line(enemyBarX - 50, lineY, enemyBarX + barWidth - 50, lineY);
+      line(enemyBarX + 20, lineY, enemyBarX + barWidth + 20, lineY);
     }
 
     // Draw DMG, HIT, and CRIT text for player side on each line 
@@ -1464,20 +1541,20 @@ class UIManager {
     stroke(0);
     strokeWeight(5);
     fill(244, 235, 215);
-    text("DMG", playerBarX - 15, playerBarY + barHeight + 50); 
-    text("HIT", playerBarX - 15, playerBarY + barHeight + 85); 
-    text("CRIT", playerBarX - 15, playerBarY + barHeight + 121); 
+    text("DMG", playerBarX - 85, playerBarY + barHeight + 50); 
+    text("HIT", playerBarX - 85, playerBarY + barHeight + 85); 
+    text("CRIT", playerBarX - 85, playerBarY + barHeight + 121); 
 
-    // Draw DMG, HIT, and CRIT text for player side on each line 
+    // Draw DMG, HIT, and CRIT text for enemy side on each line 
     textSize(25);
     textFont("DMT Shuei MGo Std Bold");
     textAlign(LEFT, BOTTOM);
     stroke(0);
     strokeWeight(5);
     fill(244, 235, 215);
-    text("DMG", enemyBarX - 15, enemyBarY + barHeight + 50); 
-    text("HIT", enemyBarX - 15, enemyBarY + barHeight + 85); 
-    text("CRIT", enemyBarX - 15, enemyBarY + barHeight + 121); 
+    text("DMG", enemyBarX + 55, enemyBarY + barHeight + 50); 
+    text("HIT", enemyBarX + 55, enemyBarY + barHeight + 85); 
+    text("CRIT", enemyBarX + 55, enemyBarY + barHeight + 121); 
 
     // Draw hit, crit, and damage values
     fill(255);
@@ -1487,10 +1564,6 @@ class UIManager {
     selectedCharacter.attack(targetEnemy);
     targetEnemy.attack(selectedCharacter);
 
-    // Check speed differences and adjust damage
-    const playerSpeedDiff = selectedCharacter.speed - targetEnemy.speed;
-    const enemySpeedDiff = targetEnemy.speed - selectedCharacter.speed;
-
     // Double damage if speed difference is 4 or more
     if (playerSpeedDiff >= 4) {
         selectedCharacter.displayedDamage *= 2;
@@ -1499,27 +1572,21 @@ class UIManager {
         targetEnemy.displayedDamage *= 2;
     }
 
-    // Then display them
-    text(selectedCharacter.displayedDamage, playerBarX + barWidth - 70, playerBarY + barHeight + 50);  // DMG
-    text(Math.floor(selectedCharacter.displayedHit) + "%", playerBarX + barWidth - 70, playerBarY + barHeight + 85);  // HIT
-    text(Math.floor(selectedCharacter.displayedCrit) + "%", playerBarX + barWidth - 70, playerBarY + barHeight + 121);  // CRIT
-
-    // Calculate distance between attacker and target
-    const distance = Math.abs(selectedCharacter.x - targetEnemy.x) + Math.abs(selectedCharacter.y - targetEnemy.y);
-
-    // Check if attacker at 2 tiles distance
-    const isRangedAttack = distance === 2;
+    // Display player values
+    text(selectedCharacter.displayedDamage, playerBarX + barWidth - 140, playerBarY + barHeight + 50);  // DMG
+    text(Math.floor(selectedCharacter.displayedHit) + "%", playerBarX + barWidth - 140, playerBarY + barHeight + 85);  // HIT
+    text(Math.floor(selectedCharacter.displayedCrit) + "%", playerBarX + barWidth - 140, playerBarY + barHeight + 121);  // CRIT
 
     // Display enemy values
     if (isRangedAttack) {
-        text("-", enemyBarX + barWidth - 70, enemyBarY + barHeight + 50);  // DMG
-        text("-", enemyBarX + barWidth - 70, enemyBarY + barHeight + 85);  // HIT
-        text("-", enemyBarX + barWidth - 70, enemyBarY + barHeight + 121);  // CRIT
+        text("-", enemyBarX + barWidth, enemyBarY + barHeight + 50);  // DMG
+        text("-", enemyBarX + barWidth, enemyBarY + barHeight + 85);  // HIT
+        text("-", enemyBarX + barWidth, enemyBarY + barHeight + 121);  // CRIT
     } 
     else {
-        text(targetEnemy.displayedDamage, enemyBarX + barWidth - 70, enemyBarY + barHeight + 50);  // DMG
-        text(Math.floor(targetEnemy.displayedHit) + "%", enemyBarX + barWidth - 70, enemyBarY + barHeight + 85);  // HIT
-        text(Math.floor(targetEnemy.displayedCrit) + "%", enemyBarX + barWidth - 70, enemyBarY + barHeight + 121);  // CRIT
+        text(targetEnemy.displayedDamage, enemyBarX + barWidth, enemyBarY + barHeight + 50);  // DMG
+        text(Math.floor(targetEnemy.displayedHit) + "%", enemyBarX + barWidth, enemyBarY + barHeight + 85);  // HIT
+        text(Math.floor(targetEnemy.displayedCrit) + "%", enemyBarX + barWidth, enemyBarY + barHeight + 121);  // CRIT
     }
 
     // Disable smoothing again for game elements

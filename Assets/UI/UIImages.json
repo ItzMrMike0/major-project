@@ -10,5 +10,7 @@
     "stronghold": "Assets/UI/TileLocationImages/stronghold.png",
     "allyBox": "Assets/UI/BattleInfoPreviewImages/ally_box.png",
     "enemyBox": "Assets/UI/BattleInfoPreviewImages/enemy_box.png",
-    "calculationBox": "Assets/UI/BattleInfoPreviewImages/calculation_box.png"
+    "calculationBox": "Assets/UI/BattleInfoPreviewImages/calculation_box.png",
+    "playerArrow": "Assets/UI/BattleInfoPreviewImages/player_arrow.png",
+    "enemyArrow": "Assets/UI/BattleInfoPreviewImages/enemy_arrow.png"
 }

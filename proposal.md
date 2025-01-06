@@ -29,23 +29,22 @@ Winning will rely not only on combat prowess but also on strategic planning and 
 
 ### 3: Characters
 - Characters with unique stats, animations, and abilities. 🟡
-- Core stats include HP, strength, skill, speed, luck, defense, resistance. 🟡
-- Derived stats like critical rate or hit rate. 🔴
+- Core stats include HP, strength, skill, speed, luck, defense, resistance. 🟢
+- Derived stats like critical rate or hit rate. 🟢
 - Assign classes with unique traits (e.g., archers, mages, knights). 🟢
 - Include movement, selection, and idle animations. 🟢
 
 ### 4: Battle System
 - Transition to a new scene or overlay for battle sequences. 🔴
-- Display calculated values such as damage dealt, hit percentage, and critical chance. 🔴
-- Add animations for attacking, defending, and taking damage. 🔴
-- Include death animations for defeated characters. 🔴 
+- Display calculated values such as damage dealt, hit percentage, and critical chance. 🟢
+- Add animations for attacking, defending, taking damage etc. 🔴
 - Highlight critical hits with unique animations and sound effects. 🔴
 - Show distinct effects for missed attacks. 🔴
 
 ### 5: Enemy AI
 - Implement enemy AI to make tactical decisions. 🟢
 - AI actions: 🟡
-  - Move toward player characters within range. 🟡
+  - Move toward player characters within range. 🟢
   - Attack player characters within range. 🔴
 
 ### 6: Sound Effects
