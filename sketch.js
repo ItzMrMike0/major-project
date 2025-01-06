@@ -502,7 +502,7 @@ class Character {
         const tileKey = `${tile.x},${tile.y}`; // Create a string key for the attackable tile's coordinates
         // If the attackable tile is not in the reachable tiles array, add it to the attackable tiles set
         if (!this.reachableTiles.some(reachable => 
-            reachable.x === tile.x && reachable.y === tile.y)) {
+          reachable.x === tile.x && reachable.y === tile.y)) {
           attackableTilesSet.add(tileKey); // Add the attackable tile's coordinates as a string to the set
         }
       }
@@ -525,7 +525,7 @@ class Character {
     this.previousY = this.y;
 
     // Check if character is actually moving to a new position
-    const isActuallyMoving = (newX !== this.x || newY !== this.y);
+    const isActuallyMoving = newX !== this.x || newY !== this.y;
 
     // Get path based on character type
     const path = isEnemy ?
@@ -801,7 +801,7 @@ class Character {
               (neighbor.x !== goal.x || neighbor.y !== goal.y)) {
             continue;
           }
-           // Calculate the tentative g-score for the neighbor
+          // Calculate the tentative g-score for the neighbor
           const tentativeGScore = gScore.get(`${current.x},${current.y}`) + 1;
           let neighborNode = openSet.find(n => n.x === neighbor.x && n.y === neighbor.y);
 
@@ -950,62 +950,62 @@ class Character {
     // Attack formula - use magic for mages
     let attack;
     if (this.classType === "Mage") {
-        attack = this.magic + this.might;
+      attack = this.magic + this.might;
     } 
     else {
-        attack = this.strength + this.might;
+      attack = this.strength + this.might;
     }
 
     // Protection and resistance formula
     let protection, resistance;
     if (opponent) {
-        protection = opponent.defense;
-        resistance = opponent.resistance;
+      protection = opponent.defense;
+      resistance = opponent.resistance;
     } 
     else {
-        protection = this.defense;
-        resistance = this.resistance;
+      protection = this.defense;
+      resistance = this.resistance;
     }
 
     // Damage Per Attack formula - use resistance for mage
     if (this.classType === "Mage") {
-        this.displayedDamage = Math.max(0, attack - resistance);
+      this.displayedDamage = Math.max(0, attack - resistance);
     } 
     else {
-        this.displayedDamage = Math.max(0, attack - protection);
+      this.displayedDamage = Math.max(0, attack - protection);
     }
 
     // Attack Speed Formula
-    const attackSpeed = this.speed - (6 - (this.strength/5));
+    const attackSpeed = this.speed - (6 - this.strength/5);
 
     // Hit Chance Formula
     let hit;
     if (this.classType === "Mage") {
-        hit = this.hit + ((this.dexterity + this.luck)/2);
+      hit = this.hit + (this.dexterity + this.luck)/2;
     } 
     else {
-        hit = this.hit + this.dexterity;
+      hit = this.hit + this.dexterity;
     }
 
     // Avoid Formula
     let avoid;
     if (opponent) {
-        const opponentSpeed = opponent.speed - (6 - (opponent.strength/5));
-        if (opponent.classType === "Mage") {
-            avoid = ((opponent.speed + opponent.luck)/2);
-        } 
-        else {
-            avoid = opponentSpeed;
-        }
+      const opponentSpeed = opponent.speed - (6 - opponent.strength/5);
+      if (opponent.classType === "Mage") {
+        avoid = (opponent.speed + opponent.luck)/2;
+      } 
+      else {
+        avoid = opponentSpeed;
+      }
     } 
     // If mage use different avoid formula
     else {
-        if (this.classType === "Mage") {
-            avoid = ((this.speed + this.luck)/2);
-        } 
-        else {
-            avoid = attackSpeed;
-        }
+      if (this.classType === "Mage") {
+        avoid = (this.speed + this.luck)/2;
+      } 
+      else {
+        avoid = attackSpeed;
+      }
     }
 
     // Displayed Hit Chance
@@ -1017,10 +1017,10 @@ class Character {
     // Crit Avoidance Formula
     let critAvoid;
     if (opponent) {
-        critAvoid = opponent.luck;
+      critAvoid = opponent.luck;
     } 
     else {
-        critAvoid = this.luck;
+      critAvoid = this.luck;
     }
 
     // Displayed Crit Chance
@@ -1408,54 +1408,54 @@ class UIManager {
     let hitDamage;
     if (playerSpeedDiff >= 4) {
       // If character will double attack, half the damage
-        hitDamage = selectedCharacter.displayedDamage / 2;
+      hitDamage = selectedCharacter.displayedDamage / 2;
     } 
     else {
-        hitDamage = selectedCharacter.displayedDamage;
+      hitDamage = selectedCharacter.displayedDamage;
     }
 
     // Calculate enemy's individual hit damage if double attack
     let enemyHitDamage;
     if (enemySpeedDiff >= 4) {
-        enemyHitDamage = targetEnemy.displayedDamage / 2;
+      enemyHitDamage = targetEnemy.displayedDamage / 2;
     } 
     else {
-        enemyHitDamage = targetEnemy.displayedDamage;
+      enemyHitDamage = targetEnemy.displayedDamage;
     }
 
     // Draw player arrow
     image(UIImages.playerArrow, centerX, yPosition + scaledHeight + arrowYOffset, 
-          scaledArrowWidth, scaledArrowHeight);
+      scaledArrowWidth, scaledArrowHeight);
 
     // Draw first attack damage to the right of the player arrow
     text(hitDamage, centerX + scaledArrowWidth + 20, yPosition + scaledHeight + arrowYOffset + scaledArrowHeight/2);
 
     // If attack is over 2 tiles, do not show enemy counterattack arrow
     if (!isRangedAttack) {
-        // Enemy counterattack arrow
-        image(UIImages.enemyArrow, centerX, yPosition + scaledHeight + arrowYOffset + arrowSpacing,
-              scaledArrowWidth, scaledArrowHeight);
-        // Draw enemy attack damage to the left of the enemy arrow
-        text(enemyHitDamage, centerX - 40, yPosition + scaledHeight + arrowYOffset + arrowSpacing + scaledArrowHeight/2);
+      // Enemy counterattack arrow
+      image(UIImages.enemyArrow, centerX, yPosition + scaledHeight + arrowYOffset + arrowSpacing,
+        scaledArrowWidth, scaledArrowHeight);
+      // Draw enemy attack damage to the left of the enemy arrow
+      text(enemyHitDamage, centerX - 40, yPosition + scaledHeight + arrowYOffset + arrowSpacing + scaledArrowHeight/2);
         
-        // If player is 4 or more speed faster, show second player arrow with individual hit damage
-        if (playerSpeedDiff >= 4) {
-            image(UIImages.playerArrow, centerX, yPosition + scaledHeight + arrowYOffset + arrowSpacing * 2,
-                  scaledArrowWidth, scaledArrowHeight);
+      // If player is 4 or more speed faster, show second player arrow with individual hit damage
+      if (playerSpeedDiff >= 4) {
+        image(UIImages.playerArrow, centerX, yPosition + scaledHeight + arrowYOffset + arrowSpacing * 2,
+          scaledArrowWidth, scaledArrowHeight);
                   
-            // Draw second attack damage (same individual hit damage)
-            text(hitDamage, centerX + scaledArrowWidth + 20, 
-                 yPosition + scaledHeight + arrowYOffset + arrowSpacing * 2 + scaledArrowHeight/2);
-        }
-        // If enemy is 4 or more speed faster, show second enemy arrow
-        else if (enemySpeedDiff >= 4) {
-            image(UIImages.enemyArrow, centerX, yPosition + scaledHeight + arrowYOffset + arrowSpacing * 2,
-                  scaledArrowWidth, scaledArrowHeight);
+        // Draw second attack damage (same individual hit damage)
+        text(hitDamage, centerX + scaledArrowWidth + 20, 
+          yPosition + scaledHeight + arrowYOffset + arrowSpacing * 2 + scaledArrowHeight/2);
+      }
+      // If enemy is 4 or more speed faster, show second enemy arrow
+      else if (enemySpeedDiff >= 4) {
+        image(UIImages.enemyArrow, centerX, yPosition + scaledHeight + arrowYOffset + arrowSpacing * 2,
+          scaledArrowWidth, scaledArrowHeight);
 
-            // Draw second enemy attack damage to the left of the arrow
-            text(enemyHitDamage, centerX - 40, 
-                 yPosition + scaledHeight + arrowYOffset + arrowSpacing * 2 + scaledArrowHeight/2);
-        }
+        // Draw second enemy attack damage to the left of the arrow
+        text(enemyHitDamage, centerX - 40, 
+          yPosition + scaledHeight + arrowYOffset + arrowSpacing * 2 + scaledArrowHeight/2);
+      }
     }
 
     // Draw HP text for player side (left)
@@ -1467,13 +1467,13 @@ class UIManager {
     fill(244, 235, 215);
     text("HP", 35, yPosition + scaledHeight + 20);
     // Draw HP text for enemy side (right)
-    text("HP", (width/2) + 35, yPosition + scaledHeight + 20);
+    text("HP", width/2 + 35, yPosition + scaledHeight + 20);
     
     // Draw current HP number for player and enemy
     textSize(40);
     fill(255);
     text(selectedCharacter.hp, 90, yPosition + scaledHeight + 15);
-    text(targetEnemy.hp, (width/2) + 90, yPosition + scaledHeight + 15);
+    text(targetEnemy.hp, width/2 + 90, yPosition + scaledHeight + 15);
 
     // HP bar constants
     const barWidth = 300;
@@ -1501,7 +1501,7 @@ class UIManager {
     rect(playerBarX, playerBarY, barWidth, barHeight, cornerRadius);
 
     // Draw enemy HP bar
-    const enemyBarX = (width/2) + 150;
+    const enemyBarX = width/2 + 150;
     const enemyBarY = yPosition + scaledHeight + 23;
     const enemyHPRatio = targetEnemy.hp / targetEnemy.hp;
 
@@ -1524,13 +1524,13 @@ class UIManager {
     stroke(255, 255, 200); 
     strokeWeight(1.5);
     for (let i = 0; i < 3; i++) {
-      const lineY = playerBarY + barHeight + 50 + (i * 35);
+      const lineY = playerBarY + barHeight + 50 + i * 35;
       line(playerBarX - 120, lineY, playerBarX + barWidth - 120, lineY);
     }
 
     // Draw three lines below enemy HP bar
     for (let i = 0; i < 3; i++) {
-      const lineY = enemyBarY + barHeight + 50 + (i * 35);
+      const lineY = enemyBarY + barHeight + 50 + i * 35;
       line(enemyBarX + 20, lineY, enemyBarX + barWidth + 20, lineY);
     }
 
@@ -1566,10 +1566,10 @@ class UIManager {
 
     // Double damage if speed difference is 4 or more
     if (playerSpeedDiff >= 4) {
-        selectedCharacter.displayedDamage *= 2;
+      selectedCharacter.displayedDamage *= 2;
     }
     if (enemySpeedDiff >= 4) {
-        targetEnemy.displayedDamage *= 2;
+      targetEnemy.displayedDamage *= 2;
     }
 
     // Display player values
@@ -1579,14 +1579,14 @@ class UIManager {
 
     // Display enemy values
     if (isRangedAttack) {
-        text("-", enemyBarX + barWidth, enemyBarY + barHeight + 50);  // DMG
-        text("-", enemyBarX + barWidth, enemyBarY + barHeight + 85);  // HIT
-        text("-", enemyBarX + barWidth, enemyBarY + barHeight + 121);  // CRIT
+      text("-", enemyBarX + barWidth, enemyBarY + barHeight + 50);  // DMG
+      text("-", enemyBarX + barWidth, enemyBarY + barHeight + 85);  // HIT
+      text("-", enemyBarX + barWidth, enemyBarY + barHeight + 121);  // CRIT
     } 
     else {
-        text(targetEnemy.displayedDamage, enemyBarX + barWidth, enemyBarY + barHeight + 50);  // DMG
-        text(Math.floor(targetEnemy.displayedHit) + "%", enemyBarX + barWidth, enemyBarY + barHeight + 85);  // HIT
-        text(Math.floor(targetEnemy.displayedCrit) + "%", enemyBarX + barWidth, enemyBarY + barHeight + 121);  // CRIT
+      text(targetEnemy.displayedDamage, enemyBarX + barWidth, enemyBarY + barHeight + 50);  // DMG
+      text(Math.floor(targetEnemy.displayedHit) + "%", enemyBarX + barWidth, enemyBarY + barHeight + 85);  // HIT
+      text(Math.floor(targetEnemy.displayedCrit) + "%", enemyBarX + barWidth, enemyBarY + barHeight + 121);  // CRIT
     }
 
     // Disable smoothing again for game elements
@@ -2154,7 +2154,6 @@ function keyPressed() {
         if (selectedOption === "Wait") {
           selectedCharacter.canMove = false;
           selectedCharacter.isGreyedOut = true;
-          selectedCharacter.action = "wait";
           actionMenu.hide();
           Character.unselectCharacter(false);
           sounds.selectOption.play();
@@ -2173,7 +2172,15 @@ function keyPressed() {
             selectedCharacter.calculateActionableTiles();
             // Play selection sound
             sounds.selectOption.play();
-
+          }
+          // If the option was "Item"
+          else if (selectedOption === "Item") {
+            // Hide the action menu
+            actionMenu.hide();
+            // Set character's action to item
+            selectedCharacter.action = "item";
+            // Play selection sound
+            sounds.selectionOption.play();
           }
           else {
             // Play error sound or some feedback that attack isn't possible
