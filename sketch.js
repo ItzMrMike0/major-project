@@ -1258,7 +1258,7 @@ class ActionMenu {
 
 // Cursor class: Renders the cursor used for selecting tiles and moving characters
 class Cursor {
-  constructor(x = 2, y = 12) {
+  constructor(x = 5, y = 8) {
     this.x = x;  // Horizontal position (in tile coordinates)
     this.y = y;  // Vertical position (in tile coordinates)
     this.width = tilesWidth;
@@ -1406,23 +1406,17 @@ class UIManager {
     fill(255);
 
     // Calculate player character's individual hit damage if double attack
-    let hitDamage;
+    let hitDamage = selectedCharacter.displayedDamage;  
     if (playerSpeedDiff >= 4) {
-      // If character will double attack, half the damage
-      hitDamage = selectedCharacter.displayedDamage / 2;
+      // If character will double attack, show the individual hit damage
+      hitDamage = selectedCharacter.displayedDamage; 
     } 
-    else {
-      hitDamage = selectedCharacter.displayedDamage;
-    }
 
     // Calculate enemy's individual hit damage if double attack
-    let enemyHitDamage;
+    let enemyHitDamage = targetEnemy.displayedDamage;
     if (enemySpeedDiff >= 4) {
-      enemyHitDamage = targetEnemy.displayedDamage / 2;
+      enemyHitDamage = targetEnemy.displayedDamage;  
     } 
-    else {
-      enemyHitDamage = targetEnemy.displayedDamage;
-    }
 
     // Draw player arrow
     image(UIImages.playerArrow, centerX, yPosition + scaledHeight + arrowYOffset, 
@@ -1814,6 +1808,23 @@ const DIRECTIONS = [
   { x: -1, y: 0 }  // left
 ];
 
+// Battle animation states for player and enemy
+let battleAnimationState = {
+  isPlaying: false, // Whether the animation is currently playing
+  currentPhase: "prepare",  // Current phase of the battle animation sequence
+  startTime: 0, // Timestamp when the current phase started
+  lastFrame: -1, // Track last frame to detect animation loop completion
+  willPlayerCrit: false,  // Whether the player's attack will be critical
+  willEnemyCrit: false, // Whether the enemy's attack will be critical
+  willPlayerHit: false, // Whether the playey's attack will hit
+  willEnemyHit: false,  // Whether the enemy's attack will hit
+  hasPlayerDouble: false, // Whether the player gets a second attack (speed >= 4)
+  hasEnemyDouble: false,  // Whether the enemy gets a second attack (speed >= 4)
+  willPlayerSecondCrit: null, // Whether the player's second attack will be critical
+  willEnemySecondCrit: null, // Whether the enemy's second attack will be critical
+  willPlayerSecondHit: null,  // Whether the player's second attack will hit
+  willEnemySecondHit: null  // Whether the enemy's second attack will hit
+};
 
 // Preload all information and images
 function preload() {
@@ -2268,6 +2279,11 @@ function keyPressed() {
   }
   // If k is pressed and there is a selected character that's not moving, unselect them
   else if (key === "k" && selectedCharacter && !selectedCharacter.isMoving) {
+    // Don't allow canceling during or right after battle animation
+    if (battleAnimationState.isPlaying || selectedCharacter.isGreyedOut) {
+      return;
+    }
+    
     // If in attack mode, cancel attack and return to original position
     if (selectedCharacter.action === "attack") {
       // Move character back to their original position
@@ -2285,8 +2301,8 @@ function keyPressed() {
       sounds.unselectCharacter.play();
       animationManager(selectedCharacter, "selected");
     }
-    // Otherwise unselect normally
-    else {
+    // Otherwise unselect normally as long as character isn't greyed out
+    else if (!selectedCharacter.isGreyedOut) {
       Character.unselectCharacter(true);
     }
   }
@@ -2365,6 +2381,11 @@ function draw() {
    
     // Display the action menu
     actionMenu.display();
+
+    // Find target enemy before calling battleInfoPreview or attack animation
+    const targetEnemy = characters.find(
+      char => char.isEnemy && char.x === locationCursor.x && char.y === locationCursor.y
+    );
    
     // Display battle info preview if in attack mode and enemy is selected
     if (selectedCharacter && selectedCharacter.action === "attack" && enemySelectedForAttack) {
@@ -2382,21 +2403,292 @@ function draw() {
         const y = (height - interfaceHeight) / 2;
         image(UIImages.attackInterface, x, y, interfaceWidth, interfaceHeight);
 
-        // Draw the attacking animation
-        const attackerName = selectedCharacter.name.toLowerCase();
-        const attackAnim = attackingAnimationPaths[attackerName + "Attack"];
-        if (attackAnim) {
-          // Position attacker on the left side
-          const attackerX = width * 0.05;
-          const attackerY = height * 0.01;  
-          const attackerWidth = width;
-          const attackerHeight = height * 0.7;  
+        // Only proceed if we have both characters
+        if (selectedCharacter && targetEnemy) {
+          // Initialize battle animation sequence if not started
+          if (!battleAnimationState.isPlaying) {
+            battleAnimationState.isPlaying = true;
+            battleAnimationState.startTime = millis();
+            battleAnimationState.currentPhase = "prepare";
+            
+            // Determine if player first hit will crit
+            battleAnimationState.willPlayerCrit = random(100) < selectedCharacter.displayedCrit;
+            // Determine if enemy first hit will crit
+            battleAnimationState.willEnemyCrit = random(100) < targetEnemy.displayedCrit;
 
-          image(attackAnim, attackerX, attackerY, attackerWidth, attackerHeight);
+            // Determine if player first hit will actually hit
+            battleAnimationState.willPlayerHit = random(100) < selectedCharacter.displayedHit;
+
+            // Determine if enemy first hit will actually hit
+            battleAnimationState.willEnemyHit = random(100) < targetEnemy.displayedHit;
+
+            // Determine if characters can double attack
+            battleAnimationState.hasPlayerDouble = selectedCharacter.speed - targetEnemy.speed >= 4;
+            battleAnimationState.hasEnemyDouble = targetEnemy.speed - selectedCharacter.speed >= 4;
+            
+            // Initialize second hit crit chances as null - will be determined if needed
+            battleAnimationState.willPlayerSecondCrit = null;
+            battleAnimationState.willEnemySecondCrit = null;
+
+            // Initialize second hit, hit chances as null - will be determined if needed
+            battleAnimationState.willPlayerSecondHit = null;
+            battleAnimationState.willEnemySecondHit = null;
+
+            battleAnimationState.lastFrame = -1;
+          }
+
+          const now = millis();
+          // Calculate the time since the animation started
+          const timeSinceStart = now - battleAnimationState.startTime;
+
+          // Position and size constants for battle animations
+          const attackerX = width * 0.02;
+          const attackerY = height * 0.01 - 50;
+          const enemyX = width * 0.08;
+          const enemyY = height * 0.01 - 50;
+          const attackerWidth = width;
+          const attackerHeight = height * 0.7;
+          const enemyWidth = width;
+          const enemyHeight = height * 0.7;
+
+          // Get character identifiers for animation paths
+          const attackerName = selectedCharacter.name.toLowerCase();
+          const enemyClass = targetEnemy.classType.toLowerCase();
+
+          // Phase 1: Prepare - Show both units in standing position
+          if (battleAnimationState.currentPhase === "prepare") {
+            image(attackingAnimationPaths[attackerName + "Standing"], attackerX, attackerY, attackerWidth, attackerHeight);
+            image(attackingAnimationPaths[enemyClass + "Standing"], enemyX, enemyY, enemyWidth, enemyHeight);
+            
+            // After 500ms, transition to player's attack
+            if (timeSinceStart > 500) {
+              battleAnimationState.currentPhase = "playerAttack";
+              battleAnimationState.startTime = now;
+              battleAnimationState.lastFrame = -1;
+              
+              // Preload player's attack animation
+              const playerAttackType = battleAnimationState.willPlayerCrit ? "Critical" : "Attack";
+              const nextAnim = attackingAnimationPaths[attackerName + playerAttackType];
+              if (nextAnim) {
+                nextAnim.reset();
+                nextAnim.play();
+              }
+            }
+          }
+          
+          // Phase 2: Player Attack - Show player's attack animation
+          else if (battleAnimationState.currentPhase === "playerAttack") {
+            // Enemy remains in standing position
+            image(attackingAnimationPaths[enemyClass + "Standing"], enemyX, enemyY, enemyWidth, enemyHeight);
+            
+            // Play player's attack animation (normal or critical)
+            const playerAttackType = battleAnimationState.willPlayerCrit ? "Critical" : "Attack";
+            const playerAnim = attackingAnimationPaths[attackerName + playerAttackType];
+            const currentPlayerFrame = playerAnim.getCurrentFrame();
+            const totalFrames = playerAnim.numFrames();
+            
+            // Draw the current frame
+            image(playerAnim, attackerX, attackerY, attackerWidth, attackerHeight);
+            
+            // Detect animation completion
+            if (currentPlayerFrame < battleAnimationState.lastFrame && battleAnimationState.lastFrame !== -1) {
+              console.log(`Player attack animation completed. Last frame: ${battleAnimationState.lastFrame}, Current frame: ${currentPlayerFrame}, Total frames: ${totalFrames}`);
+              
+              battleAnimationState.currentPhase = "transitionToEnemy";
+              battleAnimationState.startTime = now;
+              battleAnimationState.lastFrame = -1;
+            }
+            
+            battleAnimationState.lastFrame = currentPlayerFrame;
+          }
+          
+          // Phase 3: Transition to Enemy - Brief pause between attacks
+          else if (battleAnimationState.currentPhase === "transitionToEnemy") {
+            // Show both units in standing position
+            image(attackingAnimationPaths[attackerName + "Standing"], attackerX, attackerY, attackerWidth, attackerHeight);
+            image(attackingAnimationPaths[enemyClass + "Standing"], enemyX, enemyY, enemyWidth, enemyHeight);
+            
+            // After 100ms, begin enemy's counter attack as long as within range
+            if (timeSinceStart > 100) {
+              // Calculate distance between attacker and target
+              const distance = Math.abs(selectedCharacter.x - targetEnemy.x) + Math.abs(selectedCharacter.y - targetEnemy.y);
+              
+              // If distance is 2 and enemy is not a ranged unit (not Archer or Mage), skip to checkDoubles
+              if (distance === 2 && targetEnemy.classType !== "Archer" && targetEnemy.classType !== "Mage") {
+                battleAnimationState.currentPhase = "checkDoubles";
+                battleAnimationState.startTime = now;
+                battleAnimationState.lastFrame = -1;
+              } 
+              else {
+                // Enemy can counterattack, proceed with enemy attack phase
+                battleAnimationState.currentPhase = "enemyAttack";
+                battleAnimationState.startTime = now;
+                battleAnimationState.lastFrame = -1;
+                
+                // Reset and start enemy attack animation
+                const enemyAttackType = battleAnimationState.willEnemyCrit ? "Critical" : "Attack";
+                const enemyAnim = attackingAnimationPaths[enemyClass + enemyAttackType];
+                enemyAnim.reset();
+                enemyAnim.play();
+              }
+            }
+          }
+          
+          // Phase 4: Enemy Attack - Show enemy's counterattack
+          else if (battleAnimationState.currentPhase === "enemyAttack") {
+            // Player remains in standing position
+            image(attackingAnimationPaths[attackerName + "Standing"], attackerX, attackerY, attackerWidth, attackerHeight);
+            
+            // Play enemy's attack animation (normal or critical)
+            const enemyAttackType = battleAnimationState.willEnemyCrit ? "Critical" : "Attack";
+            const enemyAnim = attackingAnimationPaths[enemyClass + enemyAttackType];
+            const currentEnemyFrame = enemyAnim.getCurrentFrame();
+            const totalFrames = enemyAnim.numFrames();
+            
+            // Draw the current frame
+            image(enemyAnim, enemyX, enemyY, enemyWidth, enemyHeight);
+
+            // When animation reaches last frame, transition before it loops
+            if (currentEnemyFrame === totalFrames - 1) {
+              console.log(`Enemy attack animation completed. Current frame: ${currentEnemyFrame}, Total frames: ${totalFrames}`);
+              
+              battleAnimationState.currentPhase = "checkDoubles";
+              battleAnimationState.startTime = now;
+              battleAnimationState.lastFrame = -1;
+              enemyAnim.pause(); // Pause on last frame
+            }
+            
+            battleAnimationState.lastFrame = currentEnemyFrame;
+          }
+          
+          // Phase 5: Check for Double Attacks
+          else if (battleAnimationState.currentPhase === "checkDoubles") {
+            // Show both units in standing position
+            image(attackingAnimationPaths[attackerName + "Standing"], attackerX, attackerY, attackerWidth, attackerHeight);
+            image(attackingAnimationPaths[enemyClass + "Standing"], enemyX, enemyY, enemyWidth, enemyHeight);
+            
+            // After 100ms, determine if there are double attacks
+            if (timeSinceStart > 100) {
+              // Check for double attacks based on speed
+              const playerSpeedDiff = selectedCharacter.speed - targetEnemy.speed;
+              const enemySpeedDiff = targetEnemy.speed - selectedCharacter.speed;
+              
+              if (playerSpeedDiff >= 4) {
+                // Player is fast enough for a second attack
+                battleAnimationState.currentPhase = "playerDouble";
+                // Roll for crit on second hit
+                battleAnimationState.willPlayerSecondCrit = random(100) < selectedCharacter.displayedCrit;
+                const playerAttackType = battleAnimationState.willPlayerSecondCrit ? "Critical" : "Attack";
+                const nextAnim = attackingAnimationPaths[attackerName + playerAttackType];
+                if (nextAnim) {
+                  nextAnim.reset();
+                  nextAnim.play();
+                }
+              } 
+              else if (enemySpeedDiff >= 4) {
+                // Enemy is fast enough for a second attack
+                battleAnimationState.currentPhase = "enemyDouble";
+                // Roll for crit on second hit
+                battleAnimationState.willEnemySecondCrit = random(100) < targetEnemy.displayedCrit;
+                const enemyAttackType = battleAnimationState.willEnemySecondCrit ? "Critical" : "Attack";
+                const nextAnim = attackingAnimationPaths[enemyClass + enemyAttackType];
+                if (nextAnim) {
+                  nextAnim.reset();
+                  nextAnim.play();
+                }
+              } 
+              else {
+                // No double attacks, proceed to finish
+                battleAnimationState.currentPhase = "conclude";
+              }
+              battleAnimationState.startTime = now;
+              battleAnimationState.lastFrame = -1;
+            }
+          }
+          
+          // Phase 6a: Player Double Attack
+          else if (battleAnimationState.currentPhase === "playerDouble") {
+            // Enemy remains in standing position
+            image(attackingAnimationPaths[enemyClass + "Standing"], enemyX, enemyY, enemyWidth, enemyHeight);
+            
+            // Play player's second attack using second hit crit check
+            const playerAttackType = battleAnimationState.willPlayerSecondCrit ? "Critical" : "Attack";
+            const playerAnim = attackingAnimationPaths[attackerName + playerAttackType];
+            const currentPlayerFrame = playerAnim.getCurrentFrame();
+            const totalFrames = playerAnim.numFrames();
+            
+            // Draw the current frame
+            image(playerAnim, attackerX, attackerY, attackerWidth, attackerHeight);
+
+            // When animation completes, move to conclusion
+            if (currentPlayerFrame < battleAnimationState.lastFrame && battleAnimationState.lastFrame !== -1) {
+              console.log(`Player double attack animation completed. Last frame: ${battleAnimationState.lastFrame}, Current frame: ${currentPlayerFrame}, Total frames: ${totalFrames}`);
+              
+              battleAnimationState.currentPhase = "conclude";
+              battleAnimationState.startTime = now;
+              battleAnimationState.lastFrame = -1;
+            }
+            
+            battleAnimationState.lastFrame = currentPlayerFrame;
+          }
+          
+          // Phase 6b: Enemy Double Attack
+          else if (battleAnimationState.currentPhase === "enemyDouble") {
+            // Player remains in standing position
+            image(attackingAnimationPaths[attackerName + "Standing"], attackerX, attackerY, attackerWidth, attackerHeight);
+            
+            // Play enemy's second attack using second hit crit check
+            const enemyAttackType = battleAnimationState.willEnemySecondCrit ? "Critical" : "Attack";
+            const enemyAnim = attackingAnimationPaths[enemyClass + enemyAttackType];
+            const currentEnemyFrame = enemyAnim.getCurrentFrame();
+            const totalFrames = enemyAnim.numFrames();
+            
+            // Draw the current frame
+            image(enemyAnim, enemyX, enemyY, enemyWidth, enemyHeight);
+
+            // When animation reaches last frame, transition before it loops
+            if (currentEnemyFrame === totalFrames - 1) {
+              console.log(`Enemy double attack animation completed. Current frame: ${currentEnemyFrame}, Total frames: ${totalFrames}`);
+              
+              battleAnimationState.currentPhase = "conclude";
+              battleAnimationState.startTime = now;
+              battleAnimationState.lastFrame = -1;
+              enemyAnim.pause(); // Pause on last frame
+            }
+            
+            battleAnimationState.lastFrame = currentEnemyFrame;
+          }
+          
+          // Phase 7: Conclude - Show final standing poses and reset up
+          else if (battleAnimationState.currentPhase === "conclude") {
+            // Show both units in standing position for 1.5 seconds
+            image(attackingAnimationPaths[attackerName + "Standing"], attackerX, attackerY, attackerWidth, attackerHeight);
+            image(attackingAnimationPaths[enemyClass + "Standing"], enemyX, enemyY, enemyWidth, enemyHeight);
+            
+            if (timeSinceStart > 1500) {
+              // Reset all battle states
+              battleAnimationState.isPlaying = false;
+              selectedCharacter.attackInterfaceConfirmed = false;
+              selectedCharacter.action = null;
+              selectedCharacter.isSelected = false;
+              selectedCharacter.canMove = false;
+              selectedCharacter.isGreyedOut = true;
+              enemySelectedForAttack = false;
+              
+              // Restore music volume and character animation
+              sounds.battleMusic.amp(0.5);
+              animationManager(selectedCharacter, "standing");
+            }
+          }
         }
       } 
       else {
-        uiManager.battleInfoPreview();
+        // Your existing battle info preview code
+        if (selectedCharacter && targetEnemy) {
+          selectedCharacter.attack(targetEnemy);
+          targetEnemy.attack(selectedCharacter);
+          uiManager.battleInfoPreview();
+        }
       }
     }
 

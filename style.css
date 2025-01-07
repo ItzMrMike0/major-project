@@ -1,6 +1,10 @@
 html, body {
+  /*Centers canvas and everything to the center of the screen*/
   margin: 0;
-  padding: 0;
+  display: flex;
+  justify-content: center;
+  background-color: black;
+  align-items: center;
 }
 
 canvas {

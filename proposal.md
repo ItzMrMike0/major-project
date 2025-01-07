@@ -18,26 +18,26 @@ Winning will rely not only on combat prowess but also on strategic planning and 
 - Highlight movement range and attack range tiles when character selected. 🟢
 
 ### 2: Turn-Based Actions
-- Select individual characters to view stats or perform actions. 🟡
+- Select individual characters to view stats or perform actions. 
 - Swap between player turn and enemy turn. 🟢
-- Action options: 🟡
+- Action options: 
   - Move: Select a tile to move to. 🟢
-  - Attack: Choose a target within attack range. 🔴
+  - Attack: Choose a target within attack range. 🟡
   - Items: Use or equip items during a turn. 🔴
 - Undo move option (before confirming an action). 🟢
 - Win condition (Completely defeat all enemy characters) 🔴
 
 ### 3: Characters
-- Characters with unique stats, animations, and abilities. 🟡
+- Characters with unique stats, animations, and attacks. 🟢
 - Core stats include HP, strength, skill, speed, luck, defense, resistance. 🟢
 - Derived stats like critical rate or hit rate. 🟢
 - Assign classes with unique traits (e.g., archers, mages, knights). 🟢
 - Include movement, selection, and idle animations. 🟢
 
 ### 4: Battle System
-- Transition to a new scene or overlay for battle sequences. 🔴
+- Transition to a new scene or overlay for battle sequences. 🟢
 - Display calculated values such as damage dealt, hit percentage, and critical chance. 🟢
-- Add animations for attacking, defending, taking damage etc. 🔴
+- Add animations for attacking, critical, dodging etc. 🟡
 - Highlight critical hits with unique animations and sound effects. 🔴
 - Show distinct effects for missed attacks. 🔴
 
