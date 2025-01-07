@@ -1,0 +1,6 @@
+{
+    "royAttack": "Assets/AttackingAnimations/NormalAttack/roy_attack.gif",
+    "royCritical": "Assets/AttackingAnimations/CriticalAttack/roy_critical.gif",
+    "royDodge": "Assets/AttackingAnimations/Dodge/roy_dodge.gif",
+    "royStanding": "Assets/AttackingAnimations/Idle/roy_attack_standing.gif"
+}

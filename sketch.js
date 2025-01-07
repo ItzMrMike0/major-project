@@ -162,6 +162,7 @@ class Character {
     this.height = height; // Height of character
     this.currentState = "standing"; // Current animation state
     this.isMoving = false; // Whether the character is currently moving
+    this.attackInterfaceConfirmed = false; // Whether the user has confirmed the attack interface
 
     // Movement and attack calculations
     this.animation = null; // Character visual sprite
@@ -867,7 +868,7 @@ class Character {
 
       if (path) {
         // Draw continuous line for all segments except the last one
-        stroke(255, 255, 0, 200);
+        stroke(41, 214, 255, 200);
         strokeWeight(10);
         noFill();
         strokeCap(PROJECT); // Use square end caps instead of round
@@ -927,7 +928,7 @@ class Character {
           rotate(atan2(dy, dx));
 
           // Draw the arrowhead
-          fill(255, 255, 0, 200);
+          fill(41, 214, 255, 200);  // Changed from (255, 255, 0, 200) to (41, 214, 255, 200)
           noStroke();
           const arrowSize = 30;
           triangle(0, 0, -arrowSize, -arrowSize/2, -arrowSize, arrowSize/2);
@@ -1804,6 +1805,7 @@ let enemyPhaseDelayTimer = 0;  // Timer for enemy phase delay
 let enemyPhaseStarted = false; // Flag to track if enemy phase has started
 let uiManager; // UI Manager instance
 let enemySelectedForAttack = false; // Track if an enemy has been selected for attack
+let attackingAnimationPaths = {}; // Attacking animation paths
 // Define directions once as a constant
 const DIRECTIONS = [
   { x: 0, y: -1 }, // up
@@ -1811,6 +1813,7 @@ const DIRECTIONS = [
   { x: 1, y: 0 },  // right
   { x: -1, y: 0 }  // left
 ];
+
 
 // Preload all information and images
 function preload() {
@@ -1841,6 +1844,9 @@ function preload() {
 
   // Preload portrait images from JSON
   portraitPaths = loadJSON("Assets/Portraits/portraits.json", setupPortraitImages);
+
+  // Load attacking animations paths from JSON
+  attackingAnimationPaths = loadJSON("Assets/AttackingAnimations/attackingAnimation.json", setupAttackingAnimations);
 }
 
 function setup() {
@@ -1943,6 +1949,13 @@ function setupPortraitImages(data) {
   for (let key in data) {
     // Load each portrait image
     portraitImages[key] = loadImage(data[key]);
+  }
+}
+
+// Initialize attackingAnimations after the JSON is loaded
+function setupAttackingAnimations(data) {
+  for (let key in data) {
+    attackingAnimationPaths[key] = loadImage(data[key]);
   }
 }
 
@@ -2128,6 +2141,11 @@ function keyPressed() {
     return;
   }
 
+  // If attack interface is confirmed, block all key inputs
+  if (selectedCharacter?.attackInterfaceConfirmed) {
+    return;
+  }
+
   // Reset cursor image to default on key press
   cursorImageKey = "default";
 
@@ -2213,6 +2231,12 @@ function keyPressed() {
    
     // If there is a selected character in attack mode
     if (selectedCharacter && selectedCharacter.action === "attack") {
+      // If enemy is already selected, confirm attack interface
+      if (enemySelectedForAttack && !selectedCharacter.attackInterfaceConfirmed) {
+        selectedCharacter.attackInterfaceConfirmed = true;
+        sounds.selectOption.play();
+      }
+
       // Check if cursor is over an attackable tile
       const isAttackableTile = selectedCharacter.attackableTiles.some(
         tile => tile.x === locationCursor.x && tile.y === locationCursor.y
@@ -2344,7 +2368,36 @@ function draw() {
    
     // Display battle info preview if in attack mode and enemy is selected
     if (selectedCharacter && selectedCharacter.action === "attack" && enemySelectedForAttack) {
-      uiManager.battleInfoPreview();
+      if (selectedCharacter.attackInterfaceConfirmed) { 
+        // Lower the music volume
+        sounds.battleMusic.amp(0.3);
+
+        // Draw the battle background first
+        image(UIImages.battleBackground, 0, 0, width, height);
+        
+        // Draw the attack interface image centered on screen
+        const interfaceWidth = width * 1.05;
+        const interfaceHeight = height;
+        const x = (width - interfaceWidth) / 2;
+        const y = (height - interfaceHeight) / 2;
+        image(UIImages.attackInterface, x, y, interfaceWidth, interfaceHeight);
+
+        // Draw the attacking animation
+        const attackerName = selectedCharacter.name.toLowerCase();
+        const attackAnim = attackingAnimationPaths[attackerName + "Attack"];
+        if (attackAnim) {
+          // Position attacker on the left side
+          const attackerX = width * 0.05;
+          const attackerY = height * 0.01;  
+          const attackerWidth = width;
+          const attackerHeight = height * 0.7;  
+
+          image(attackAnim, attackerX, attackerY, attackerWidth, attackerHeight);
+        }
+      } 
+      else {
+        uiManager.battleInfoPreview();
+      }
     }
 
     // Check and handle turn system

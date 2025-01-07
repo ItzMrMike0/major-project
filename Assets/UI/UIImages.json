@@ -13,5 +13,6 @@
     "calculationBox": "Assets/UI/BattleInfoPreviewImages/calculation_box.png",
     "playerArrow": "Assets/UI/BattleInfoPreviewImages/player_arrow.png",
     "enemyArrow": "Assets/UI/BattleInfoPreviewImages/enemy_arrow.png",
-    "attackInterface": "Assets/UI/InBattleImages/attack_interface.png"
+    "attackInterface": "Assets/UI/InBattleImages/attack_interface.png",
+    "battleBackground": "Assets/UI/InBattleImages/field_background.png"
 }

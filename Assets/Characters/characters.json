@@ -3,8 +3,8 @@
     {
       "name": "Roy",
       "classType": "Lord",
-      "x": 2,
-      "y": 12,
+      "x": 6,
+      "y": 11,
       "level": 1,
       "hp": 27,
       "strength": 13,
@@ -81,7 +81,7 @@
     {
       "name": "Wolt",
       "classType": "Archer",
-      "x": 6,
+      "x": 0,
       "y": 11,
       "level": 1,
       "hp": 23,
@@ -100,7 +100,7 @@
     {
       "name": "Lugh",
       "classType": "Mage",
-      "x": 6,
+      "x": 1,
       "y": 10,
       "level": 1,
       "hp": 24,
