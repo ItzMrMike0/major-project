@@ -2389,13 +2389,15 @@ function getDodgeDelay(attackerName, defenderName, isCrit = false) {
   const delayMap = {
     // Roy's attacks
     'roy_fighter': isCrit ? 1700 : 1900,
-    'roy_brigand': isCrit ? 2500 : 2000,
     
     // Enemy attacks on Roy
     'fighter_roy': isCrit ? 900 : 900,
-    'brigand_roy': isCrit ? 2500 : 2000,
 
-    // Add more 
+    // Bor's attacks
+    'bors_fighter': isCrit ? 1500 : 1600,
+
+    // Enemy attacks on Bor
+    'fighter_bors': isCrit ? 800 : 800,
   };
 
   return delayMap[key];
