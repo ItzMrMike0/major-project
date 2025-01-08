@@ -2348,8 +2348,8 @@ function handleDodgeAnimation(dodgerName, dodgerX, dodgerY, width, height, now, 
     
     // Get the appropriate delay based on attacker, defender and if the attack is critical
     const isCrit = isSecondDodge ? 
-      (dodgerName.includes("enemy") ? battleAnimationState.willEnemySecondCrit : battleAnimationState.willPlayerSecondCrit) :
-      (dodgerName.includes("enemy") ? battleAnimationState.willEnemyCrit : battleAnimationState.willPlayerCrit);
+      dodgerName.includes("enemy") ? battleAnimationState.willEnemySecondCrit : battleAnimationState.willPlayerSecondCrit :
+      dodgerName.includes("enemy") ? battleAnimationState.willEnemyCrit : battleAnimationState.willPlayerCrit;
     
     // For both attacker and defender, use class type for enemies and name for players
     const attackerKey = attacker.isEnemy ? attacker.classType : attacker.name;
@@ -2360,8 +2360,8 @@ function handleDodgeAnimation(dodgerName, dodgerX, dodgerY, width, height, now, 
     // Only start dodge animation after character-specific delay
     if (now - battleAnimationState.dodgeStartTime >= dodgeDelay) {
       const dodgeFlag = isSecondDodge ? 
-        (dodgerName.includes("enemy") ? "enemySecondDodgePlayed" : "playerSecondDodgePlayed") :
-        (dodgerName.includes("enemy") ? "enemyDodgePlayed" : "playerDodgePlayed");
+        dodgerName.includes("enemy") ? "enemySecondDodgePlayed" : "playerSecondDodgePlayed" :
+        dodgerName.includes("enemy") ? "enemyDodgePlayed" : "playerDodgePlayed";
 
       if (!battleAnimationState[dodgeFlag]) {
         dodgeAnim.reset();
@@ -2388,16 +2388,40 @@ function getDodgeDelay(attackerName, defenderName, isCrit = false) {
   // Delay map for specific character combinations
   const delayMap = {
     // Roy's attacks
-    'roy_fighter': isCrit ? 1700 : 1900,
+    'roy_fighter': isCrit ? 1600 : 1950,
     
-    // Enemy attacks on Roy
-    'fighter_roy': isCrit ? 900 : 900,
+    // // Enemy attacks on Roy
+    // 'fighter_roy': isCrit ? 900 : 900,
 
     // Bor's attacks
-    'bors_fighter': isCrit ? 1500 : 1600,
+    'bors_fighter': isCrit ? 1250 : 1350,
 
-    // Enemy attacks on Bor
-    'fighter_bors': isCrit ? 800 : 800,
+    // // Enemy attacks on Bor
+    // 'fighter_bors': isCrit ? 800 : 800,
+
+    // Allen's attacks
+    'allen_fighter': isCrit ? 2150 : 800,
+
+    // // Enemy attacks on Allen
+    // 'fighter_allen': isCrit ? 900 : 900,
+
+    // Lance's attacks
+    'lance_fighter': isCrit ? 1300 : 850,
+
+    // // Enemy attacks on Lance
+    // 'fighter_lance': isCrit ? 900 : 900,
+
+    // Wolt's attacks
+    'wolt_fighter': isCrit? 2900 : 1400,
+
+    // // Enemy attacks on Wolt
+    // 'fighter_wolt': isCrit ? 900 : 900,
+
+    // Lugh's attacks
+    'lugh_fighter': isCrit? 1900 : 1450,
+
+    // // Enemy attacks on Lugh
+    // 'fighter_lugh': isCrit ? 900 : 900,  
   };
 
   return delayMap[key];
