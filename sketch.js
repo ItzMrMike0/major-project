@@ -2348,8 +2348,8 @@ function handleDodgeAnimation(dodgerName, dodgerX, dodgerY, width, height, now, 
     
     // Get the appropriate delay based on attacker, defender and if the attack is critical
     const isCrit = isSecondDodge ? 
-      (attacker.isEnemy ? battleAnimationState.willEnemySecondCrit : battleAnimationState.willPlayerSecondCrit) :
-      (attacker.isEnemy ? battleAnimationState.willEnemyCrit : battleAnimationState.willPlayerCrit);
+      attacker.isEnemy ? battleAnimationState.willEnemySecondCrit : battleAnimationState.willPlayerSecondCrit :
+      attacker.isEnemy ? battleAnimationState.willEnemyCrit : battleAnimationState.willPlayerCrit;
     
     // For both attacker and defender, use class type for enemies and name for players
     const attackerKey = attacker.isEnemy ? attacker.classType : attacker.name;
@@ -2360,8 +2360,8 @@ function handleDodgeAnimation(dodgerName, dodgerX, dodgerY, width, height, now, 
     // Only start dodge animation after character-specific delay
     if (now - battleAnimationState.dodgeStartTime >= dodgeDelay) {
       const dodgeFlag = isSecondDodge ? 
-        (dodgerName.includes("enemy") ? "enemySecondDodgePlayed" : "playerSecondDodgePlayed") :
-        (dodgerName.includes("enemy") ? "enemyDodgePlayed" : "playerDodgePlayed");
+        dodgerName.includes("enemy") ? "enemySecondDodgePlayed" : "playerSecondDodgePlayed" :
+        dodgerName.includes("enemy") ? "enemyDodgePlayed" : "playerDodgePlayed";
 
       if (!battleAnimationState[dodgeFlag]) {
         dodgeAnim.reset();

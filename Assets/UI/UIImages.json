@@ -14,5 +14,7 @@
     "playerArrow": "Assets/UI/BattleInfoPreviewImages/player_arrow.png",
     "enemyArrow": "Assets/UI/BattleInfoPreviewImages/enemy_arrow.png",
     "attackInterface": "Assets/UI/InBattleImages/attack_interface.png",
-    "battleBackground": "Assets/UI/InBattleImages/field_background.png"
+    "battleBackground": "Assets/UI/InBattleImages/field_background.png",
+    "criticalText": "Assets/UI/InBattleImages/critical_text.png",
+    "missText": "Assets/UI/InBattleImages/miss_text.png"
 }
