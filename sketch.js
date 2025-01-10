@@ -2360,19 +2360,19 @@ function showCritText(isEnemyAttacking, now, attackerName, defenderName) {
   const key = `${attackerName.toLowerCase()}_${defenderName.toLowerCase()}`;
   const delayMap = {
     // Player attacking fighter
-    'roy_fighter': 1600,
-    'bors_fighter': 1400,
-    'allen_fighter': 2200,
-    'lance_fighter': 1300,
-    'wolt_fighter': 2900,
+    'roy_fighter': 1850,
+    'bors_fighter': 1425,
+    'allen_fighter': 2250,
+    'lance_fighter': 1350,
+    'wolt_fighter': 2750,
     'lugh_fighter': 2100,
     
     // Fighter attacking players
     'fighter_roy': 900,
-    'fighter_bors': 700,
-    'fighter_allen': 800,
-    'fighter_lance': 800,
-    'fighter_wolt': 490,
+    'fighter_bors': 650,
+    'fighter_allen': 775,
+    'fighter_lance': 775,
+    'fighter_wolt': 925,
     'fighter_lugh': 850
   };
   const critDelay = delayMap[key] || 0;
@@ -2461,28 +2461,28 @@ function getDodgeDelay(attackerName, defenderName, isCrit = false) {
   // Delay map for specific character combinations
   const delayMap = {
     // Roy's attacks
-    'roy_fighter': isCrit ? 1600 : 1950,
-    'fighter_roy': isCrit ? 900 : 950,
+    'roy_fighter': isCrit ? 1850 : 700,
+    'fighter_roy': isCrit ? 900 : 1000,
 
     // Bor's attacks
-    'bors_fighter': isCrit ? 1300 : 1400,
-    'fighter_bors': isCrit ? 700 : 875,
+    'bors_fighter': isCrit ? 1425 : 1475,
+    'fighter_bors': isCrit ? 650 : 825,
 
     // Allen's attacks
-    'allen_fighter': isCrit ? 2200 : 800,
-    'fighter_allen': isCrit ? 800 : 870,
+    'allen_fighter': isCrit ? 2250 : 800,
+    'fighter_allen': isCrit ? 775 : 950,
 
     // Lance's attacks
-    'lance_fighter': isCrit ? 1300 : 850,
-    'fighter_lance': isCrit ? 800 : 850,
+    'lance_fighter': isCrit ? 1350 : 850,
+    'fighter_lance': isCrit ? 775 : 1000,
 
     // Wolt's attacks
-    'wolt_fighter': isCrit? 2900 : 1400,
-    'fighter_wolt': isCrit ? 490 : 575,
+    'wolt_fighter': isCrit? 2750 : 1400,
+    'fighter_wolt': isCrit ? 925 : 1000,
 
     // Lugh's attacks
     'lugh_fighter': isCrit? 2100 : 1450,
-    'fighter_lugh': isCrit ? 850 : 900,  
+    'fighter_lugh': isCrit ? 800 : 900,  
   };
 
   const delay = delayMap[key];
