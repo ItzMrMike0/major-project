@@ -1824,7 +1824,11 @@ let battleAnimationState = {
   enemySecondDodgePlayed: false, // Whether the enemy's second dodge animation has played
   dodgeStartTime: 0,  // Add new timing tracker for dodge animations
   missTextStartTime: 0,  // When the miss text started showing
-  critTextStartTime: 0  // When the crit text started showing
+  critTextStartTime: 0,  // When the crit text started showing
+  hitEffectStartTime: 0,  // When the hit effect started showing
+  hitEffectPlayed: false,  // Whether the hit effect has been played for current attack
+  hitEffectStarted: false,  // Whether the hit effect animation has started
+  hitEffectFrame: -1  // Track the hit effect animation frame
 };
 
 // Preload all information and images
@@ -2489,10 +2493,94 @@ function handleAttackAnimation(attackerName, attackerX, attackerY, width, height
   const attackType = isCrit ? "Critical" : "Attack";
   const attackAnim = attackingAnimationPaths[attackerName + attackType];
   const currentFrame = attackAnim.getCurrentFrame();
-  const totalFrames = attackAnim.numFrames();
-  
+  const totalFrames = attackAnim.numFrames();  
   // Draw the current frame
   image(attackAnim, attackerX, attackerY, width, height);
+
+  // Handle hit effects for regular attacks (not crits)
+  if (!isCrit) {
+    const now = millis();
+    const isEnemyAttacking = attackerName.includes("fighter") || attackerName.includes("brigand");
+    const willHit = isSecondAttack ? 
+      isEnemyAttacking ? battleAnimationState.willEnemySecondHit : battleAnimationState.willPlayerHit :
+      isEnemyAttacking ? battleAnimationState.willEnemyHit : battleAnimationState.willPlayerHit;
+
+    // Get the appropriate delay based on attacker
+    const hitDelayMap = {
+      'roy': 265,
+      'bors': 800,
+      'allen': 350,
+      'lance': 400,
+      'wolt': 800,
+      'lugh': 1000,
+      'fighter': 490 
+    };
+
+    // Get base name for delay lookup
+    let baseName = attackerName.toLowerCase();
+    if (baseName.includes('fighter')) {
+      baseName = 'fighter';
+    }
+    
+    const hitDelay = hitDelayMap[baseName] || 1000;
+    const hitEffectDuration = 500; // Duration to show hit effect in milliseconds
+
+    console.log("testing");
+    // If this is a hit and we haven't finished playing the effect
+    if (willHit && !battleAnimationState.hitEffectPlayed && currentFrame > 0) {
+      console.log(`Hit effect check - Attacker: ${attackerName}, Will Hit: ${willHit}, Current Frame: ${currentFrame}, Is Enemy: ${isEnemyAttacking}`);
+      console.log("bruhther");
+      // If this is the first frame we're checking for hit effect
+      if (battleAnimationState.hitEffectStartTime === 0) {
+        battleAnimationState.hitEffectStartTime = now;
+        console.log(`Hit effect start time set to: ${now}`);
+      }
+
+      // Only start hit effect after the delay
+      if (now - battleAnimationState.hitEffectStartTime >= hitDelay) {
+        // Get the appropriate hit effect
+        const hitEffect = isEnemyAttacking ? UIImages.regularHitEffectLeft : UIImages.regularHitEffectRight;
+        
+        // If we haven't started the hit effect yet
+        if (!battleAnimationState.hitEffectStarted) {
+          console.log(`Starting hit effect for ${isEnemyAttacking ? 'enemy' : 'player'} attack`);
+          if (hitEffect) {
+            hitEffect.reset();
+            hitEffect.play();
+            battleAnimationState.hitEffectStarted = true;
+          }
+          else {
+            console.error('Hit effect image not found:', isEnemyAttacking ? 'regularHitEffectLeft' : 'regularHitEffectRight');
+          }
+        }
+
+        // Draw the hit effect
+        if (hitEffect) {
+          const currentHitFrame = hitEffect.getCurrentFrame();
+          // Only draw if we haven't reached the last frame
+          if (currentHitFrame < hitEffect.numFrames() - 1) {
+            image(hitEffect, 0, 0, width, height);
+            console.log(`Drawing hit effect - Frame: ${currentHitFrame}, Total Frames: ${hitEffect.numFrames()}, Side: ${isEnemyAttacking ? 'left' : 'right'}`);
+          }
+
+          // Mark as played after duration has passed
+          if (now - battleAnimationState.hitEffectStartTime >= hitDelay + hitEffectDuration) {
+            console.log(`Hit effect completed after ${now - battleAnimationState.hitEffectStartTime}ms`);
+            battleAnimationState.hitEffectPlayed = true;
+            if (hitEffect) {
+              hitEffect.pause();
+            }
+          }
+        }
+        else {
+          console.error('Hit effect image not found:', isEnemyAttacking ? 'regularHitEffectLeft' : 'regularHitEffectRight');
+        }
+      }
+      else {
+        console.log(`Waiting for hit effect delay: ${hitDelay - (now - battleAnimationState.hitEffectStartTime)}ms remaining`);
+      }
+    }
+  }
   
   // Return animation state for phase transitions
   return {
@@ -2561,8 +2649,8 @@ function handleBattleAnimation(selectedCharacter, targetEnemy) {
 
   // Position and size constants for battle animations
   const baseAttackerX = width * 0.02;
-  // Adjust position if character is Bors
-  const attackerX = selectedCharacter.name.toLowerCase() === "bors" ? baseAttackerX + width * 0.08 : baseAttackerX;
+  // Adjust position if character is Bors or Roy
+  const attackerX = selectedCharacter.name.toLowerCase() === "bors" ? baseAttackerX + width * 0.08 : selectedCharacter.name.toLowerCase() === "roy" ? baseAttackerX + width * 0.025 : baseAttackerX;
   const attackerY = height * 0.01 - 50;
   const enemyX = width * 0.08;
   const enemyY = height * 0.01 - 50;
@@ -2649,6 +2737,11 @@ function handleBattleAnimation(selectedCharacter, targetEnemy) {
         battleAnimationState.lastFrame = -1;
       } 
       else {
+        // Reset hit effect states before enemy attack
+        battleAnimationState.hitEffectStartTime = 0;
+        battleAnimationState.hitEffectPlayed = false;
+        battleAnimationState.hitEffectStarted = false;
+        
         // Enemy can counterattack, proceed with enemy attack phase
         battleAnimationState.currentPhase = "enemyAttack";
         battleAnimationState.startTime = now;
@@ -2701,7 +2794,11 @@ function handleBattleAnimation(selectedCharacter, targetEnemy) {
       {attackerX, enemyX, attackerY, enemyY}, 
       {attackerWidth, attackerHeight, enemyWidth, enemyHeight});
       
-      battleAnimationState.dodgeStartTime = 0; // Reset dodge start time for next phase
+    battleAnimationState.dodgeStartTime = 0; // Reset dodge start time for next phase
+    battleAnimationState.hitEffectStartTime = 0; // Reset hit effect start time
+    battleAnimationState.hitEffectPlayed = false; // Reset hit effect played flag
+    battleAnimationState.hitEffectStarted = false; // Reset hit effect started flag
+    battleAnimationState.hitEffectFrame = -1; // Reset hit effect frame tracking
 
     
     // After 100ms, determine if there are double attacks
@@ -2872,24 +2969,24 @@ function drawBattleInterface(selectedCharacter, targetEnemy) {
 
   // Set player weapon text and image
   if (selectedCharacter.name === "Roy") {
-      playerWeaponText = "Steel Sword";
-      playerWeaponImage = UIImages.sword;
+    playerWeaponText = "Steel Sword";
+    playerWeaponImage = UIImages.sword;
   }
   else if (selectedCharacter.name === "Wolt") {
-      playerWeaponText = "Steel Bow";
-      playerWeaponImage = UIImages.bow;
+    playerWeaponText = "Steel Bow";
+    playerWeaponImage = UIImages.bow;
   }
   else if (selectedCharacter.name === "Bors") {
-      playerWeaponText = "Steel Lance";
-      playerWeaponImage = UIImages.lance;
+    playerWeaponText = "Steel Lance";
+    playerWeaponImage = UIImages.lance;
   }
   else if (selectedCharacter.name === "Lance" || selectedCharacter.name === "Allen") {
-      playerWeaponText = "Steel Spear";
-      playerWeaponImage = UIImages.spear;
+    playerWeaponText = "Steel Spear";
+    playerWeaponImage = UIImages.spear;
   }
   else if (selectedCharacter.name === "Lugh") {
-      playerWeaponText = "Fire Tome";
-      playerWeaponImage = UIImages.tome;
+    playerWeaponText = "Fire Tome";
+    playerWeaponImage = UIImages.tome;
   }
 
   // Set enemy weapon text and image
