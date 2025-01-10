@@ -1828,7 +1828,9 @@ let battleAnimationState = {
   enemyDodgePlayed: false, // Whether the enemy's dodge animation has played
   playerSecondDodgePlayed: false, // Whether the player's second dodge animation has played
   enemySecondDodgePlayed: false, // Whether the enemy's second dodge animation has played
-  dodgeStartTime: 0  // Add new timing tracker for dodge animations
+  dodgeStartTime: 0,  // Add new timing tracker for dodge animations
+  missTextStartTime: 0,  // When the miss text started showing
+  critTextStartTime: 0  // When the crit text started showing
 };
 
 // Preload all information and images
@@ -2336,6 +2338,62 @@ function isCursorOverCharacter(character) {
   return locationCursor.x === character.x && locationCursor.y === character.y;
 }
 
+// Function to show miss text
+function showMissText(isEnemyAttacking, now) {
+  // If this is the first frame showing the text, record the start time
+  if (battleAnimationState.missTextStartTime === 0) {
+    battleAnimationState.missTextStartTime = now;
+  }
+  
+  // Only show text if less than 400ms has passed
+  if (now - battleAnimationState.missTextStartTime <= 400) {
+    // If enemy is attacking, show miss text on the left, otherwise show it on the right
+    const missX = isEnemyAttacking ? width * 0.3 : width * 0.57;
+    const missY = height * 0.4;
+    image(UIImages.missText, missX, missY);
+  }
+}
+
+// Function to show critical hit text
+function showCritText(isEnemyAttacking, now, attackerName, defenderName) {
+  // Get the delay based on attacker and defender
+  const key = `${attackerName.toLowerCase()}_${defenderName.toLowerCase()}`;
+  const delayMap = {
+    // Player attacking fighter
+    'roy_fighter': 1600,
+    'bors_fighter': 1400,
+    'allen_fighter': 2200,
+    'lance_fighter': 1300,
+    'wolt_fighter': 2900,
+    'lugh_fighter': 2100,
+    
+    // Fighter attacking players
+    'fighter_roy': 900,
+    'fighter_bors': 700,
+    'fighter_allen': 800,
+    'fighter_lance': 800,
+    'fighter_wolt': 490,
+    'fighter_lugh': 850
+  };
+  const critDelay = delayMap[key] || 0;
+
+  // If this is the first frame showing the text, record the start time
+  if (battleAnimationState.critTextStartTime === 0) {
+    battleAnimationState.critTextStartTime = now;
+  }
+  
+  // Only show text if we're past the delay and less than 400ms after that
+  const timeSinceStart = now - battleAnimationState.critTextStartTime;
+  if (timeSinceStart >= critDelay && timeSinceStart <= critDelay + 400) {
+    // If enemy is attacking, show crit text on the left, otherwise show it on the right
+    const critX = isEnemyAttacking ? width * 0.26 : width * 0.52;
+    const critY = height * 0.4;
+    // Scale down the image by 30%
+    const critWidth = UIImages.criticalText.width * 0.7;
+    const critHeight = UIImages.criticalText.height * 0.7;
+    image(UIImages.criticalText, critX, critY, critWidth, critHeight);
+  }
+}
 
 // Helper function to handle dodge animations
 function handleDodgeAnimation(dodgerName, dodgerX, dodgerY, width, height, now, attacker, defender, isSecondDodge = false) {
@@ -2367,8 +2425,15 @@ function handleDodgeAnimation(dodgerName, dodgerX, dodgerY, width, height, now, 
         dodgeAnim.reset();
         dodgeAnim.play();
         battleAnimationState[dodgeFlag] = true;
+        battleAnimationState.missTextStartTime = 0; // Reset miss text timer when new dodge starts
       }
       image(dodgeAnim, dodgerX, dodgerY, width, height);
+
+      // Display miss text based on who is attacking
+      if (UIImages.missText) {
+        showMissText(attacker.isEnemy, now);
+      }
+
       if (dodgeAnim.getCurrentFrame() === dodgeAnim.numFrames() - 1) {
         dodgeAnim.pause();
       }
@@ -2400,7 +2465,7 @@ function getDodgeDelay(attackerName, defenderName, isCrit = false) {
     'fighter_roy': isCrit ? 900 : 950,
 
     // Bor's attacks
-    'bors_fighter': isCrit ? 1300 : 1350,
+    'bors_fighter': isCrit ? 1300 : 1400,
     'fighter_bors': isCrit ? 700 : 875,
 
     // Allen's attacks
@@ -2466,6 +2531,9 @@ function handleBattleAnimation(selectedCharacter, targetEnemy) {
     battleAnimationState.enemyDodgePlayed = false;
     battleAnimationState.playerSecondDodgePlayed = false;
     battleAnimationState.enemySecondDodgePlayed = false;
+    battleAnimationState.dodgeStartTime = 0;
+    battleAnimationState.missTextStartTime = 0;
+    battleAnimationState.critTextStartTime = 0;
     
     // Determine if player first hit will crit
     battleAnimationState.willPlayerCrit = random(100) < selectedCharacter.displayedCrit;
@@ -2498,7 +2566,9 @@ function handleBattleAnimation(selectedCharacter, targetEnemy) {
   const timeSinceStart = now - battleAnimationState.startTime;
 
   // Position and size constants for battle animations
-  const attackerX = width * 0.02;
+  const baseAttackerX = width * 0.02;
+  // Adjust position if character is Bors
+  const attackerX = selectedCharacter.name.toLowerCase() === "bors" ? baseAttackerX + width * 0.08 : baseAttackerX;
   const attackerY = height * 0.01 - 50;
   const enemyX = width * 0.08;
   const enemyY = height * 0.01 - 50;
@@ -2542,6 +2612,10 @@ function handleBattleAnimation(selectedCharacter, targetEnemy) {
     } 
     else {
       image(attackingAnimationPaths[enemyClass + "Standing"], enemyX, enemyY, enemyWidth, enemyHeight);
+      // Show critical text if this is a critical hit
+      if (battleAnimationState.willPlayerCrit && UIImages.criticalText) {
+        showCritText(false, now, attackerName, enemyClass);
+      }
     }
     
     // Play player's attack animation
@@ -2554,6 +2628,9 @@ function handleBattleAnimation(selectedCharacter, targetEnemy) {
       battleAnimationState.currentPhase = "transitionToEnemy";
       battleAnimationState.startTime = now;
       battleAnimationState.lastFrame = -1;
+      battleAnimationState.missTextStartTime = 0;  // Reset miss text timer
+      battleAnimationState.critTextStartTime = 0;  // Reset crit text timer
+      battleAnimationState.dodgeStartTime = 0; // Reset dodge start time for next phase
     }
     
     battleAnimationState.lastFrame = animState.currentFrame;
@@ -2561,9 +2638,7 @@ function handleBattleAnimation(selectedCharacter, targetEnemy) {
   
   // Phase 3: Transition to Enemy - Brief pause between attacks
   else if (battleAnimationState.currentPhase === "transitionToEnemy") {
-    // Reset dodge start time for next phase
-    battleAnimationState.dodgeStartTime = 0;
-    
+    // Show standing animations
     showStandingAnimations(attackerName, enemyClass, 
       {attackerX, enemyX, attackerY, enemyY}, 
       {attackerWidth, attackerHeight, enemyWidth, enemyHeight});
@@ -2603,6 +2678,10 @@ function handleBattleAnimation(selectedCharacter, targetEnemy) {
     } 
     else {
       image(attackingAnimationPaths[attackerName + "Standing"], attackerX, attackerY, attackerWidth, attackerHeight);
+      // Show critical text if this is a critical hit
+      if (battleAnimationState.willEnemyCrit && UIImages.criticalText) {
+        showCritText(true, now, enemyClass, attackerName);
+      }
     }
     
     // Play enemy's attack animation
@@ -2623,12 +2702,13 @@ function handleBattleAnimation(selectedCharacter, targetEnemy) {
   
   // Phase 5: Check for Double Attacks
   else if (battleAnimationState.currentPhase === "checkDoubles") {
-    // Reset dodge start time for next phase
-    battleAnimationState.dodgeStartTime = 0;
-    
+    // Show standing animations
     showStandingAnimations(attackerName, enemyClass, 
       {attackerX, enemyX, attackerY, enemyY}, 
       {attackerWidth, attackerHeight, enemyWidth, enemyHeight});
+      
+      battleAnimationState.dodgeStartTime = 0; // Reset dodge start time for next phase
+
     
     // After 100ms, determine if there are double attacks
     if (timeSinceStart > 100) {
@@ -2661,6 +2741,9 @@ function handleBattleAnimation(selectedCharacter, targetEnemy) {
           nextAnim.reset();
           nextAnim.play();
         }
+        battleAnimationState.missTextStartTime = 0;  // Reset miss text timer
+        battleAnimationState.dodgeStartTime = 0; // Reset dodge start time for next phase
+        battleAnimationState.critTextStartTime = 0; // Reset crit text timer
       } 
       else {
         // No double attacks, proceed to finish
@@ -2680,6 +2763,10 @@ function handleBattleAnimation(selectedCharacter, targetEnemy) {
     } 
     else {
       image(attackingAnimationPaths[enemyClass + "Standing"], enemyX, enemyY, enemyWidth, enemyHeight);
+      // Show critical text if this is a critical hit
+      if (battleAnimationState.willPlayerSecondCrit && UIImages.criticalText) {
+        showCritText(false, now, attackerName, enemyClass);
+      }
     }
     
     // Play player's second attack
@@ -2706,6 +2793,10 @@ function handleBattleAnimation(selectedCharacter, targetEnemy) {
     } 
     else {
       image(attackingAnimationPaths[attackerName + "Standing"], attackerX, attackerY, attackerWidth, attackerHeight);
+      // Show critical text if this is a critical hit
+      if (battleAnimationState.willEnemySecondCrit && UIImages.criticalText) {
+        showCritText(true, now, enemyClass, attackerName);
+      }
     }
     
     // Play enemy's second attack
@@ -2726,14 +2817,12 @@ function handleBattleAnimation(selectedCharacter, targetEnemy) {
   
   // Phase 7: Conclude - Show final standing poses and reset up
   else if (battleAnimationState.currentPhase === "conclude") {
-    // Reset dodge start time
-    battleAnimationState.dodgeStartTime = 0;
-    
+    // Show standing animations
     showStandingAnimations(attackerName, enemyClass, 
       {attackerX, enemyX, attackerY, enemyY}, 
       {attackerWidth, attackerHeight, enemyWidth, enemyHeight});
     
-    if (timeSinceStart > 1500) {
+    if (timeSinceStart > 1000) {
       // Reset all battle states
       battleAnimationState.isPlaying = false;
       selectedCharacter.attackInterfaceConfirmed = false;

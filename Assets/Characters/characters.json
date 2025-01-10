@@ -10,12 +10,12 @@
       "strength": 13,
       "magic": 6,
       "dexterity": 9,
-      "speed": 7,
-      "luck": 8,
+      "speed": 11,
+      "luck": 100,
       "defense": 6,
       "resistance": 6,
       "might": 5,
-      "hit": 90,
+      "hit": 0,
       "isSelected": false,
       "isEnemy": false
     },
@@ -34,7 +34,7 @@
       "defense": 8,
       "resistance": 1,
       "might": 6,
-      "hit": 80,
+      "hit": 0,
       "isSelected": false,
       "isEnemy": false
     },
@@ -207,7 +207,7 @@
       "defense": 4,
       "resistance": 4,
       "might": 6,
-      "hit": 75,
+      "hit": 0,
       "isSelected": false,
       "isEnemy": true
     },
