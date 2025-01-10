@@ -1534,19 +1534,13 @@ class UIManager {
     textFont("DMT Shuei MGo Std Bold");
     textAlign(LEFT, BOTTOM);
     stroke(0);
-    strokeWeight(5);
+    strokeWeight(3);
     fill(244, 235, 215);
     text("DMG", playerBarX - 85, playerBarY + barHeight + 50); 
     text("HIT", playerBarX - 85, playerBarY + barHeight + 85); 
     text("CRIT", playerBarX - 85, playerBarY + barHeight + 121); 
 
     // Draw DMG, HIT, and CRIT text for enemy side on each line 
-    textSize(25);
-    textFont("DMT Shuei MGo Std Bold");
-    textAlign(LEFT, BOTTOM);
-    stroke(0);
-    strokeWeight(5);
-    fill(244, 235, 215);
     text("DMG", enemyBarX + 55, enemyBarY + barHeight + 50); 
     text("HIT", enemyBarX + 55, enemyBarY + barHeight + 85); 
     text("CRIT", enemyBarX + 55, enemyBarY + barHeight + 121); 
@@ -2373,7 +2367,7 @@ function showCritText(isEnemyAttacking, now, attackerName, defenderName) {
     'fighter_allen': 775,
     'fighter_lance': 775,
     'fighter_wolt': 925,
-    'fighter_lugh': 850
+    'fighter_lugh': 800
   };
   const critDelay = delayMap[key] || 0;
 
@@ -2839,6 +2833,100 @@ function handleBattleAnimation(selectedCharacter, targetEnemy) {
   }
 }
 
+// Draw battle interface with background and attack interface image
+function drawBattleInterface(selectedCharacter, targetEnemy) {
+  // Lower the music volume
+  sounds.battleMusic.amp(0.3);
+
+  // Draw the battle background first
+  image(UIImages.battleBackground, 0, 0, width, height);
+  
+  // Draw the attack interface image centered on screen
+  const interfaceWidth = width * 1.05;
+  const interfaceHeight = height;
+  const x = (width - interfaceWidth) / 2;
+  const y = (height - interfaceHeight) / 2;
+  image(UIImages.attackInterface, x, y, interfaceWidth, interfaceHeight);
+
+  // Setup text style for character names at top
+  textSize(50);
+  textFont("DMT Shuei MGo Std Bold");
+  textAlign(CENTER, CENTER);
+  stroke(0);
+  strokeWeight(7);
+  fill(255);
+
+  // Draw player character name at top left
+  text(selectedCharacter.name, width * 0.13, height * 0.11);
+
+  // Draw enemy character class at top right
+  text(targetEnemy.classType, width * 0.88, height * 0.11);
+
+  // Calculate positions for bottom stats
+  const playerStatsX = width * 0.1;
+  const enemyStatsX = width * 0.92;
+  const baseStatsY = height * 0.745;
+
+  // Setup text style for stats labels
+  textSize(25);
+  textFont("DMT Shuei MGo Std Bold");
+  textAlign(LEFT, BOTTOM);
+  stroke(0);
+  strokeWeight(3);  // Reduced from 5 to 3 to make text cleaner
+  fill(244, 235, 215);
+
+  // Draw DMG, HIT, and CRIT text for player side
+  text("DMG", playerStatsX - 85, baseStatsY);
+  text("HIT", playerStatsX - 85, baseStatsY + 36);
+  text("CRIT", playerStatsX - 85, baseStatsY + 73);
+
+  // Draw DMG, HIT, and CRIT text for enemy side
+  text("DMG", enemyStatsX - 85, baseStatsY);
+  text("HIT", enemyStatsX - 85, baseStatsY + 36);
+  text("CRIT", enemyStatsX - 85, baseStatsY + 73);
+
+  // Calculate if it's a ranged attack
+  const distance = Math.abs(selectedCharacter.x - targetEnemy.x) + Math.abs(selectedCharacter.y - targetEnemy.y);
+  const isRangedAttack = distance === 2;
+
+  // Calculate speed differences for double attacks
+  const playerSpeedDiff = selectedCharacter.speed - targetEnemy.speed;
+  const enemySpeedDiff = targetEnemy.speed - selectedCharacter.speed;
+
+  // Calculate attacking values
+  selectedCharacter.attack(targetEnemy);
+  targetEnemy.attack(selectedCharacter);
+
+  // Double damage if speed difference is 4 or more
+  if (playerSpeedDiff >= 4) {
+    selectedCharacter.displayedDamage *= 2;
+  }
+  if (enemySpeedDiff >= 4) {
+    targetEnemy.displayedDamage *= 2;
+  }
+
+  // Draw values
+  fill(255);
+  textAlign(RIGHT, BOTTOM);
+
+  // Display player values
+  text(selectedCharacter.displayedDamage, playerStatsX + 50, baseStatsY);
+  text(Math.floor(selectedCharacter.displayedHit) + "%", playerStatsX + 50, baseStatsY + 36);
+  text(Math.floor(selectedCharacter.displayedCrit) + "%", playerStatsX + 50, baseStatsY + 72);
+
+  // Display enemy values if it's a ranged attack set to -
+  if (isRangedAttack) {
+    text("-", enemyStatsX + 50, baseStatsY);
+    text("-", enemyStatsX + 50, baseStatsY + 35);
+    text("-", enemyStatsX + 50, baseStatsY + 70);
+  } 
+  else {
+    text(targetEnemy.displayedDamage, enemyStatsX + 50, baseStatsY);
+    text(Math.floor(targetEnemy.displayedHit) + "%", enemyStatsX + 50, baseStatsY + 36);
+    text(Math.floor(targetEnemy.displayedCrit) + "%", enemyStatsX + 50, baseStatsY + 72);
+  }
+}
+
 // Main game loop for rendering everything on the screen
 function draw() {
   // Only run if the game state is gameplay
@@ -2898,18 +2986,9 @@ function draw() {
     // Display battle info preview if in attack mode and enemy is selected
     if (selectedCharacter && selectedCharacter.action === "attack" && enemySelectedForAttack) {
       if (selectedCharacter.attackInterfaceConfirmed) { 
-        // Lower the music volume
-        sounds.battleMusic.amp(0.3);
 
-        // Draw the battle background first
-        image(UIImages.battleBackground, 0, 0, width, height);
-        
-        // Draw the attack interface image centered on screen
-        const interfaceWidth = width * 1.05;
-        const interfaceHeight = height;
-        const x = (width - interfaceWidth) / 2;
-        const y = (height - interfaceHeight) / 2;
-        image(UIImages.attackInterface, x, y, interfaceWidth, interfaceHeight);
+        // Draw the battle interface
+        drawBattleInterface(selectedCharacter, targetEnemy);
 
         // Only proceed if we have both characters
         if (selectedCharacter && targetEnemy) {
