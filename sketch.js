@@ -2862,6 +2862,56 @@ function drawBattleInterface(selectedCharacter, targetEnemy) {
   // Draw enemy character class at top right
   text(targetEnemy.classType, width * 0.88, height * 0.11);
 
+  // Draw weapon text and images
+  textSize(35);
+  strokeWeight(4);
+
+  // Get weapon text and image based on character
+  let playerWeaponText, playerWeaponImage;
+  let enemyWeaponText, enemyWeaponImage;
+
+  // Set player weapon text and image
+  if (selectedCharacter.name === "Roy") {
+      playerWeaponText = "Steel Sword";
+      playerWeaponImage = UIImages.sword;
+  }
+  else if (selectedCharacter.name === "Wolt") {
+      playerWeaponText = "Steel Bow";
+      playerWeaponImage = UIImages.bow;
+  }
+  else if (selectedCharacter.name === "Bors") {
+      playerWeaponText = "Steel Lance";
+      playerWeaponImage = UIImages.lance;
+  }
+  else if (selectedCharacter.name === "Lance" || selectedCharacter.name === "Allen") {
+      playerWeaponText = "Steel Spear";
+      playerWeaponImage = UIImages.spear;
+  }
+  else if (selectedCharacter.name === "Lugh") {
+      playerWeaponText = "Fire Tome";
+      playerWeaponImage = UIImages.tome;
+  }
+
+  // Set enemy weapon text and image
+  if (targetEnemy.classType === "Fighter" || targetEnemy.classType === "Brigand") {
+    enemyWeaponText = "Iron Axe";
+    enemyWeaponImage = UIImages.axe;
+  }
+
+  // Draw player weapon text and image
+  text(playerWeaponText, width * 0.32, height * 0.8);
+  if (playerWeaponImage) {
+    const weaponSize = 45;
+    image(playerWeaponImage, width * 0.45 - weaponSize/2, height * 0.76, weaponSize, weaponSize);
+  }
+
+  // Draw enemy weapon text and image
+  text(enemyWeaponText, width * 0.63, height * 0.8);
+  if (enemyWeaponImage) {
+    const weaponSize = 45;
+    image(enemyWeaponImage, width * 0.76 - weaponSize/2, height * 0.76, weaponSize, weaponSize);
+  }
+
   // Calculate positions for bottom stats
   const playerStatsX = width * 0.1;
   const enemyStatsX = width * 0.92;

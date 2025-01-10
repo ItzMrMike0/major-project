@@ -16,5 +16,13 @@
     "attackInterface": "Assets/UI/InBattleImages/attack_interface.png",
     "battleBackground": "Assets/UI/InBattleImages/field_background.png",
     "criticalText": "Assets/UI/InBattleImages/critical_text.png",
-    "missText": "Assets/UI/InBattleImages/miss_text.png"
+    "missText": "Assets/UI/InBattleImages/miss_text.png",
+    "axe": "Assets/UI/InBattleImages/axe.png",
+    "sword": "Assets/UI/InBattleImages/sword.png",
+    "bow": "Assets/UI/InBattleImages/bow.png",
+    "tome": "Assets/UI/InBattleImages/tome.png",
+    "spear": "Assets/UI/InBattleImages/spear.png",
+    "lance": "Assets/UI/InBattleImages/lance.png",
+    "regularHitEffectLeft": "Assets/UI/InBattleImages/regular_hit_effect_left.gif",
+    "regularHitEffectRight": "Assets/UI/InBattleImages/regular_hit_effect_right.gif"
 }
