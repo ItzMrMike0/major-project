@@ -2463,7 +2463,7 @@ function handleAttackAnimation(attackerName, attackerX, attackerY, width, height
     // Get the appropriate delay based on attacker
     const hitDelayMap = {
       'roy': 265,
-      'bors': 1050,
+      'bors': 975,
       'allen': 350,
       'lance': 400,
       'wolt': 800,
@@ -2530,35 +2530,35 @@ function handleAttackAnimation(attackerName, attackerX, attackerY, width, height
                 // Player attacking fighter
                 'roy_fighter': 50,
                 'bors_fighter': 50,
-                'allen_fighter': -100,
-                'lance_fighter': -100,
-                'wolt_fighter': -100,
-                'lugh_fighter': -100,
+                'allen_fighter': 50,
+                'lance_fighter': 50,
+                'wolt_fighter': 44,
+                'lugh_fighter': 50,
                 
                 // Fighter attacking players
                 'fighter_roy': 77,
-                'fighter_bors': 0,
-                'fighter_allen': 0,
-                'fighter_lance': 0,
-                'fighter_wolt': 0,
-                'fighter_lugh': 0
+                'fighter_bors': 72,
+                'fighter_allen': 90,
+                'fighter_lance': 90,
+                'fighter_wolt': 90,
+                'fighter_lugh': 85
               };
 
               // Hit effect y positions for specific attacker-defender combinations
               const hitEffectYPositions = {
                 // Player attacking fighter
                 'roy_fighter': 60,
-                'bors_fighter': 30,
-                'allen_fighter': 30,
-                'lance_fighter': 30,
-                'wolt_fighter': 30,
-                'lugh_fighter': 30,
+                'bors_fighter': 107,
+                'allen_fighter': 80,
+                'lance_fighter': 70,
+                'wolt_fighter': 84,
+                'lugh_fighter': 85,
                 
                 // Fighter attacking players
                 'fighter_roy': 50,
-                'fighter_bors': 50,
-                'fighter_allen': 50,
-                'fighter_lance': 50,
+                'fighter_bors': 33,
+                'fighter_allen': 26,
+                'fighter_lance': 26,
                 'fighter_wolt': 50,
                 'fighter_lugh': 50
               };
@@ -2566,7 +2566,21 @@ function handleAttackAnimation(attackerName, attackerX, attackerY, width, height
               // Get x and y offsets based on attacker-defender combination
               const xPos = hitEffectXPositions[comboKey] || 0;  // Character-specific x offset
               const yPos = hitEffectYPositions[comboKey] || 0;  // Character-specific y offset
+              
+              // Draw the regular hit effect
               image(hitEffect, xPos, yPos, width, height);
+              
+              // Lugh's fire effect - use same delay as regular hit effect
+              if (!isEnemyAttacking && attackerKey === 'lugh' && UIImages.fireHitEffect) {
+                // Only start fire effect after the delay
+                if (now - battleAnimationState.hitEffectStartTime >= hitDelay) {
+                  if (!battleAnimationState.hitEffectStarted) {
+                    UIImages.fireHitEffect.reset();
+                    UIImages.fireHitEffect.play();
+                  }
+                  image(UIImages.fireHitEffect, xPos-120, yPos, width, height);
+                }
+              }
             }
           }
 
@@ -2654,8 +2668,13 @@ function handleBattleAnimation(selectedCharacter, targetEnemy) {
 
   // Position and size constants for battle animations
   const baseAttackerX = width * 0.02;
-  // Adjust position if character is Bors or Roy
-  const attackerX = selectedCharacter.name.toLowerCase() === "bors" ? baseAttackerX + width * 0.08 : selectedCharacter.name.toLowerCase() === "roy" ? baseAttackerX + width * 0.025 : baseAttackerX;
+  // Adjust position if character is Bors, Roy, or Wolt
+  const attackerX = selectedCharacter.name.toLowerCase() === "bors" ? baseAttackerX + width * 0.08 
+  : selectedCharacter.name.toLowerCase() === "roy" ? baseAttackerX + width * 0.025 
+  : selectedCharacter.name.toLowerCase() === "wolt" ? baseAttackerX + width * 0.025 
+  : selectedCharacter.name.toLowerCase() === "lugh" ? baseAttackerX + width * 0.025 
+  : baseAttackerX;
+
   const attackerY = height * 0.01 - 50;
   const enemyX = width * 0.08;
   const enemyY = height * 0.01 - 50;
