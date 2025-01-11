@@ -299,7 +299,6 @@ class Character {
           character.isSelected = true;
           character.calculateActionableTiles();
           animationManager(character, "selected");
-          console.log(`Showing range for enemy ${character.name}`);
           return;
         }
      
@@ -314,18 +313,12 @@ class Character {
 
           // Play character-specific voice line
           const voiceKey = `${character.name.toLowerCase()}SelectVoice`;
-          if (sounds[voiceKey]) {
-            sounds[voiceKey].play();
-          }
-          else {
-            console.warn(`Select voice line for "${character.name}" not preloaded.`);
-          }
+          sounds[voiceKey].play();
 
           // Update selection state and animation
           selectedCharacter = character;
           character.isSelected = true;
           animationManager(character, "selected");
-          console.log(`${character.name} is now selected.`);
 
           // Calculate possible movement options
           character.calculateActionableTiles();
@@ -348,13 +341,9 @@ class Character {
         sounds.unselectCharacter.amp(0.5);
         sounds.unselectCharacter.play();
       }
- 
-      console.log("Character deselected.");
-    }
-    else {
-      console.log("No characters are selected.");
     }
   }
+
 
   // Movement range values based on class type (How many tiles a character can walk in one turn)
   getMovementRange() {
@@ -534,7 +523,6 @@ class Character {
       Character.findPath({ x: this.x, y: this.y }, { x: newX, y: newY }, tiles);
 
     if (!path) {
-      console.log("No path found!");
       return;
     }
 
@@ -638,14 +626,7 @@ class Character {
 
           // Move the character to the new location
           selectedCharacter.moveTo(cursor.x, cursor.y);
-          console.log(`${selectedCharacter.name} moved to (${cursor.x}, ${cursor.y})`);
         }
-        else {
-          console.log("Cannot move to this tile - occupied.");
-        }
-      }
-      else {
-        console.log("Tile not reachable.");
       }
     }
   }
@@ -654,19 +635,16 @@ class Character {
   static findPath(start, goal, tiles, isEnemy = false) {
     // First check if the start or goal positions are invalid
     if (!Tile.isWithinMapBounds(start.x, start.y) || !Tile.isWithinMapBounds(goal.x, goal.y)) {
-      console.log("Start or goal position is out of bounds");
       return null;
     }
 
     // Check if start or goal is walkable
     if (!tiles[start.y][start.x].isWalkable()) {
-      console.log("Start position is not walkable");
       return null;
     }
 
     // For enemy pathfinding, we allow moving towards player positions
     if (!tiles[goal.y][goal.x].isWalkable() && (!isEnemy || !this.isPositionBlockedByPlayer?.(goal.x, goal.y))) {
-      console.log("Goal position is not walkable");
       return null;
     }
 
@@ -1157,20 +1135,10 @@ class EnemyCharacter extends Character {
 
       // If we found a valid position, move there
       if (targetPos) {
-        console.log(`Moving to (${targetPos.x}, ${targetPos.y})`);
         this.previousX = this.x;
         this.previousY = this.y;
         this.moveTo(targetPos.x, targetPos.y);
       }
-
-      else {
-        // If we couldn't find any valid position, mark as moved
-        console.log(`No valid position found for ${this.name}`);
-      }
-    }
-    else {
-      // If no path found, mark as moved
-      console.log("No valid path found to player");
     }
   }
 }
@@ -1828,7 +1796,8 @@ let battleAnimationState = {
   hitEffectStartTime: 0,  // When the hit effect started showing
   hitEffectPlayed: false,  // Whether the hit effect has been played for current attack
   hitEffectStarted: false,  // Whether the hit effect animation has started
-  hitEffectFrame: -1  // Track the hit effect animation frame
+  hitEffectFrame: -1,  // Track the hit effect animation frame
+  whiteFlashFrame: 0  // Track white flash frames
 };
 
 // Preload all information and images
@@ -1978,7 +1947,6 @@ function setupAttackingAnimations(data) {
 // Handles animation changes based on the character's state (e.g., walking, standing)
 function animationManager(character, state) {
   if (!character) {
-    console.error("Animation manager called with an invalid character.");
     return;
   }
 
@@ -1998,9 +1966,6 @@ function animationManager(character, state) {
     character.animation = loadImage(statePaths[state]);
     // Update the current state
     character.currentState = state;
-  }
-  else {
-    console.warn(`Unknown animation state: ${state}`);
   }
 }
 
@@ -2050,7 +2015,6 @@ function handleTurnSystem() {
       turnImageTimer = millis();
       sounds.enemyPhase.amp(2);
       sounds.enemyPhase.play();
-      console.log("All players have moved, switching to enemy turn");
     }
   }
   else {
@@ -2447,15 +2411,7 @@ function handleDodgeAnimation(dodgerName, dodgerX, dodgerY, width, height, now, 
 function getDodgeDelay(attackerName, defenderName, isCrit = false) {
   // Create a key for the combination of attacker and defender
   const key = `${attackerName.toLowerCase()}_${defenderName.toLowerCase()}`;
-  
-  // Add debug logging
-  console.log('getDodgeDelay called with:', {
-    attackerName,
-    defenderName,
-    isCrit,
-    lookupKey: key
-  });
-  
+
   // Delay map for specific character combinations
   const delayMap = {
     // Roy's attacks
@@ -2484,12 +2440,11 @@ function getDodgeDelay(attackerName, defenderName, isCrit = false) {
   };
 
   const delay = delayMap[key];
-  console.log('Found delay:', delay);
   return delay || 0;
 }
 
 // Helper function to handle attack animations
-function handleAttackAnimation(attackerName, attackerX, attackerY, width, height, isCrit, isSecondAttack = false) {
+function handleAttackAnimation(attackerName, attackerX, attackerY, width, height, isCrit, isSecondAttack = false, selectedCharacter, targetEnemy) {
   const attackType = isCrit ? "Critical" : "Attack";
   const attackAnim = attackingAnimationPaths[attackerName + attackType];
   const currentFrame = attackAnim.getCurrentFrame();
@@ -2508,7 +2463,7 @@ function handleAttackAnimation(attackerName, attackerX, attackerY, width, height
     // Get the appropriate delay based on attacker
     const hitDelayMap = {
       'roy': 265,
-      'bors': 800,
+      'bors': 1050,
       'allen': 350,
       'lance': 400,
       'wolt': 800,
@@ -2525,15 +2480,11 @@ function handleAttackAnimation(attackerName, attackerX, attackerY, width, height
     const hitDelay = hitDelayMap[baseName] || 1000;
     const hitEffectDuration = 500; // Duration to show hit effect in milliseconds
 
-    console.log("testing");
     // If this is a hit and we haven't finished playing the effect
     if (willHit && !battleAnimationState.hitEffectPlayed && currentFrame > 0) {
-      console.log(`Hit effect check - Attacker: ${attackerName}, Will Hit: ${willHit}, Current Frame: ${currentFrame}, Is Enemy: ${isEnemyAttacking}`);
-      console.log("bruhther");
       // If this is the first frame we're checking for hit effect
       if (battleAnimationState.hitEffectStartTime === 0) {
         battleAnimationState.hitEffectStartTime = now;
-        console.log(`Hit effect start time set to: ${now}`);
       }
 
       // Only start hit effect after the delay
@@ -2543,14 +2494,11 @@ function handleAttackAnimation(attackerName, attackerX, attackerY, width, height
         
         // If we haven't started the hit effect yet
         if (!battleAnimationState.hitEffectStarted) {
-          console.log(`Starting hit effect for ${isEnemyAttacking ? 'enemy' : 'player'} attack`);
           if (hitEffect) {
             hitEffect.reset();
             hitEffect.play();
             battleAnimationState.hitEffectStarted = true;
-          }
-          else {
-            console.error('Hit effect image not found:', isEnemyAttacking ? 'regularHitEffectLeft' : 'regularHitEffectRight');
+            battleAnimationState.whiteFlashFrame = 0; // Initialize white flash counter
           }
         }
 
@@ -2559,25 +2507,77 @@ function handleAttackAnimation(attackerName, attackerX, attackerY, width, height
           const currentHitFrame = hitEffect.getCurrentFrame();
           // Only draw if we haven't reached the last frame
           if (currentHitFrame < hitEffect.numFrames() - 1) {
-            image(hitEffect, 0, 0, width, height);
-            console.log(`Drawing hit effect - Frame: ${currentHitFrame}, Total Frames: ${hitEffect.numFrames()}, Side: ${isEnemyAttacking ? 'left' : 'right'}`);
+            // Show white flash for first 3 frames
+            if (battleAnimationState.whiteFlashFrame < 3) {
+              // Draw white rectangle over entire screen
+              fill(255);
+              noStroke();
+              rect(0, 0, width, height);
+              battleAnimationState.whiteFlashFrame++;
+            } 
+            else {
+              // Get attacker and defender names/types
+              const attackerKey = isEnemyAttacking ? selectedCharacter.classType.toLowerCase() : selectedCharacter.name.toLowerCase();
+              const defenderKey = isEnemyAttacking ? targetEnemy.name.toLowerCase() : targetEnemy.classType.toLowerCase();
+              const comboKey = `${attackerKey}_${defenderKey}`;
+
+              console.log("Attack combo:", {
+                comboKey
+              });
+
+              // Hit effect x positions for specific attacker-defender combinations
+              const hitEffectXPositions = {
+                // Player attacking fighter
+                'roy_fighter': 50,
+                'bors_fighter': 50,
+                'allen_fighter': -100,
+                'lance_fighter': -100,
+                'wolt_fighter': -100,
+                'lugh_fighter': -100,
+                
+                // Fighter attacking players
+                'fighter_roy': 77,
+                'fighter_bors': 0,
+                'fighter_allen': 0,
+                'fighter_lance': 0,
+                'fighter_wolt': 0,
+                'fighter_lugh': 0
+              };
+
+              // Hit effect y positions for specific attacker-defender combinations
+              const hitEffectYPositions = {
+                // Player attacking fighter
+                'roy_fighter': 60,
+                'bors_fighter': 30,
+                'allen_fighter': 30,
+                'lance_fighter': 30,
+                'wolt_fighter': 30,
+                'lugh_fighter': 30,
+                
+                // Fighter attacking players
+                'fighter_roy': 50,
+                'fighter_bors': 50,
+                'fighter_allen': 50,
+                'fighter_lance': 50,
+                'fighter_wolt': 50,
+                'fighter_lugh': 50
+              };
+
+              // Get x and y offsets based on attacker-defender combination
+              const xPos = hitEffectXPositions[comboKey] || 0;  // Character-specific x offset
+              const yPos = hitEffectYPositions[comboKey] || 0;  // Character-specific y offset
+              image(hitEffect, xPos, yPos, width, height);
+            }
           }
 
           // Mark as played after duration has passed
           if (now - battleAnimationState.hitEffectStartTime >= hitDelay + hitEffectDuration) {
-            console.log(`Hit effect completed after ${now - battleAnimationState.hitEffectStartTime}ms`);
             battleAnimationState.hitEffectPlayed = true;
             if (hitEffect) {
               hitEffect.pause();
             }
           }
         }
-        else {
-          console.error('Hit effect image not found:', isEnemyAttacking ? 'regularHitEffectLeft' : 'regularHitEffectRight');
-        }
-      }
-      else {
-        console.log(`Waiting for hit effect delay: ${hitDelay - (now - battleAnimationState.hitEffectStartTime)}ms remaining`);
       }
     }
   }
@@ -2586,7 +2586,7 @@ function handleAttackAnimation(attackerName, attackerX, attackerY, width, height
   return {
     currentFrame,
     totalFrames,
-    isComplete: currentFrame < battleAnimationState.lastFrame && battleAnimationState.lastFrame !== -1
+    isComplete: currentFrame === totalFrames - 1
   };
 }
 
@@ -2616,6 +2616,11 @@ function handleBattleAnimation(selectedCharacter, targetEnemy) {
     battleAnimationState.dodgeStartTime = 0;
     battleAnimationState.missTextStartTime = 0;
     battleAnimationState.critTextStartTime = 0;
+    battleAnimationState.hitEffectStartTime = 0;
+    battleAnimationState.hitEffectPlayed = false;
+    battleAnimationState.hitEffectStarted = false;
+    battleAnimationState.hitEffectFrame = -1;
+    battleAnimationState.whiteFlashFrame = 0;
     
     // Determine if player first hit will crit
     battleAnimationState.willPlayerCrit = random(100) < selectedCharacter.displayedCrit;
@@ -2689,7 +2694,6 @@ function handleBattleAnimation(selectedCharacter, targetEnemy) {
   else if (battleAnimationState.currentPhase === "playerAttack") {
     // If player misses, show enemy dodge animation, otherwise show standing
     if (!battleAnimationState.willPlayerHit) {
-      console.log(`${enemyClass} dodged ${attackerName}'s attack!`);
       handleDodgeAnimation(enemyClass, enemyX, enemyY, enemyWidth, enemyHeight, now, selectedCharacter, targetEnemy);
     } 
     else {
@@ -2701,12 +2705,10 @@ function handleBattleAnimation(selectedCharacter, targetEnemy) {
     }
     
     // Play player's attack animation
-    const animState = handleAttackAnimation(attackerName, attackerX, attackerY, attackerWidth, attackerHeight, battleAnimationState.willPlayerCrit);
+    const animState = handleAttackAnimation(attackerName, attackerX, attackerY, attackerWidth, attackerHeight, battleAnimationState.willPlayerCrit, false, selectedCharacter, targetEnemy);
     
     // Detect animation completion
     if (animState.isComplete) {
-      console.log(`Player attack animation completed. Last frame: ${battleAnimationState.lastFrame}, Current frame: ${animState.currentFrame}, Total frames: ${animState.totalFrames}`);
-      
       battleAnimationState.currentPhase = "transitionToEnemy";
       battleAnimationState.startTime = now;
       battleAnimationState.lastFrame = -1;
@@ -2760,7 +2762,6 @@ function handleBattleAnimation(selectedCharacter, targetEnemy) {
   else if (battleAnimationState.currentPhase === "enemyAttack") {
     // If enemy misses, show player dodge animation, otherwise show standing
     if (!battleAnimationState.willEnemyHit) {
-      console.log(`${attackerName} dodged ${enemyClass}'s attack!`);
       handleDodgeAnimation(attackerName, attackerX, attackerY, attackerWidth, attackerHeight, now, targetEnemy, selectedCharacter);
     } 
     else {
@@ -2772,12 +2773,10 @@ function handleBattleAnimation(selectedCharacter, targetEnemy) {
     }
     
     // Play enemy's attack animation
-    const animState = handleAttackAnimation(enemyClass, enemyX, enemyY, enemyWidth, enemyHeight, battleAnimationState.willEnemyCrit);
+    const animState = handleAttackAnimation(enemyClass, enemyX, enemyY, enemyWidth, enemyHeight, battleAnimationState.willEnemyCrit, false, targetEnemy, selectedCharacter);
 
     // When animation reaches last frame, transition before it loops
-    if (animState.currentFrame === animState.totalFrames - 1) {
-      console.log(`Enemy attack animation completed. Current frame: ${animState.currentFrame}, Total frames: ${animState.totalFrames}`);
-      
+    if (animState.isComplete) {      
       battleAnimationState.currentPhase = "checkDoubles";
       battleAnimationState.startTime = now;
       battleAnimationState.lastFrame = -1;
@@ -2849,7 +2848,6 @@ function handleBattleAnimation(selectedCharacter, targetEnemy) {
   else if (battleAnimationState.currentPhase === "playerDouble") {
     // If player misses second hit, show enemy dodge animation, otherwise show standing
     if (!battleAnimationState.willPlayerSecondHit) {
-      console.log(`${enemyClass} dodged ${attackerName}'s second attack!`);
       handleDodgeAnimation(enemyClass, enemyX, enemyY, enemyWidth, enemyHeight, now, selectedCharacter, targetEnemy, true);
     } 
     else {
@@ -2861,12 +2859,10 @@ function handleBattleAnimation(selectedCharacter, targetEnemy) {
     }
     
     // Play player's second attack
-    const animState = handleAttackAnimation(attackerName, attackerX, attackerY, attackerWidth, attackerHeight, battleAnimationState.willPlayerSecondCrit, true);
+    const animState = handleAttackAnimation(attackerName, attackerX, attackerY, attackerWidth, attackerHeight, battleAnimationState.willPlayerSecondCrit, true, selectedCharacter, targetEnemy);
 
     // When animation completes, move to conclusion
     if (animState.isComplete) {
-      console.log(`Player double attack animation completed. Last frame: ${battleAnimationState.lastFrame}, Current frame: ${animState.currentFrame}, Total frames: ${animState.totalFrames}`);
-      
       battleAnimationState.currentPhase = "conclude";
       battleAnimationState.startTime = now;
       battleAnimationState.lastFrame = -1;
@@ -2879,7 +2875,6 @@ function handleBattleAnimation(selectedCharacter, targetEnemy) {
   else if (battleAnimationState.currentPhase === "enemyDouble") {
     // Show dodge animation for player if they dodge, otherwise show standing
     if (!battleAnimationState.willEnemySecondHit) {
-      console.log(`${attackerName} dodged ${enemyClass}'s second attack!`);
       handleDodgeAnimation(attackerName, attackerX, attackerY, attackerWidth, attackerHeight, now, targetEnemy, selectedCharacter, true);
     } 
     else {
@@ -2891,12 +2886,10 @@ function handleBattleAnimation(selectedCharacter, targetEnemy) {
     }
     
     // Play enemy's second attack
-    const animState = handleAttackAnimation(enemyClass, enemyX, enemyY, enemyWidth, enemyHeight, battleAnimationState.willEnemySecondCrit, true);
+    const animState = handleAttackAnimation(enemyClass, enemyX, enemyY, enemyWidth, enemyHeight, battleAnimationState.willEnemySecondCrit, true, targetEnemy, selectedCharacter);
 
     // When animation reaches last frame, transition before it loops
-    if (animState.currentFrame === animState.totalFrames - 1) {
-      console.log(`Enemy double attack animation completed. Current frame: ${animState.currentFrame}, Total frames: ${animState.totalFrames}`);
-      
+    if (animState.isComplete) {
       battleAnimationState.currentPhase = "conclude";
       battleAnimationState.startTime = now;
       battleAnimationState.lastFrame = -1;
@@ -2916,6 +2909,11 @@ function handleBattleAnimation(selectedCharacter, targetEnemy) {
     if (timeSinceStart > 1000) {
       // Reset all battle states
       battleAnimationState.isPlaying = false;
+      battleAnimationState.hitEffectStartTime = 0;
+      battleAnimationState.hitEffectPlayed = false;
+      battleAnimationState.hitEffectStarted = false;
+      battleAnimationState.hitEffectFrame = -1;
+      battleAnimationState.lastFrame = -1;
       selectedCharacter.attackInterfaceConfirmed = false;
       selectedCharacter.action = null;
       selectedCharacter.isSelected = false;
