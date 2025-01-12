@@ -2443,6 +2443,171 @@ function getDodgeDelay(attackerName, defenderName, isCrit = false) {
   return delay || 0;
 }
 
+// Helper function to handle hit effects
+function handleHitEffect(now, isEnemyAttacking, isCrit, hitDelay, hitEffectDuration, width, height, selectedCharacter, targetEnemy) {
+  // Get the appropriate hit effect based on whether it's a critical hit
+  const hitEffect = isEnemyAttacking ? 
+    (isCrit ? UIImages.criticalHitEffectLeft : UIImages.regularHitEffectLeft) :
+    (isCrit ? UIImages.criticalHitEffectRight : UIImages.regularHitEffectRight);
+  
+  // If we haven't started the hit effect yet
+  if (!battleAnimationState.hitEffectStarted) {
+    if (hitEffect) {
+      hitEffect.reset();
+      hitEffect.play();
+      battleAnimationState.hitEffectStarted = true;
+      battleAnimationState.whiteFlashFrame = 0; // Initialize white flash counter
+    }
+  }
+
+  // Draw the hit effect
+  if (hitEffect) {
+    const currentHitFrame = hitEffect.getCurrentFrame();
+    // Only draw if we haven't reached the last frame
+    if (currentHitFrame < hitEffect.numFrames() - 1) {
+      // Show white flash for first 3 frames
+      if (battleAnimationState.whiteFlashFrame < 3) {
+        // Draw white rectangle over entire screen
+        fill(255);
+        noStroke();
+        rect(0, 0, width, height);
+        battleAnimationState.whiteFlashFrame++;
+      }
+      else {
+        // Get attacker and defender names/types
+        const attackerKey = isEnemyAttacking ? selectedCharacter.classType.toLowerCase() : selectedCharacter.name.toLowerCase();
+        const defenderKey = isEnemyAttacking ? targetEnemy.name.toLowerCase() : targetEnemy.classType.toLowerCase();
+        const comboKey = `${attackerKey}_${defenderKey}`;
+
+        // Hit effect x positions for specific attacker-defender combinations
+        const hitEffectXPositions = {
+          // Player attacking fighter
+          'roy_fighter': 50,
+          'bors_fighter': 50,
+          'allen_fighter': 50,
+          'lance_fighter': 50,
+          'wolt_fighter': 44,
+          'lugh_fighter': 50,
+          
+          // Fighter attacking players
+          'fighter_roy': 77,
+          'fighter_bors': 72,
+          'fighter_allen': 90,
+          'fighter_lance': 90,
+          'fighter_wolt': 90,
+          'fighter_lugh': 85
+        };
+
+        // Hit effect y positions for specific attacker-defender combinations
+        const hitEffectYPositions = {
+          // Player attacking fighter
+          'roy_fighter': 60,
+          'bors_fighter': 107,
+          'allen_fighter': 80,
+          'lance_fighter': 70,
+          'wolt_fighter': 84,
+          'lugh_fighter': 85,
+          
+          // Fighter attacking players
+          'fighter_roy': 50,
+          'fighter_bors': 33,
+          'fighter_allen': 26,
+          'fighter_lance': 26,
+          'fighter_wolt': 50,
+          'fighter_lugh': 50
+        };
+
+        // Get x and y offsets based on attacker-defender combination
+        const xPos = hitEffectXPositions[comboKey] || 0;  // Character-specific x offset
+        const yPos = hitEffectYPositions[comboKey] || 0;  // Character-specific y offset
+        
+        // If it's a critical hit, use critical hit effect
+        if (isCrit) {
+          if (!isEnemyAttacking) {
+            // Player hitting enemy
+            image(hitEffect, -500, -150, width * 2, height * 2);
+          } 
+          else {
+            // Enemy hitting player
+            image(hitEffect, -350, -150, width * 2, height * 2);
+          }
+        }
+        else {
+          // If it's a regular hit, use regular hit effect
+          image(hitEffect, xPos, yPos, width, height);
+        }
+
+        // Lugh's fire effect - use same delay as hit effect
+        if (!isEnemyAttacking && attackerKey === 'lugh' && UIImages.fireHitEffect) {
+          // Only start fire effect after the delay
+          if (now - battleAnimationState.hitEffectStartTime >= hitDelay) {
+            if (!battleAnimationState.hitEffectStarted) {
+              UIImages.fireHitEffect.reset();
+              UIImages.fireHitEffect.play();
+            }
+            image(UIImages.fireHitEffect, xPos-120, yPos, width, height);
+          }
+        }
+      }
+    }
+  }
+
+  // Mark as played after duration has passed
+  if (now - battleAnimationState.hitEffectStartTime >= hitDelay + hitEffectDuration) {
+    battleAnimationState.hitEffectPlayed = true;
+    if (hitEffect) {
+      hitEffect.pause();
+    }
+  }
+}
+
+// Helper function to handle hit timing and state
+function handleHitTiming(attackerName, isSecondAttack, currentFrame, isCrit, width, height, selectedCharacter, targetEnemy) {
+  const now = millis();
+  const isEnemyAttacking = attackerName.includes("fighter") || attackerName.includes("brigand");
+  const willHit = isSecondAttack ? 
+    isEnemyAttacking ? battleAnimationState.willEnemySecondHit : battleAnimationState.willPlayerHit :
+    isEnemyAttacking ? battleAnimationState.willEnemyHit : battleAnimationState.willPlayerHit;
+
+  const hitDelay = getHitDelay(attackerName, isCrit);
+  const hitEffectDuration = 500; // Duration to show hit effect in milliseconds
+
+  // If this is a hit and we haven't finished playing the effect
+  if (willHit && !battleAnimationState.hitEffectPlayed && currentFrame > 0) {
+    // If this is the first frame we're checking for hit effect
+    if (battleAnimationState.hitEffectStartTime === 0) {
+      battleAnimationState.hitEffectStartTime = now;
+    }
+
+    // Only start hit effect after the delay
+    if (now - battleAnimationState.hitEffectStartTime >= hitDelay + 50) {
+      handleHitEffect(now, isEnemyAttacking, isCrit, hitDelay, hitEffectDuration, width, height, selectedCharacter, targetEnemy);
+    }
+  }
+}
+
+// Helper function to get hit delay based on attacker and crit
+function getHitDelay(attackerName, isCrit = false) {
+  // Get base name for delay lookup
+  let baseName = attackerName.toLowerCase();
+  if (baseName.includes('fighter')) {
+    baseName = 'fighter';
+  }
+
+  // Delay map for specific characters
+  const hitDelayMap = {
+    'roy': isCrit ? 1350 : 265,
+    'bors': isCrit ? 1300 : 975,
+    'allen': isCrit ? 2200 : 350,
+    'lance': isCrit ? 1150 : 400,
+    'wolt': isCrit ? 2275 : 800,
+    'lugh': isCrit ? 1800 : 1000,
+    'fighter': isCrit ? 850 : 490
+  };
+  
+  return hitDelayMap[baseName] || 1000;
+}
+
 // Helper function to handle attack animations
 function handleAttackAnimation(attackerName, attackerX, attackerY, width, height, isCrit, isSecondAttack = false, selectedCharacter, targetEnemy) {
   const attackType = isCrit ? "Critical" : "Attack";
@@ -2452,149 +2617,8 @@ function handleAttackAnimation(attackerName, attackerX, attackerY, width, height
   // Draw the current frame
   image(attackAnim, attackerX, attackerY, width, height);
 
-  // Handle hit effects for regular attacks (not crits)
-  if (!isCrit) {
-    const now = millis();
-    const isEnemyAttacking = attackerName.includes("fighter") || attackerName.includes("brigand");
-    const willHit = isSecondAttack ? 
-      isEnemyAttacking ? battleAnimationState.willEnemySecondHit : battleAnimationState.willPlayerHit :
-      isEnemyAttacking ? battleAnimationState.willEnemyHit : battleAnimationState.willPlayerHit;
-
-    // Get the appropriate delay based on attacker
-    const hitDelayMap = {
-      'roy': 265,
-      'bors': 975,
-      'allen': 350,
-      'lance': 400,
-      'wolt': 800,
-      'lugh': 1000,
-      'fighter': 490 
-    };
-
-    // Get base name for delay lookup
-    let baseName = attackerName.toLowerCase();
-    if (baseName.includes('fighter')) {
-      baseName = 'fighter';
-    }
-    
-    const hitDelay = hitDelayMap[baseName] || 1000;
-    const hitEffectDuration = 500; // Duration to show hit effect in milliseconds
-
-    // If this is a hit and we haven't finished playing the effect
-    if (willHit && !battleAnimationState.hitEffectPlayed && currentFrame > 0) {
-      // If this is the first frame we're checking for hit effect
-      if (battleAnimationState.hitEffectStartTime === 0) {
-        battleAnimationState.hitEffectStartTime = now;
-      }
-
-      // Only start hit effect after the delay
-      if (now - battleAnimationState.hitEffectStartTime >= hitDelay) {
-        // Get the appropriate hit effect
-        const hitEffect = isEnemyAttacking ? UIImages.regularHitEffectLeft : UIImages.regularHitEffectRight;
-        
-        // If we haven't started the hit effect yet
-        if (!battleAnimationState.hitEffectStarted) {
-          if (hitEffect) {
-            hitEffect.reset();
-            hitEffect.play();
-            battleAnimationState.hitEffectStarted = true;
-            battleAnimationState.whiteFlashFrame = 0; // Initialize white flash counter
-          }
-        }
-
-        // Draw the hit effect
-        if (hitEffect) {
-          const currentHitFrame = hitEffect.getCurrentFrame();
-          // Only draw if we haven't reached the last frame
-          if (currentHitFrame < hitEffect.numFrames() - 1) {
-            // Show white flash for first 3 frames
-            if (battleAnimationState.whiteFlashFrame < 3) {
-              // Draw white rectangle over entire screen
-              fill(255);
-              noStroke();
-              rect(0, 0, width, height);
-              battleAnimationState.whiteFlashFrame++;
-            } 
-            else {
-              // Get attacker and defender names/types
-              const attackerKey = isEnemyAttacking ? selectedCharacter.classType.toLowerCase() : selectedCharacter.name.toLowerCase();
-              const defenderKey = isEnemyAttacking ? targetEnemy.name.toLowerCase() : targetEnemy.classType.toLowerCase();
-              const comboKey = `${attackerKey}_${defenderKey}`;
-
-              console.log("Attack combo:", {
-                comboKey
-              });
-
-              // Hit effect x positions for specific attacker-defender combinations
-              const hitEffectXPositions = {
-                // Player attacking fighter
-                'roy_fighter': 50,
-                'bors_fighter': 50,
-                'allen_fighter': 50,
-                'lance_fighter': 50,
-                'wolt_fighter': 44,
-                'lugh_fighter': 50,
-                
-                // Fighter attacking players
-                'fighter_roy': 77,
-                'fighter_bors': 72,
-                'fighter_allen': 90,
-                'fighter_lance': 90,
-                'fighter_wolt': 90,
-                'fighter_lugh': 85
-              };
-
-              // Hit effect y positions for specific attacker-defender combinations
-              const hitEffectYPositions = {
-                // Player attacking fighter
-                'roy_fighter': 60,
-                'bors_fighter': 107,
-                'allen_fighter': 80,
-                'lance_fighter': 70,
-                'wolt_fighter': 84,
-                'lugh_fighter': 85,
-                
-                // Fighter attacking players
-                'fighter_roy': 50,
-                'fighter_bors': 33,
-                'fighter_allen': 26,
-                'fighter_lance': 26,
-                'fighter_wolt': 50,
-                'fighter_lugh': 50
-              };
-
-              // Get x and y offsets based on attacker-defender combination
-              const xPos = hitEffectXPositions[comboKey] || 0;  // Character-specific x offset
-              const yPos = hitEffectYPositions[comboKey] || 0;  // Character-specific y offset
-              
-              // Draw the regular hit effect
-              image(hitEffect, xPos, yPos, width, height);
-              
-              // Lugh's fire effect - use same delay as regular hit effect
-              if (!isEnemyAttacking && attackerKey === 'lugh' && UIImages.fireHitEffect) {
-                // Only start fire effect after the delay
-                if (now - battleAnimationState.hitEffectStartTime >= hitDelay) {
-                  if (!battleAnimationState.hitEffectStarted) {
-                    UIImages.fireHitEffect.reset();
-                    UIImages.fireHitEffect.play();
-                  }
-                  image(UIImages.fireHitEffect, xPos-120, yPos, width, height);
-                }
-              }
-            }
-          }
-
-          // Mark as played after duration has passed
-          if (now - battleAnimationState.hitEffectStartTime >= hitDelay + hitEffectDuration) {
-            battleAnimationState.hitEffectPlayed = true;
-            if (hitEffect) {
-              hitEffect.pause();
-            }
-          }
-        }
-      }
-    }
-  }
+  // Handle hit timing and effects
+  handleHitTiming(attackerName, isSecondAttack, currentFrame, isCrit, width, height, selectedCharacter, targetEnemy);
   
   // Return animation state for phase transitions
   return {

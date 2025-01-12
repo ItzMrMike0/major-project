@@ -25,5 +25,7 @@
     "lance": "Assets/UI/InBattleImages/lance.png",
     "regularHitEffectLeft": "Assets/UI/InBattleImages/regular_hit_effect_left.gif",
     "regularHitEffectRight": "Assets/UI/InBattleImages/regular_hit_effect_right.gif",
+    "criticalHitEffectLeft": "Assets/UI/InBattleImages/critical_hit_effect_left.gif",
+    "criticalHitEffectRight": "Assets/UI/InBattleImages/critical_hit_effect_right.gif",
     "fireHitEffect": "Assets/UI/InBattleImages/fire_effect.gif"
 }
