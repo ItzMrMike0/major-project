@@ -22,7 +22,7 @@ Winning will rely not only on combat prowess but also on strategic planning and 
 - Swap between player turn and enemy turn. 🟢
 - Action options: 
   - Move: Select a tile to move to. 🟢
-  - Attack: Choose a target within attack range. 🟡
+  - Attack: Choose a target within attack range. 🟢
   - Items: Use or equip items during a turn. 🔴
 - Undo move option (before confirming an action). 🟢
 - Win condition (Completely defeat all enemy characters) 🔴
@@ -37,9 +37,9 @@ Winning will rely not only on combat prowess but also on strategic planning and 
 ### 4: Battle System
 - Transition to a new scene or overlay for battle sequences. 🟢
 - Display calculated values such as damage dealt, hit percentage, and critical chance. 🟢
-- Add animations for attacking, critical, dodging etc. 🟡
-- Highlight critical hits with unique animations and sound effects. 🔴
-- Show distinct effects for missed attacks. 🔴
+- Add animations for attacking, critical, dodging etc. 🟢
+- Highlight critical hits with unique animations and sound effects. 🟢
+- Show distinct effects for missed attacks. 🟢
 
 ### 5: Enemy AI
 - Implement enemy AI to make tactical decisions. 🟢

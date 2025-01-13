@@ -5,7 +5,11 @@
 // Credits
 // Tileset acquired from https://forums.serenesforest.net/topic/24982-tileset-collection/
 // Background music acquired from https://www.youtube.com/watch?v=Cx4GQH2tHYQ
-// A lot of sprites taken from https://github.com/Klokinator/FE-Repo/tree/main
+// Sprites taken from https://github.com/Klokinator/FE-Repo/tree/main
+// Fire effect taken from https://www.spriters-resource.com/game_boy_advance/fireemblemthebindingblade/sheet/53728/
+// Weapon images taken from https://www.spriters-resource.com/nintendo_switch/fireemblemengage/sheet/209792/
+// Tile name images taken from Fire Emblem: Three Houses
+// In battle UI mostly taken from https://www.spriters-resource.com/nintendo_switch/fireemblemengage/sheet/216994/
 // Cursor moving sound acquired from https://www.youtube.com/watch?v=fkmp_YR9RXc
 // Select character sound acquired from https://www.youtube.com/watch?v=7Z2sxm7CkPw
 // Deselect character sound acquired from https://www.youtube.com/watch?v=U8wAHIaW4S0
@@ -1813,7 +1817,7 @@ class BattleManager {
     const key = `${attackerName.toLowerCase()}_${defenderName.toLowerCase()}`;
     
     // Map of delay timings for each possible attacker-defender combination
-    const delayMap = {
+    const critDelayMap = {
       'roy_fighter': 1850,  // Roy attacking Fighter
       'bors_fighter': 1425, // Bors attacking Fighter
       'allen_fighter': 2250,  // Allen attacking Fighter
@@ -1826,10 +1830,17 @@ class BattleManager {
       'fighter_allen': 775, // Fighter attacking Allen
       'fighter_lance': 775, // Fighter attacking Lance
       'fighter_wolt': 925,  // Fighter attacking Wolt
-      'fighter_lugh': 800 // Fighter attacking Lugh
+      'fighter_lugh': 800, // Fighter attacking Lugh
+
+      'brigand_roy': 2050, // Brigand attacking Roy
+      'brigand_bors': 1975,  // Brigand attacking Bors
+      'brigand_allen': 2075, // Brigand attacking Allen
+      'brigand_lance': 2075, // Brigand attacking Lance
+      'brigand_wolt': 2050,  // Brigand attacking Wolt
+      'brigand_lugh': 2000 // Brigand attacking Lugh
     };
     // Get the appropriate delay for this combination
-    const critDelay = delayMap[key];
+    const critDelay = critDelayMap[key];
 
     // Initialize the start time if this is the first frame
     if (this.state.critTextStartTime === 0) {
@@ -1850,6 +1861,36 @@ class BattleManager {
       const critHeight = UIImages.criticalText.height * 0.7;
       image(UIImages.criticalText, critX, critY, critWidth, critHeight);
     }
+  }
+
+  // Get the appropriate delay before showing a dodge animation based on the attacker/defender combo
+  getDodgeDelay(attackerName, defenderName, isCrit = false) {
+    // Create a unique key combining attacker and defender names
+    const key = `${attackerName.toLowerCase()}_${defenderName.toLowerCase()}`;
+    
+    // Map of delay timings for each attacker-defender combination
+    // Different delays for critical hits vs normal attacks
+    const dodgeDelayMap = {
+      'roy_fighter': isCrit ? 1850 : 700,     // Roy attacking Fighter
+      'fighter_roy': isCrit ? 900 : 1000,     // Fighter attacking Roy
+
+      'bors_fighter': isCrit ? 1425 : 1475,   // Bors attacking Fighter
+      'fighter_bors': isCrit ? 650 : 825,     // Fighter attacking Bors
+
+      'allen_fighter': isCrit ? 2250 : 800,   // Allen attacking Fighter
+      'fighter_allen': isCrit ? 775 : 950,    // Fighter attacking Allen
+
+      'lance_fighter': isCrit ? 1350 : 850,   // Lance attacking Fighter
+      'fighter_lance': isCrit ? 775 : 1000,   // Fighter attacking Lance
+
+      'wolt_fighter': isCrit? 2750 : 1400,    // Wolt attacking Fighter
+      'fighter_wolt': isCrit ? 925 : 1000,    // Fighter attacking Wolt
+
+      'lugh_fighter': isCrit? 1850 : 1500,    // Lugh attacking Fighter
+      'fighter_lugh': isCrit ? 800 : 900,     // Fighter attacking Lugh
+    };
+    // Return the appropriate delay
+    return dodgeDelayMap[key];
   }
 
   // Handle the dodge animation when a character avoids an attack
@@ -1914,37 +1955,94 @@ class BattleManager {
     }
   }
 
-  // Get the appropriate delay before showing a dodge animation based on the attacker/defender combo
-  getDodgeDelay(attackerName, defenderName, isCrit = false) {
-    // Create a unique key combining attacker and defender names
-    const key = `${attackerName.toLowerCase()}_${defenderName.toLowerCase()}`;
+  // Handle the timing of hit effects during an attack
+  handleHitTiming(attackerName, isSecondAttack, currentFrame, isCrit, width, height, selectedCharacter, targetEnemy) {
+    // Get current time
+    const now = millis();
     
-    // Map of delay timings for each attacker-defender combination
-    // Different delays for critical hits vs normal attacks
-    const delayMap = {
-      'roy_fighter': isCrit ? 1850 : 700,     // Roy attacking Fighter
-      'fighter_roy': isCrit ? 900 : 1000,     // Fighter attacking Roy
-      'bors_fighter': isCrit ? 1425 : 1475,   // Bors attacking Fighter
-      'fighter_bors': isCrit ? 650 : 825,     // Fighter attacking Bors
-      'allen_fighter': isCrit ? 2250 : 800,   // Allen attacking Fighter
-      'fighter_allen': isCrit ? 775 : 950,    // Fighter attacking Allen
-      'lance_fighter': isCrit ? 1350 : 850,   // Lance attacking Fighter
-      'fighter_lance': isCrit ? 775 : 1000,   // Fighter attacking Lance
-      'wolt_fighter': isCrit? 2750 : 1400,    // Wolt attacking Fighter
-      'fighter_wolt': isCrit ? 925 : 1000,    // Fighter attacking Wolt
-      'lugh_fighter': isCrit? 1850 : 1500,    // Lugh attacking Fighter
-      'fighter_lugh': isCrit ? 800 : 900,     // Fighter attacking Lugh
+    // Check if this is an enemy attack based on attacker name
+    const isEnemyAttacking = attackerName.includes("fighter") || attackerName.includes("brigand");
+    
+    // Determine if this attack will hit based on whether it's a second attack
+    const willHit = isSecondAttack ? 
+      isEnemyAttacking ? this.state.willEnemySecondHit : this.state.willPlayerHit : // Second attack hit checks
+      isEnemyAttacking ? this.state.willEnemyHit : this.state.willPlayerHit;  // First attack hit checks
+
+    // Get the appropriate delay before showing hit effect
+    const hitDelay = this.getHitDelay(attackerName, isCrit);
+    // Hit effects last 500ms
+    const hitEffectDuration = 500;
+
+    // Special handling for Lugh's fire magic attack
+    if (!isEnemyAttacking && attackerName === "lugh" && currentFrame > 0 && !this.state.fireEffectPlayed) {
+      // Initialize hit effect timing if not already set
+      if (this.state.hitEffectStartTime === 0) {
+        this.state.hitEffectStartTime = now;
+      }
+
+      // After appropriate delay, show fire effect
+      if (now - this.state.hitEffectStartTime >= hitDelay) {
+        // Start fire effect animation if not already started
+        if (!this.state.fireEffectStarted) {
+          UIImages.fireHitEffect.reset();
+          UIImages.fireHitEffect.play();
+          this.state.fireEffectStarted = true;
+        }
+        // Position and display fire effect
+        const xPos = 50;
+        const yPos = 85;
+        image(UIImages.fireHitEffect, xPos-120, yPos, width, height);
+
+        // Mark fire effect as complete after duration
+        if (now - this.state.hitEffectStartTime >= hitDelay + hitEffectDuration) {
+          this.state.fireEffectPlayed = true;
+        }
+      }
+    }
+
+    // Handle regular hit effects if attack will hit and hasn't been played yet
+    if (willHit && !this.state.hitEffectPlayed && currentFrame > 0) {
+      // Initialize hit effect timing if not already set
+      if (this.state.hitEffectStartTime === 0) {
+        this.state.hitEffectStartTime = now;
+      }
+
+      // After appropriate delay plus small buffer, show hit effect
+      if (now - this.state.hitEffectStartTime >= hitDelay + 50) {
+        this.handleHitEffect(now, isEnemyAttacking, isCrit, hitDelay, hitEffectDuration, width, height, selectedCharacter, targetEnemy);
+      }
+    }
+  }
+
+  // Get the appropriate delay before showing hit effect based on attacker and if it's a critical hit
+  getHitDelay(attackerName, isCrit = false) {
+    // Convert character name to lowercase 
+    let baseName = attackerName.toLowerCase();
+    if (baseName.includes('fighter')) {
+      baseName = 'fighter';
+    }
+
+    // Map of hit delays for each character, with different timings for critical hits
+    const hitDelayMap = {
+      'roy': isCrit ? 1350 : 265,     // Roy's attack timing
+      'bors': isCrit ? 1300 : 925,    // Bors's attack timing
+      'allen': isCrit ? 2200 : 350,   // Allen's attack timing
+      'lance': isCrit ? 1150 : 400,   // Lance's attack timing
+      'wolt': isCrit ? 2275 : 800,    // Wolt's attack timing
+      'lugh': isCrit ? 1800 : 1000,   // Lugh's attack timing
+      'fighter': isCrit ? 850 : 490   // Fighter's attack timing
     };
-    // Return the appropriate delay
-    return delayMap[key];
+    
+    // Return the character's specific delay timing
+    return hitDelayMap[baseName];
   }
 
   // Handle the visual hit effect when an attack lands
   handleHitEffect(now, isEnemyAttacking, isCrit, hitDelay, hitEffectDuration, width, height, selectedCharacter, targetEnemy) {
     // Choose the appropriate hit effect based on attacker and if it's a critical hit
     const hitEffect = isEnemyAttacking ? 
-      (isCrit ? UIImages.criticalHitEffectLeft : UIImages.regularHitEffectLeft) :   // Enemy attacks come from left
-      (isCrit ? UIImages.criticalHitEffectRight : UIImages.regularHitEffectRight);  // Player attacks come from right
+      isCrit ? UIImages.criticalHitEffectLeft : UIImages.regularHitEffectLeft :   // Enemy attacks come from left
+      isCrit ? UIImages.criticalHitEffectRight : UIImages.regularHitEffectRight;  // Player attacks come from right
     
     // Get attacker and defender names for positioning
     const attackerKey = isEnemyAttacking ? selectedCharacter.classType.toLowerCase() : selectedCharacter.name.toLowerCase();
@@ -2035,86 +2133,17 @@ class BattleManager {
     }
   }
 
-  // Handle the timing of hit effects during an attack
-  handleHitTiming(attackerName, isSecondAttack, currentFrame, isCrit, width, height, selectedCharacter, targetEnemy) {
-    // Get current time
-    const now = millis();
+  // Display standing animations for both characters during non-action moments
+  showStandingAnimations(attackerName, enemyName, positions, dimensions) {
+    // Show attacker's standing animation
+    image(attackingAnimationPaths[attackerName + "Standing"], 
+      positions.attackerX, positions.attackerY, 
+      dimensions.attackerWidth, dimensions.attackerHeight);
     
-    // Check if this is an enemy attack based on attacker name
-    const isEnemyAttacking = attackerName.includes("fighter") || attackerName.includes("brigand");
-    
-    // Determine if this attack will hit based on whether it's a second attack
-    const willHit = isSecondAttack ? 
-      isEnemyAttacking ? this.state.willEnemySecondHit : this.state.willPlayerHit : // Second attack hit checks
-      isEnemyAttacking ? this.state.willEnemyHit : this.state.willPlayerHit;  // First attack hit checks
-
-    // Get the appropriate delay before showing hit effect
-    const hitDelay = this.getHitDelay(attackerName, isCrit);
-    // Hit effects last 500ms
-    const hitEffectDuration = 500;
-
-    // Special handling for Lugh's fire magic attack
-    if (!isEnemyAttacking && attackerName === "lugh" && currentFrame > 0 && !this.state.fireEffectPlayed) {
-      // Initialize hit effect timing if not already set
-      if (this.state.hitEffectStartTime === 0) {
-        this.state.hitEffectStartTime = now;
-      }
-
-      // After appropriate delay, show fire effect
-      if (now - this.state.hitEffectStartTime >= hitDelay) {
-        // Start fire effect animation if not already started
-        if (!this.state.fireEffectStarted) {
-          UIImages.fireHitEffect.reset();
-          UIImages.fireHitEffect.play();
-          this.state.fireEffectStarted = true;
-        }
-        // Position and display fire effect
-        const xPos = 50;
-        const yPos = 85;
-        image(UIImages.fireHitEffect, xPos-120, yPos, width, height);
-
-        // Mark fire effect as complete after duration
-        if (now - this.state.hitEffectStartTime >= hitDelay + hitEffectDuration) {
-          this.state.fireEffectPlayed = true;
-        }
-      }
-    }
-
-    // Handle regular hit effects if attack will hit and hasn't been played yet
-    if (willHit && !this.state.hitEffectPlayed && currentFrame > 0) {
-      // Initialize hit effect timing if not already set
-      if (this.state.hitEffectStartTime === 0) {
-        this.state.hitEffectStartTime = now;
-      }
-
-      // After appropriate delay plus small buffer, show hit effect
-      if (now - this.state.hitEffectStartTime >= hitDelay + 50) {
-        this.handleHitEffect(now, isEnemyAttacking, isCrit, hitDelay, hitEffectDuration, width, height, selectedCharacter, targetEnemy);
-      }
-    }
-  }
-
-  // Get the appropriate delay before showing hit effect based on attacker and if it's a critical hit
-  getHitDelay(attackerName, isCrit = false) {
-    // Convert character name to lowercase 
-    let baseName = attackerName.toLowerCase();
-    if (baseName.includes('fighter')) {
-      baseName = 'fighter';
-    }
-
-    // Map of hit delays for each character, with different timings for critical hits
-    const hitDelayMap = {
-      'roy': isCrit ? 1350 : 265,     // Roy's attack timing
-      'bors': isCrit ? 1300 : 975,    // Bors's attack timing
-      'allen': isCrit ? 2200 : 350,   // Allen's attack timing
-      'lance': isCrit ? 1150 : 400,   // Lance's attack timing
-      'wolt': isCrit ? 2275 : 800,    // Wolt's attack timing
-      'lugh': isCrit ? 1800 : 1000,   // Lugh's attack timing
-      'fighter': isCrit ? 850 : 490   // Fighter's attack timing
-    };
-    
-    // Return the character's specific delay timing
-    return hitDelayMap[baseName];
+    // Show defender's standing animation
+    image(attackingAnimationPaths[enemyName + "Standing"], 
+      positions.enemyX, positions.enemyY, 
+      dimensions.enemyWidth, dimensions.enemyHeight);
   }
 
   // Handle the main attack animation sequence for a character
@@ -2139,19 +2168,6 @@ class BattleManager {
       totalFrames,  // Total number of frames
       isComplete: currentFrame === totalFrames - 1  // Whether animation has finished
     };
-  }
-
-  // Display standing animations for both characters during non-action moments
-  showStandingAnimations(attackerName, enemyName, positions, dimensions) {
-    // Show attacker's standing animation
-    image(attackingAnimationPaths[attackerName + "Standing"], 
-      positions.attackerX, positions.attackerY, 
-      dimensions.attackerWidth, dimensions.attackerHeight);
-    
-    // Show defender's standing animation
-    image(attackingAnimationPaths[enemyName + "Standing"], 
-      positions.enemyX, positions.enemyY, 
-      dimensions.enemyWidth, dimensions.enemyHeight);
   }
 
   // Main method for managing the entire battle animation sequence
@@ -3139,18 +3155,18 @@ function keyPressed() {
   // Handle action menu navigation first if menu is visible
   if (actionMenu.isVisible) {
     sounds.cursorSelection.amp(0.7);
-    if (key === "w") {
-      // If w is pressed move selection up and play sound
+    if (keyCode === 87) {
+      // If "w" is pressed move selection up and play sound
       actionMenu.moveSelection("up");
       sounds.cursorSelection.play();
     }
-    else if (key === "s") {
-      // If s is pressed move selection down and play sound
+    else if (keyCode === 83) {
+      // If "s" is pressed move selection down and play sound
       actionMenu.moveSelection("down");
       sounds.cursorSelection.play();
     }
-    else if (key === "j") {
-      // If j is pressed select the highlighted option
+    else if (keyCode === 74) {
+      // If "j" is pressed select the highlighted option
       let selectedCharacter = Character.getSelectedCharacter();
       if (selectedCharacter) {
         const selectedOption = actionMenu.getSelectedOption();
@@ -3194,8 +3210,8 @@ function keyPressed() {
         }
       }
     }
-    else if (key === "k") {
-      // If k is pressed cancel the action menu and move character back to their previous location
+    else if (keyCode === 75) {
+      // If "k" is pressed cancel the action menu and move character back to their previous location
       const selectedCharacter = Character.getSelectedCharacter();
       if (selectedCharacter) {
         sounds.unselectCharacter.play();
@@ -3212,8 +3228,8 @@ function keyPressed() {
     return;
   }
 
-  // If menu is not visible, handle normal game controls
-  if (key === "j") {
+  // If menu is not visible, handle normal game controls when "k" is pressed
+  if (keyCode === 74) {
     const selectedCharacter = Character.getSelectedCharacter();
    
     // If there is a selected character in attack mode
@@ -3253,10 +3269,10 @@ function keyPressed() {
       Character.selectCharacter();
     }
   }
-  // If k is pressed and there is a selected character that's not moving, unselect them
-  else if (key === "k" && selectedCharacter && !selectedCharacter.isMoving) {
+  // If "k" is pressed and there is a selected character that's not moving, unselect them
+  else if (keyCode === 75 && selectedCharacter && !selectedCharacter.isMoving) {
     // Don't allow canceling during or right after battle animation
-    if (battleAnimationState.isPlaying || selectedCharacter.isGreyedOut) {
+    if (battleManager.isPlaying || selectedCharacter.isGreyedOut) {
       return;
     }
     
@@ -3282,8 +3298,8 @@ function keyPressed() {
       Character.unselectCharacter(true);
     }
   }
-  // 'R' key - Skip to enemy turn
-  else if (key === "r" && isPlayerTurn) {
+  // If "r" key is pressed - Skip to enemy turn
+  else if (keyCode === 82 && isPlayerTurn) {
     // Deselect any selected character
     if (selectedCharacter) {
       Character.unselectCharacter(false);
