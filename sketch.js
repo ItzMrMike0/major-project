@@ -1741,6 +1741,1038 @@ class UIManager {
   }
 }
 
+// BattleManager class: Handles all battle animations and effects
+class BattleManager {
+  constructor() {
+    // Initialize battle state object to track various animation states and timings
+    this.state = {
+      // Core battle state
+      isPlaying: false, // Whether a battle animation is currently playing
+      currentPhase: "prepare",  // Current phase of the battle animation (prepare, playerAttack, enemyAttack, etc)
+      startTime: 0, // Timestamp when the current phase started
+      lastFrame: -1,  // Last animation frame that was displayed
+      
+      // Combat outcome calculations
+      willPlayerCrit: false, // Whether player's attack will be a critical hit
+      willEnemyCrit: false, // Whether enemy's attack will be a critical hit
+      willPlayerHit: false, // Whether player's attack will land
+      willEnemyHit: false,  // Whether enemy's attack will land
+      
+      // Double attack flags based on speed differences
+      hasPlayerDouble: false, // Whether player is fast enough to attack twice
+      hasEnemyDouble: false,  // Whether enemy is fast enough to attack twice
+      
+      // Hit and Crit calculations for potential second attacks
+      willPlayerSecondCrit: null, // Whether player's second attack will crit
+      willEnemySecondCrit: null,  // Whether enemy's second attack will crit
+      willPlayerSecondHit: null,  // Whether player's second attack will hit
+      willEnemySecondHit: null, // Whether enemy's second attack will hit
+      
+      // Animation state tracking for dodge animations
+      playerDodgePlayed: false, // Whether player's dodge animation has played
+      enemyDodgePlayed: false,  // Whether enemy's dodge animation has played
+      playerSecondDodgePlayed: false, // Whether player's second dodge animation has played
+      enemySecondDodgePlayed: false,  // Whether enemy's second dodge animation has played
+      
+      // Timing variables for various effects
+      dodgeStartTime: 0,  // When dodge animation started
+      missTextStartTime: 0, // When "MISS" text started displaying
+      critTextStartTime: 0, // When "CRITICAL" text started displaying
+      hitEffectStartTime: 0,  // When hit effect animation started
+      
+      // Hit effect animation states
+      hitEffectPlayed: false, // Whether hit effect animation has played
+      hitEffectStarted: false,  // Whether hit effect animation has started
+      hitEffectFrame: -1, // Current frame of hit effect animation
+      whiteFlashFrame: 0, // Frame counter for white flash effect on critical hits
+      
+      // Special effects for magic attacks
+      fireEffectStarted: false, // Whether fire effect has started (for magic attacks)
+      fireEffectPlayed: false // Whether fire effect has completed
+    };
+  }
+  // Display "MISS" text when an attack doesn't land
+  showMissText(isEnemyAttacking, now) {
+    // Initialize the start time if this is the first frame
+    if (this.state.missTextStartTime === 0) {
+      this.state.missTextStartTime = now;
+    }
+    
+    // Show the miss text for 400ms (0.4 seconds)
+    if (now - this.state.missTextStartTime <= 400) {
+      // Position the text differently based on who is attacking
+      const missX = isEnemyAttacking ? width * 0.3 : width * 0.57;  // Left side for enemy attacks, right side for player
+      const missY = height * 0.4;  // 40% down from the top of the screen
+      image(UIImages.missText, missX, missY);
+    }
+  }
+
+  // Display "CRITICAL" text for critical hits
+  showCritText(isEnemyAttacking, now, attackerName, defenderName) {
+    // Create a unique key for timing based on attacker and defender
+    const key = `${attackerName.toLowerCase()}_${defenderName.toLowerCase()}`;
+    
+    // Map of delay timings for each possible attacker-defender combination
+    const delayMap = {
+      'roy_fighter': 1850,  // Roy attacking Fighter
+      'bors_fighter': 1425, // Bors attacking Fighter
+      'allen_fighter': 2250,  // Allen attacking Fighter
+      'lance_fighter': 1350,  // Lance attacking Fighter
+      'wolt_fighter': 2750, // Wolt attacking Fighter
+      'lugh_fighter': 2100, // Lugh attacking Fighter
+      
+      'fighter_roy': 900, // Fighter attacking Roy
+      'fighter_bors': 650,  // Fighter attacking Bors
+      'fighter_allen': 775, // Fighter attacking Allen
+      'fighter_lance': 775, // Fighter attacking Lance
+      'fighter_wolt': 925,  // Fighter attacking Wolt
+      'fighter_lugh': 800 // Fighter attacking Lugh
+    };
+    // Get the appropriate delay for this combination
+    const critDelay = delayMap[key];
+
+    // Initialize the start time if this is the first frame
+    if (this.state.critTextStartTime === 0) {
+      this.state.critTextStartTime = now;
+    }
+    
+    // Calculate how long the text has been showing
+    const timeSinceStart = now - this.state.critTextStartTime;
+    
+    // Show the critical text for 400ms after the appropriate delay
+    if (timeSinceStart >= critDelay && timeSinceStart <= critDelay + 400) {
+      // Position the text differently based on who is attacking
+      const critX = isEnemyAttacking ? width * 0.26 : width * 0.52;  // Left side for enemy, right for player
+      const critY = height * 0.4;  // 40% down from the top
+
+      // Scale the critical text to 70% of its original size
+      const critWidth = UIImages.criticalText.width * 0.7;
+      const critHeight = UIImages.criticalText.height * 0.7;
+      image(UIImages.criticalText, critX, critY, critWidth, critHeight);
+    }
+  }
+
+  // Handle the dodge animation when a character avoids an attack
+  handleDodgeAnimation(dodgerName, dodgerX, dodgerY, width, height, now, attacker, defender, isSecondDodge = false) {
+    // Get the dodge animation for the character
+    const dodgeAnim = attackingAnimationPaths[dodgerName + "Dodge"];
+    
+    if (dodgeAnim) {
+      // Initialize the dodge start time if this is the first frame
+      if (this.state.dodgeStartTime === 0) {
+        this.state.dodgeStartTime = now;
+      }
+      
+      // Determine if this dodge is in response to a critical hit
+      const isCrit = isSecondDodge ? 
+        // For second attacks, check second crit flags
+        attacker.isEnemy ? this.state.willEnemySecondCrit : this.state.willPlayerSecondCrit :
+        // For first attacks, check first crit flags
+        attacker.isEnemy ? this.state.willEnemyCrit : this.state.willPlayerCrit;
+      
+      // Get the proper keys for timing lookup based on attacker/defender character
+      const attackerKey = attacker.isEnemy ? attacker.classType : attacker.name;
+      const defenderKey = defender.isEnemy ? defender.classType : defender.name;
+      
+      // Get the appropriate delay before showing the dodge animation
+      const dodgeDelay = this.getDodgeDelay(attackerKey, defenderKey, isCrit);
+      
+      // Once we've waited for the delay, show the dodge animation
+      if (now - this.state.dodgeStartTime >= dodgeDelay) {
+        // Determine which dodge flag to check/set based on who is dodging and if it's a second attack
+        const dodgeFlag = isSecondDodge ? 
+          dodgerName.includes("enemy") ? "enemySecondDodgePlayed" : "playerSecondDodgePlayed" :
+          dodgerName.includes("enemy") ? "enemyDodgePlayed" : "playerDodgePlayed";
+
+        // If we haven't played this dodge animation yet
+        if (!this.state[dodgeFlag]) {
+          // Reset and start the dodge animation
+          dodgeAnim.reset();
+          dodgeAnim.play();
+          // Mark this dodge as played and reset miss text timing
+          this.state[dodgeFlag] = true;
+          this.state.missTextStartTime = 0;
+        }
+        
+        // Draw the dodge animation at the specified position
+        image(dodgeAnim, dodgerX, dodgerY, width, height);
+
+        // Show the "MISS" text along with the dodge
+        if (UIImages.missText) {
+          this.showMissText(attacker.isEnemy, now);
+        }
+
+        // If we've reached the last frame, pause the animation
+        if (dodgeAnim.getCurrentFrame() === dodgeAnim.numFrames() - 1) {
+          dodgeAnim.pause();
+        }
+      } 
+      else {
+        // While waiting for dodge timing, show standing animation
+        image(attackingAnimationPaths[dodgerName + "Standing"], dodgerX, dodgerY, width, height);
+      }
+    }
+  }
+
+  // Get the appropriate delay before showing a dodge animation based on the attacker/defender combo
+  getDodgeDelay(attackerName, defenderName, isCrit = false) {
+    // Create a unique key combining attacker and defender names
+    const key = `${attackerName.toLowerCase()}_${defenderName.toLowerCase()}`;
+    
+    // Map of delay timings for each attacker-defender combination
+    // Different delays for critical hits vs normal attacks
+    const delayMap = {
+      'roy_fighter': isCrit ? 1850 : 700,     // Roy attacking Fighter
+      'fighter_roy': isCrit ? 900 : 1000,     // Fighter attacking Roy
+      'bors_fighter': isCrit ? 1425 : 1475,   // Bors attacking Fighter
+      'fighter_bors': isCrit ? 650 : 825,     // Fighter attacking Bors
+      'allen_fighter': isCrit ? 2250 : 800,   // Allen attacking Fighter
+      'fighter_allen': isCrit ? 775 : 950,    // Fighter attacking Allen
+      'lance_fighter': isCrit ? 1350 : 850,   // Lance attacking Fighter
+      'fighter_lance': isCrit ? 775 : 1000,   // Fighter attacking Lance
+      'wolt_fighter': isCrit? 2750 : 1400,    // Wolt attacking Fighter
+      'fighter_wolt': isCrit ? 925 : 1000,    // Fighter attacking Wolt
+      'lugh_fighter': isCrit? 1850 : 1500,    // Lugh attacking Fighter
+      'fighter_lugh': isCrit ? 800 : 900,     // Fighter attacking Lugh
+    };
+    // Return the appropriate delay
+    return delayMap[key];
+  }
+
+  // Handle the visual hit effect when an attack lands
+  handleHitEffect(now, isEnemyAttacking, isCrit, hitDelay, hitEffectDuration, width, height, selectedCharacter, targetEnemy) {
+    // Choose the appropriate hit effect based on attacker and if it's a critical hit
+    const hitEffect = isEnemyAttacking ? 
+      (isCrit ? UIImages.criticalHitEffectLeft : UIImages.regularHitEffectLeft) :   // Enemy attacks come from left
+      (isCrit ? UIImages.criticalHitEffectRight : UIImages.regularHitEffectRight);  // Player attacks come from right
+    
+    // Get attacker and defender names for positioning
+    const attackerKey = isEnemyAttacking ? selectedCharacter.classType.toLowerCase() : selectedCharacter.name.toLowerCase();
+    const defenderKey = isEnemyAttacking ? targetEnemy.name.toLowerCase() : targetEnemy.classType.toLowerCase();
+    const comboKey = `${attackerKey}_${defenderKey}`;
+
+    // Map of x-positions for hit effects based on attacker-defender combinations
+    const hitEffectXPositions = {
+      'roy_fighter': 50,  // Roy attacking Fighter
+      'bors_fighter': 50, // Bors attacking Fighter
+      'allen_fighter': 50,  // Allen attacking Fighter
+      'lance_fighter': 50,  // Lance attacking Fighter
+      'wolt_fighter': 44, // Wolt attacking Fighter
+      'lugh_fighter': 50, // Lugh attacking Fighter
+      'fighter_roy': 77,  // Fighter attacking Roy
+      'fighter_bors': 72, // Fighter attacking Bors
+      'fighter_allen': 90,  // Fighter attacking Allen
+      'fighter_lance': 90,  // Fighter attacking Lance
+      'fighter_wolt': 90, // Fighter attacking Wolt
+      'fighter_lugh': 85  // Fighter attacking Lugh
+    };
+
+    // Map of y-positions for hit effects based on attacker-defender combinations
+    const hitEffectYPositions = {
+      'roy_fighter': 60,  // Roy attacking Fighter
+      'bors_fighter': 107,  // Bors attacking Fighter
+      'allen_fighter': 80,  // Allen attacking Fighter
+      'lance_fighter': 70,  // Lance attacking Fighter
+      'wolt_fighter': 84, // Wolt attacking Fighter
+      'lugh_fighter': 85, // Lugh attacking Fighter
+      'fighter_roy': 50,  // Fighter attacking Roy
+      'fighter_bors': 33, // Fighter attacking Bors
+      'fighter_allen': 26,  // Fighter attacking Allen
+      'fighter_lance': 26,  // Fighter attacking Lance
+      'fighter_wolt': 50, // Fighter attacking Wolt
+      'fighter_lugh': 50  // Fighter attacking Lugh
+    };
+
+    // Get the appropriate x and y positions for this combination
+    const xPos = hitEffectXPositions[comboKey];
+    const yPos = hitEffectYPositions[comboKey];
+    
+    // If this is the first frame of the hit effect
+    if (!this.state.hitEffectStarted) {
+      if (hitEffect) {
+        // Reset and start the hit effect animation
+        hitEffect.reset();
+        hitEffect.play();
+        this.state.hitEffectStarted = true;
+        this.state.whiteFlashFrame = 0;  // Reset white flash counter
+      }
+    }
+
+    if (hitEffect) {
+      const currentHitFrame = hitEffect.getCurrentFrame();
+      if (currentHitFrame < hitEffect.numFrames() - 1) {
+        // Show white flash effect for first 5 frames
+        if (this.state.whiteFlashFrame < 5) {
+          fill(255);
+          noStroke();
+          rect(0, 0, width, height);
+          this.state.whiteFlashFrame++;
+        }
+        else {
+          // For critical hits, show a different effect
+          if (isCrit) {
+            if (!isEnemyAttacking) {
+              image(hitEffect, -500, -150, width * 2, height * 2);  // Right side crit effect
+            } 
+            else {
+              image(hitEffect, -350, -150, width * 2, height * 2);  // Left side crit effect
+            }
+          }
+          else {
+            // Normal hit effect at calculated position
+            image(hitEffect, xPos, yPos, width, height);
+          }
+        }
+      }
+    }
+
+    // If hit effect has played for its duration, mark it as complete
+    if (now - this.state.hitEffectStartTime >= hitDelay + hitEffectDuration) {
+      this.state.hitEffectPlayed = true;
+      if (hitEffect) {
+        hitEffect.pause();
+      }
+    }
+  }
+
+  // Handle the timing of hit effects during an attack
+  handleHitTiming(attackerName, isSecondAttack, currentFrame, isCrit, width, height, selectedCharacter, targetEnemy) {
+    // Get current time
+    const now = millis();
+    
+    // Check if this is an enemy attack based on attacker name
+    const isEnemyAttacking = attackerName.includes("fighter") || attackerName.includes("brigand");
+    
+    // Determine if this attack will hit based on whether it's a second attack
+    const willHit = isSecondAttack ? 
+      isEnemyAttacking ? this.state.willEnemySecondHit : this.state.willPlayerHit : // Second attack hit checks
+      isEnemyAttacking ? this.state.willEnemyHit : this.state.willPlayerHit;  // First attack hit checks
+
+    // Get the appropriate delay before showing hit effect
+    const hitDelay = this.getHitDelay(attackerName, isCrit);
+    // Hit effects last 500ms
+    const hitEffectDuration = 500;
+
+    // Special handling for Lugh's fire magic attack
+    if (!isEnemyAttacking && attackerName === "lugh" && currentFrame > 0 && !this.state.fireEffectPlayed) {
+      // Initialize hit effect timing if not already set
+      if (this.state.hitEffectStartTime === 0) {
+        this.state.hitEffectStartTime = now;
+      }
+
+      // After appropriate delay, show fire effect
+      if (now - this.state.hitEffectStartTime >= hitDelay) {
+        // Start fire effect animation if not already started
+        if (!this.state.fireEffectStarted) {
+          UIImages.fireHitEffect.reset();
+          UIImages.fireHitEffect.play();
+          this.state.fireEffectStarted = true;
+        }
+        // Position and display fire effect
+        const xPos = 50;
+        const yPos = 85;
+        image(UIImages.fireHitEffect, xPos-120, yPos, width, height);
+
+        // Mark fire effect as complete after duration
+        if (now - this.state.hitEffectStartTime >= hitDelay + hitEffectDuration) {
+          this.state.fireEffectPlayed = true;
+        }
+      }
+    }
+
+    // Handle regular hit effects if attack will hit and hasn't been played yet
+    if (willHit && !this.state.hitEffectPlayed && currentFrame > 0) {
+      // Initialize hit effect timing if not already set
+      if (this.state.hitEffectStartTime === 0) {
+        this.state.hitEffectStartTime = now;
+      }
+
+      // After appropriate delay plus small buffer, show hit effect
+      if (now - this.state.hitEffectStartTime >= hitDelay + 50) {
+        this.handleHitEffect(now, isEnemyAttacking, isCrit, hitDelay, hitEffectDuration, width, height, selectedCharacter, targetEnemy);
+      }
+    }
+  }
+
+  // Get the appropriate delay before showing hit effect based on attacker and if it's a critical hit
+  getHitDelay(attackerName, isCrit = false) {
+    // Convert character name to lowercase 
+    let baseName = attackerName.toLowerCase();
+    if (baseName.includes('fighter')) {
+      baseName = 'fighter';
+    }
+
+    // Map of hit delays for each character, with different timings for critical hits
+    const hitDelayMap = {
+      'roy': isCrit ? 1350 : 265,     // Roy's attack timing
+      'bors': isCrit ? 1300 : 975,    // Bors's attack timing
+      'allen': isCrit ? 2200 : 350,   // Allen's attack timing
+      'lance': isCrit ? 1150 : 400,   // Lance's attack timing
+      'wolt': isCrit ? 2275 : 800,    // Wolt's attack timing
+      'lugh': isCrit ? 1800 : 1000,   // Lugh's attack timing
+      'fighter': isCrit ? 850 : 490   // Fighter's attack timing
+    };
+    
+    // Return the character's specific delay timing
+    return hitDelayMap[baseName];
+  }
+
+  // Handle the main attack animation sequence for a character
+  handleAttackAnimation(attackerName, attackerX, attackerY, width, height, isCrit, isSecondAttack = false, selectedCharacter, targetEnemy) {
+    // Determine which attack animation to use (critical or normal)
+    const attackType = isCrit ? "Critical" : "Attack";
+    // Get the appropriate attack animation
+    const attackAnim = attackingAnimationPaths[attackerName + attackType];
+    // Get current frame and total frames of the animation
+    const currentFrame = attackAnim.getCurrentFrame();
+    const totalFrames = attackAnim.numFrames();  
+    
+    // Display the attack animation at the specified position
+    image(attackAnim, attackerX, attackerY, width, height);
+
+    // Handle hit effects timing based on current frame
+    this.handleHitTiming(attackerName, isSecondAttack, currentFrame, isCrit, width, height, selectedCharacter, targetEnemy);
+    
+    // Return animation state for phase management
+    return {
+      currentFrame, // Current frame number
+      totalFrames,  // Total number of frames
+      isComplete: currentFrame === totalFrames - 1  // Whether animation has finished
+    };
+  }
+
+  // Display standing animations for both characters during non-action moments
+  showStandingAnimations(attackerName, enemyName, positions, dimensions) {
+    // Show attacker's standing animation
+    image(attackingAnimationPaths[attackerName + "Standing"], 
+      positions.attackerX, positions.attackerY, 
+      dimensions.attackerWidth, dimensions.attackerHeight);
+    
+    // Show defender's standing animation
+    image(attackingAnimationPaths[enemyName + "Standing"], 
+      positions.enemyX, positions.enemyY, 
+      dimensions.enemyWidth, dimensions.enemyHeight);
+  }
+
+  // Main method for managing the entire battle animation sequence
+  handleBattleAnimation(selectedCharacter, targetEnemy) {
+    // Initialize battle state if this is the first frame
+    if (!this.state.isPlaying) {
+      this.initializeBattleState(selectedCharacter, targetEnemy);
+    }
+
+    // Get current time and calculate duration of current phase
+    const now = millis();
+    const timeSinceStart = now - this.state.startTime;
+
+    // Calculate positions for characters based on their type
+    const positions = {
+      // Adjust attacker X position based on character type
+      attackerX: selectedCharacter.name.toLowerCase() === "bors" 
+        ? width * 0.1  // Bors position
+        : ["roy", "wolt", "lugh"].includes(selectedCharacter.name.toLowerCase()) 
+          ? width * 0.045  // Roy, Wolt, and Lugh's position
+          : width * 0.02,  // Default position
+      
+      attackerY: height * 0.01 - 50,  // Attacker Y position
+      enemyX: width * 0.08,           // Enemy X position
+      enemyY: height * 0.01 - 50      // Enemy Y position
+    };
+
+    // Set dimensions for character sprites
+    const dimensions = {
+      attackerWidth: width,           // Full width for attacker
+      attackerHeight: height * 0.7,   // 70% of height for attacker
+      enemyWidth: width,              // Full width for enemy
+      enemyHeight: height * 0.7       // 70% of height for enemy
+    };
+
+    // Get normalized names for animation lookups
+    const attackerName = selectedCharacter.name.toLowerCase();
+    const enemyClass = targetEnemy.classType.toLowerCase();
+
+    // Handle different phases of the battle animation
+    if (this.state.currentPhase === "prepare") {
+      // Initial preparation phase - show standing animations
+      this.handlePreparePhase(attackerName, enemyClass, positions, dimensions, timeSinceStart, now);
+    }
+    else if (this.state.currentPhase === "playerAttack") {
+      // Player's attack phase
+      this.handlePlayerAttackPhase(attackerName, enemyClass, positions, dimensions, now, selectedCharacter, targetEnemy);
+    }
+    else if (this.state.currentPhase === "transitionToEnemy") {
+      // Transition phase between player and enemy attacks
+      this.handleTransitionToEnemyPhase(attackerName, enemyClass, positions, dimensions, timeSinceStart, selectedCharacter, targetEnemy, now);
+    }
+    else if (this.state.currentPhase === "enemyAttack") {
+      // Enemy's attack phase
+      this.handleEnemyAttackPhase(attackerName, enemyClass, positions, dimensions, now, selectedCharacter, targetEnemy);
+    }
+    else if (this.state.currentPhase === "checkDoubles") {
+      // Check if either character gets a second attack
+      this.handleCheckDoublesPhase(attackerName, enemyClass, positions, dimensions, timeSinceStart, selectedCharacter, targetEnemy, now);
+    }
+    else if (this.state.currentPhase === "playerDouble") {
+      // Player's second attack phase
+      this.handlePlayerDoublePhase(attackerName, enemyClass, positions, dimensions, now, selectedCharacter, targetEnemy);
+    }
+    else if (this.state.currentPhase === "enemyDouble") {
+      // Enemy's second attack phase
+      this.handleEnemyDoublePhase(attackerName, enemyClass, positions, dimensions, now, selectedCharacter, targetEnemy);
+    }
+    else if (this.state.currentPhase === "conclude") {
+      // Conclude the battle animation
+      this.handleConcludePhase(attackerName, enemyClass, positions, dimensions, timeSinceStart, selectedCharacter);
+    }
+  }
+
+  // Sets up the initial state for a battle sequence between two characters
+  initializeBattleState(selectedCharacter, targetEnemy) {
+    this.state = {
+      // Core battle state
+      isPlaying: true, // Indicates if battle animation is currently active
+      currentPhase: "prepare",  // Starting phase of battle sequence
+      startTime: millis(),  // Timestamp when battle begins
+      lastFrame: -1,  // Tracks the last animation frame processed
+
+      // Combat outcome calculations
+      willPlayerCrit: random(100) < selectedCharacter.displayedCrit,  // Determines if player lands a critical hit
+      willEnemyCrit: random(100) < targetEnemy.displayedCrit, // Determines if enemy lands a critical hit
+      willPlayerHit: random(100) < selectedCharacter.displayedHit,  // Determines if player's attack connects
+      willEnemyHit: random(100) < targetEnemy.displayedHit, // Determines if enemy's attack connects
+
+      // Double attack checks (speed difference of 4 or more enables double attacks)
+      hasPlayerDouble: selectedCharacter.speed - targetEnemy.speed >= 4,  // Can player attack twice
+      hasEnemyDouble: targetEnemy.speed - selectedCharacter.speed >= 4, // Can enemy attack twice
+
+      // Second attack outcomes (initialized as null, set later if doubles occur)
+      willPlayerSecondCrit: null, // Critical hit check for player's second attack
+      willEnemySecondCrit: null,  // Critical hit check for enemy's second attack
+      willPlayerSecondHit: null,  // Hit check for player's second attack
+      willEnemySecondHit: null, // Hit check for enemy's second attack
+
+      // Animation state tracking
+      playerDodgePlayed: false, // Has player's dodge animation been shown
+      playerDodgePlayed: false, // Has player's dodge animation been shown
+      enemyDodgePlayed: false,  // Has enemy's dodge animation been shown
+      playerSecondDodgePlayed: false, // Has player's second dodge been shown
+      enemySecondDodgePlayed: false,// Has enemy's second dodge been shown
+      dodgeStartTime: 0,  // Timestamp when dodge animation begins
+      missTextStartTime: 0, // Timestamp when "MISS" text appears
+      critTextStartTime: 0, // Timestamp when "CRITICAL" text appears
+      
+      // Hit effect states
+      hitEffectStartTime: 0,  // Timestamp when hit effect begins
+      hitEffectPlayed: false, // Has the hit effect animation completed
+      hitEffectStarted: false,  // Has the hit effect begun playing
+      hitEffectFrame: -1, // Current frame of hit effect animation
+      whiteFlashFrame: 0, // Frame counter for impact flash effect
+      
+      // Special effect states
+      fireEffectStarted: false, // Has fire magic effect started (for Lugh)
+      fireEffectPlayed: false // Has fire magic effect completed
+    };
+  }
+
+  // Handles the initial preparation phase of the battle animation
+  handlePreparePhase(attackerName, enemyClass, positions, dimensions, timeSinceStart, now) {
+    // Display both characters in their standing positions
+    this.showStandingAnimations(attackerName, enemyClass, positions, dimensions);
+    
+    // After 500ms, transition to the player's attack phase
+    if (timeSinceStart > 500) {
+      // Update battle state for player attack
+      this.state.currentPhase = "playerAttack";
+      this.state.startTime = now;
+      this.state.lastFrame = -1;
+      
+      // Determine attack type (critical or normal) and prepare animation
+      const playerAttackType = this.state.willPlayerCrit ? "Critical" : "Attack";
+      const nextAnim = attackingAnimationPaths[attackerName + playerAttackType];
+      
+      // Reset and start the attack animation if it exists
+      if (nextAnim) {
+        nextAnim.reset();
+        nextAnim.play();
+      }
+    }
+  }
+
+  // Handles the player's attack phase of the battle animation
+  handlePlayerAttackPhase(attackerName, enemyClass, positions, dimensions, now, selectedCharacter, targetEnemy) {
+    // If the attack will miss, show dodge animation for the enemy
+    if (!this.state.willPlayerHit) {
+      this.handleDodgeAnimation(enemyClass, positions.enemyX, positions.enemyY, dimensions.enemyWidth, dimensions.enemyHeight, now, selectedCharacter, targetEnemy);
+    } 
+    // If the attack will hit, show enemy standing and potentially critical text
+    else {
+      // Display enemy in standing position
+      image(attackingAnimationPaths[enemyClass + "Standing"], positions.enemyX, positions.enemyY, dimensions.enemyWidth, dimensions.enemyHeight);
+      
+      // Show critical hit text if applicable
+      if (this.state.willPlayerCrit && UIImages.criticalText) {
+        this.showCritText(false, now, attackerName, enemyClass);
+      }
+    }
+    
+    // Handle the player's attack animation and get its state
+    const animState = this.handleAttackAnimation(
+      attackerName, 
+      positions.attackerX, 
+      positions.attackerY, 
+      dimensions.attackerWidth, 
+      dimensions.attackerHeight, 
+      this.state.willPlayerCrit, 
+      false, 
+      selectedCharacter, 
+      targetEnemy
+    );
+    
+    // If attack animation is complete, transition to next phase
+    if (animState.isComplete) {
+      // Reset state variables for next phase
+      this.state.currentPhase = "transitionToEnemy";
+      this.state.startTime = now;
+      this.state.lastFrame = -1;
+      this.state.missTextStartTime = 0;
+      this.state.critTextStartTime = 0;
+      this.state.dodgeStartTime = 0;
+    }
+    
+    // Update the last frame for animation tracking
+    this.state.lastFrame = animState.currentFrame;
+  }
+
+  // Handles the transition phase between player's attack and enemy's counter-attack
+  handleTransitionToEnemyPhase(attackerName, enemyClass, positions, dimensions, timeSinceStart, selectedCharacter, targetEnemy, now) {
+    // Show both characters in their standing positions during transition
+    this.showStandingAnimations(attackerName, enemyClass, positions, dimensions);
+    
+    // Wait for 100 ms before proceeding
+    if (timeSinceStart > 100) {
+      // Calculate the Manhattan distance between attacker and defender
+      const distance = Math.abs(selectedCharacter.x - targetEnemy.x) + Math.abs(selectedCharacter.y - targetEnemy.y);
+      
+      // Check if enemy can counter-attack based on distance and class type
+      // Melee units (non-Archer, non-Mage) can only counter at distance 2
+      if (distance === 2 && targetEnemy.classType !== "Archer" && targetEnemy.classType !== "Mage") {
+        // Skip enemy attack and check for double attacks
+        this.state.currentPhase = "checkDoubles";
+        this.state.startTime = now;
+        this.state.lastFrame = -1;
+      } 
+      else {
+        // Reset hit effect state variables for enemy attack
+        this.state.hitEffectStartTime = 0;
+        this.state.hitEffectPlayed = false;
+        this.state.hitEffectStarted = false;
+        
+        // Prepare for enemy attack phase
+        this.state.currentPhase = "enemyAttack";
+        this.state.startTime = now;
+        this.state.lastFrame = -1;
+        
+        // Set up enemy attack animation based on critical hit status
+        const enemyAttackType = this.state.willEnemyCrit ? "Critical" : "Attack";
+        const enemyAnim = attackingAnimationPaths[enemyClass + enemyAttackType];
+        enemyAnim.reset();
+        enemyAnim.play();
+      }
+    }
+  }
+
+  // Handles the enemy's attack phase of the battle animation
+  handleEnemyAttackPhase(attackerName, enemyClass, positions, dimensions, now, selectedCharacter, targetEnemy) {
+    // If the enemy's attack will miss, show dodge animation for the player
+    if (!this.state.willEnemyHit) {
+      this.handleDodgeAnimation(attackerName, positions.attackerX, positions.attackerY, dimensions.attackerWidth, dimensions.attackerHeight, now, targetEnemy, selectedCharacter);
+    } 
+    // If the attack will hit, show player standing and potentially critical text
+    else {
+      // Display player character in standing position
+      image(attackingAnimationPaths[attackerName + "Standing"], positions.attackerX, positions.attackerY, dimensions.attackerWidth, dimensions.attackerHeight);
+      
+      // Show critical hit text if applicable
+      if (this.state.willEnemyCrit && UIImages.criticalText) {
+        this.showCritText(true, now, enemyClass, attackerName);
+      }
+    }
+    
+    // Handle the enemy's attack animation and get its state
+    const animState = this.handleAttackAnimation(
+      enemyClass, 
+      positions.enemyX, 
+      positions.enemyY, 
+      dimensions.enemyWidth, 
+      dimensions.enemyHeight, 
+      this.state.willEnemyCrit, 
+      false, 
+      targetEnemy, 
+      selectedCharacter
+    );
+
+    // If attack animation is complete, transition to next phase
+    if (animState.isComplete) {      
+      // Move to check doubles phase
+      this.state.currentPhase = "checkDoubles";
+      this.state.startTime = now;
+      this.state.lastFrame = -1;
+      
+      // Pause the enemy's attack animation
+      attackingAnimationPaths[enemyClass + (this.state.willEnemyCrit ? "Critical" : "Attack")].pause();
+    }
+    
+    // Update the last frame for animation tracking
+    this.state.lastFrame = animState.currentFrame;
+  }
+
+  // Handles the phase that checks if either character gets a second attack based on speed difference
+  handleCheckDoublesPhase(attackerName, enemyClass, positions, dimensions, timeSinceStart, selectedCharacter, targetEnemy, now) {
+    // Show both characters in their standing positions
+    this.showStandingAnimations(attackerName, enemyClass, positions, dimensions);
+      
+    // Reset all hit effect and animation state variables
+    this.state.dodgeStartTime = 0;
+    this.state.hitEffectStartTime = 0;
+    this.state.hitEffectPlayed = false;
+    this.state.hitEffectStarted = false;
+    this.state.hitEffectFrame = -1;
+    
+    // Wait for 100ms before checking for double attacks
+    if (timeSinceStart > 100) {
+      // Calculate speed differences between player and enemy
+      const playerSpeedDiff = selectedCharacter.speed - targetEnemy.speed;
+      const enemySpeedDiff = targetEnemy.speed - selectedCharacter.speed;
+      
+      // If player is significantly faster (speed diff >= 4), they get a second attack
+      if (playerSpeedDiff >= 4) {
+        // Set up player's second attack
+        this.state.currentPhase = "playerDouble";
+        // Calculate hit and crit chances for second attack
+        this.state.willPlayerSecondHit = random(100) < selectedCharacter.displayedHit;
+        this.state.willPlayerSecondCrit = random(100) < selectedCharacter.displayedCrit;
+        
+        // Prepare the appropriate attack animation
+        const playerAttackType = this.state.willPlayerSecondCrit ? "Critical" : "Attack";
+        const nextAnim = attackingAnimationPaths[attackerName + playerAttackType];
+        if (nextAnim) {
+          nextAnim.reset();
+          nextAnim.play();
+        }
+      } 
+      // If enemy is significantly faster, they get a second attack
+      else if (enemySpeedDiff >= 4) {
+        // Set up enemy's second attack
+        this.state.currentPhase = "enemyDouble";
+        // Calculate hit and crit chances for second attack
+        this.state.willEnemySecondHit = random(100) < targetEnemy.displayedHit;
+        this.state.willEnemySecondCrit = random(100) < targetEnemy.displayedCrit;
+        
+        // Prepare the appropriate attack animation
+        const enemyAttackType = this.state.willEnemySecondCrit ? "Critical" : "Attack";
+        const nextAnim = attackingAnimationPaths[enemyClass + enemyAttackType];
+        if (nextAnim) {
+          nextAnim.reset();
+          nextAnim.play();
+        }
+        
+        // Reset timing variables for the second attack
+        this.state.missTextStartTime = 0;
+        this.state.dodgeStartTime = 0;
+        this.state.critTextStartTime = 0;
+      } 
+      // If neither character is fast enough for a second attack, conclude the battle
+      else {
+        this.state.currentPhase = "conclude";
+      }
+      
+      // Update timing variables for the next phase
+      this.state.startTime = now;
+      this.state.lastFrame = -1;
+    }
+  }
+
+  handlePlayerDoublePhase(attackerName, enemyClass, positions, dimensions, now, selectedCharacter, targetEnemy) {
+    // If the second attack will miss, show dodge animation for the enemy
+    if (!this.state.willPlayerSecondHit) {
+      this.handleDodgeAnimation(
+        enemyClass, 
+        positions.enemyX, 
+        positions.enemyY, 
+        dimensions.enemyWidth, 
+        dimensions.enemyHeight, 
+        now, 
+        selectedCharacter, 
+        targetEnemy, 
+        true  // Indicates this is a second attack
+      );
+    } 
+    // If the attack will hit, show enemy standing and potentially critical text
+    else {
+      // Display enemy in standing position
+      image(attackingAnimationPaths[enemyClass + "Standing"], positions.enemyX, positions.enemyY, dimensions.enemyWidth, dimensions.enemyHeight);
+      
+      // Show critical hit text if applicable for second attack
+      if (this.state.willPlayerSecondCrit && UIImages.criticalText) {
+        this.showCritText(false, now, attackerName, enemyClass);
+      }
+    }
+    
+    // Handle the player's second attack animation and get its state
+    const animState = this.handleAttackAnimation(
+      attackerName, 
+      positions.attackerX, 
+      positions.attackerY, 
+      dimensions.attackerWidth, 
+      dimensions.attackerHeight, 
+      this.state.willPlayerSecondCrit, 
+      true,  // Indicates this is a second attack
+      selectedCharacter, 
+      targetEnemy
+    );
+
+    // If second attack animation is complete, transition to conclude phase
+    if (animState.isComplete) {
+      this.state.currentPhase = "conclude";
+      this.state.startTime = now;
+      this.state.lastFrame = -1;
+    }
+    
+    // Update the last frame for animation tracking
+    this.state.lastFrame = animState.currentFrame;
+  }
+
+  // Handles the enemy's second attack phase when they are fast enough for a double attack
+  handleEnemyDoublePhase(attackerName, enemyClass, positions, dimensions, now, selectedCharacter, targetEnemy) {
+    // If the second attack will miss, show dodge animation for the player
+    if (!this.state.willEnemySecondHit) {
+      this.handleDodgeAnimation(
+        attackerName, 
+        positions.attackerX, 
+        positions.attackerY, 
+        dimensions.attackerWidth, 
+        dimensions.attackerHeight, 
+        now, 
+        targetEnemy, 
+        selectedCharacter, 
+        true  // Indicates this is a second attack
+      );
+    } 
+    // If the attack will hit, show player standing and potentially critical text
+    else {
+      // Display player character in standing position
+      image(attackingAnimationPaths[attackerName + "Standing"], positions.attackerX, positions.attackerY, dimensions.attackerWidth, dimensions.attackerHeight);
+      
+      // Show critical hit text if applicable for second attack
+      if (this.state.willEnemySecondCrit && UIImages.criticalText) {
+        this.showCritText(true, now, enemyClass, attackerName);
+      }
+    }
+    
+    // Handle the enemy's second attack animation and get its state
+    const animState = this.handleAttackAnimation(
+      enemyClass, 
+      positions.enemyX, 
+      positions.enemyY, 
+      dimensions.enemyWidth, 
+      dimensions.enemyHeight, 
+      this.state.willEnemySecondCrit, 
+      true,  // Indicates this is a second attack
+      targetEnemy, 
+      selectedCharacter
+    );
+
+    // If second attack animation is complete, transition to conclude phase
+    if (animState.isComplete) {
+      this.state.currentPhase = "conclude";
+      this.state.startTime = now;
+      this.state.lastFrame = -1;
+      
+      // Pause the enemy's attack animation
+      attackingAnimationPaths[enemyClass + (this.state.willEnemySecondCrit ? "Critical" : "Attack")].pause();
+    }
+    
+    // Update the last frame for animation tracking
+    this.state.lastFrame = animState.currentFrame;
+  }
+
+  // Handles the conclusion phase of the battle animation sequence
+  handleConcludePhase(attackerName, enemyClass, positions, dimensions, timeSinceStart, selectedCharacter) {
+    // Show both characters in their standing positions for the final frame
+    this.showStandingAnimations(attackerName, enemyClass, positions, dimensions);
+    
+    // Wait for 1 second before concluding the battle
+    if (timeSinceStart > 1000) {
+      // Reset battle animation state
+      this.state.isPlaying = false;
+      this.state.hitEffectStartTime = 0;
+      this.state.hitEffectPlayed = false;
+      this.state.hitEffectStarted = false;
+      this.state.hitEffectFrame = -1;
+      this.state.lastFrame = -1;
+      
+      // Reset player character state
+      selectedCharacter.attackInterfaceConfirmed = false;
+      selectedCharacter.action = null;
+      selectedCharacter.isSelected = false;
+      selectedCharacter.canMove = false;
+      selectedCharacter.isGreyedOut = true;
+      
+      // Reset enemy selection state
+      enemySelectedForAttack = false;
+      
+      // Adjust battle music volume
+      sounds.battleMusic.amp(0.5);
+      
+      // Reset character animation to standing
+      animationManager(selectedCharacter, "standing");
+    }
+  }
+
+  drawBattleInterface(selectedCharacter, targetEnemy) {
+    // Lower the music volume
+    sounds.battleMusic.amp(0.3);
+  
+    // Draw the battle background first
+    image(UIImages.battleBackground, 0, 0, width, height);
+    
+    // Draw the attack interface image centered on screen
+    const interfaceWidth = width * 1.05;
+    const interfaceHeight = height;
+    const x = (width - interfaceWidth) / 2;
+    const y = (height - interfaceHeight) / 2;
+    image(UIImages.attackInterface, x, y, interfaceWidth, interfaceHeight);
+  
+    // Setup text style for character names at top
+    textSize(50);
+    textFont("DMT Shuei MGo Std Bold");
+    textAlign(CENTER, CENTER);
+    stroke(0);
+    strokeWeight(7);
+    fill(255);
+  
+    // Draw player character name at top left
+    text(selectedCharacter.name, width * 0.13, height * 0.11);
+  
+    // Draw enemy character class at top right
+    text(targetEnemy.classType, width * 0.88, height * 0.11);
+  
+    // Draw weapon text and images
+    textSize(35);
+    strokeWeight(4);
+  
+    // Get weapon text and image based on character
+    let playerWeaponText, playerWeaponImage;
+    let enemyWeaponText, enemyWeaponImage;
+  
+    // Set player weapon text and image
+    if (selectedCharacter.name === "Roy") {
+      playerWeaponText = "Steel Sword";
+      playerWeaponImage = UIImages.sword;
+    }
+    else if (selectedCharacter.name === "Wolt") {
+      playerWeaponText = "Steel Bow";
+      playerWeaponImage = UIImages.bow;
+    }
+    else if (selectedCharacter.name === "Bors") {
+      playerWeaponText = "Steel Lance";
+      playerWeaponImage = UIImages.lance;
+    }
+    else if (selectedCharacter.name === "Lance" || selectedCharacter.name === "Allen") {
+      playerWeaponText = "Steel Spear";
+      playerWeaponImage = UIImages.spear;
+    }
+    else if (selectedCharacter.name === "Lugh") {
+      playerWeaponText = "Fire Tome";
+      playerWeaponImage = UIImages.tome;
+    }
+  
+    // Set enemy weapon text and image
+    if (targetEnemy.classType === "Fighter" || targetEnemy.classType === "Brigand") {
+      enemyWeaponText = "Iron Axe";
+      enemyWeaponImage = UIImages.axe;
+    }
+  
+    // Draw player weapon text and image
+    text(playerWeaponText, width * 0.32, height * 0.8);
+    if (playerWeaponImage) {
+      const weaponSize = 45;
+      image(playerWeaponImage, width * 0.45 - weaponSize/2, height * 0.76, weaponSize, weaponSize);
+    }
+  
+    // Draw enemy weapon text and image
+    text(enemyWeaponText, width * 0.63, height * 0.8);
+    if (enemyWeaponImage) {
+      const weaponSize = 45;
+      image(enemyWeaponImage, width * 0.76 - weaponSize/2, height * 0.76, weaponSize, weaponSize);
+    }
+  
+    // Calculate positions for bottom stats
+    const playerStatsX = width * 0.1;
+    const enemyStatsX = width * 0.92;
+    const baseStatsY = height * 0.745;
+  
+    // Setup text style for stats labels
+    textSize(25);
+    textFont("DMT Shuei MGo Std Bold");
+    textAlign(LEFT, BOTTOM);
+    stroke(0);
+    strokeWeight(3);  // Reduced from 5 to 3 to make text cleaner
+    fill(244, 235, 215);
+  
+    // Draw DMG, HIT, and CRIT text for player side
+    text("DMG", playerStatsX - 85, baseStatsY);
+    text("HIT", playerStatsX - 85, baseStatsY + 36);
+    text("CRIT", playerStatsX - 85, baseStatsY + 73);
+  
+    // Draw DMG, HIT, and CRIT text for enemy side
+    text("DMG", enemyStatsX - 85, baseStatsY);
+    text("HIT", enemyStatsX - 85, baseStatsY + 36);
+    text("CRIT", enemyStatsX - 85, baseStatsY + 73);
+  
+    // Calculate if it's a ranged attack
+    const distance = Math.abs(selectedCharacter.x - targetEnemy.x) + Math.abs(selectedCharacter.y - targetEnemy.y);
+    const isRangedAttack = distance === 2;
+  
+    // Calculate speed differences for double attacks
+    const playerSpeedDiff = selectedCharacter.speed - targetEnemy.speed;
+    const enemySpeedDiff = targetEnemy.speed - selectedCharacter.speed;
+  
+    // Calculate attacking values
+    selectedCharacter.attack(targetEnemy);
+    targetEnemy.attack(selectedCharacter);
+  
+    // Double damage if speed difference is 4 or more
+    if (playerSpeedDiff >= 4) {
+      selectedCharacter.displayedDamage *= 2;
+    }
+    if (enemySpeedDiff >= 4) {
+      targetEnemy.displayedDamage *= 2;
+    }
+  
+    // Draw values
+    fill(255);
+    textAlign(RIGHT, BOTTOM);
+  
+    // Display player values
+    text(selectedCharacter.displayedDamage, playerStatsX + 50, baseStatsY);
+    text(Math.floor(selectedCharacter.displayedHit) + "%", playerStatsX + 50, baseStatsY + 36);
+    text(Math.floor(selectedCharacter.displayedCrit) + "%", playerStatsX + 50, baseStatsY + 72);
+  
+    // Display enemy values if it's a ranged attack set to -
+    if (isRangedAttack) {
+      text("-", enemyStatsX + 50, baseStatsY);
+      text("-", enemyStatsX + 50, baseStatsY + 35);
+      text("-", enemyStatsX + 50, baseStatsY + 70);
+    } 
+    else {
+      text(targetEnemy.displayedDamage, enemyStatsX + 50, baseStatsY);
+      text(Math.floor(targetEnemy.displayedHit) + "%", enemyStatsX + 50, baseStatsY + 36);
+      text(Math.floor(targetEnemy.displayedCrit) + "%", enemyStatsX + 50, baseStatsY + 72);
+    }
+  }
+}
+
 // GLOBAL VARIABLES
 let levelToLoad, lines; // Level file to load and its content (lines)
 let tilesHigh, tilesWide, tilesWidth, tilesHeight; // Tile grid dimensions and sizes
@@ -1762,6 +2794,8 @@ let enemyPhaseStarted = false; // Flag to track if enemy phase has started
 let uiManager; // UI Manager instance
 let enemySelectedForAttack = false; // Track if an enemy has been selected for attack
 let attackingAnimationPaths = {}; // Attacking animation paths
+let battleManager; // Battle Manager instance
+
 // Define directions once as a constant
 const DIRECTIONS = [
   { x: 0, y: -1 }, // up
@@ -1769,38 +2803,6 @@ const DIRECTIONS = [
   { x: 1, y: 0 },  // right
   { x: -1, y: 0 }  // left
 ];
-
-// Battle animation states for player and enemy
-let battleAnimationState = {
-  isPlaying: false, // Whether the animation is currently playing
-  currentPhase: "prepare",  // Current phase of the battle animation sequence
-  startTime: 0, // Timestamp when the current phase started
-  lastFrame: -1, // Track last frame to detect animation loop completion
-  willPlayerCrit: false,  // Whether the player's attack will be critical
-  willEnemyCrit: false, // Whether the enemy's attack will be critical
-  willPlayerHit: false, // Whether the playey's attack will hit
-  willEnemyHit: false,  // Whether the enemy's attack will hit
-  hasPlayerDouble: false, // Whether the player gets a second attack (speed >= 4)
-  hasEnemyDouble: false,  // Whether the enemy gets a second attack (speed >= 4)
-  willPlayerSecondCrit: null, // Whether the player's second attack will be critical
-  willEnemySecondCrit: null, // Whether the enemy's second attack will be critical
-  willPlayerSecondHit: null,  // Whether the player's second attack will hit
-  willEnemySecondHit: null,  // Whether the enemy's second attack will hit
-  playerDodgePlayed: false, // Whether the player's dodge animation has played
-  enemyDodgePlayed: false, // Whether the enemy's dodge animation has played
-  playerSecondDodgePlayed: false, // Whether the player's second dodge animation has played
-  enemySecondDodgePlayed: false, // Whether the enemy's second dodge animation has played
-  dodgeStartTime: 0,  // Add new timing tracker for dodge animations
-  missTextStartTime: 0,  // When the miss text started showing
-  critTextStartTime: 0,  // When the crit text started showing
-  hitEffectStartTime: 0,  // When the hit effect started showing
-  hitEffectPlayed: false,  // Whether the hit effect has been played for current attack
-  hitEffectStarted: false,  // Whether the hit effect animation has started
-  hitEffectFrame: -1,  // Track the hit effect animation frame
-  whiteFlashFrame: 0,  // Track white flash frames
-  fireEffectStarted: false,  // Whether Lugh's fire effect has started
-  fireEffectPlayed: false   // Whether Lugh's fire effect has been played for current attack
-};
 
 // Preload all information and images
 function preload() {
@@ -1875,6 +2877,9 @@ function setup() {
 
   // Initialize the UI manager
   uiManager = new UIManager();
+
+  // Initialize battle manager
+  battleManager = new BattleManager();
 
   // Initialize turn image display for first player turn
   showTurnImage = true;
@@ -2302,837 +3307,6 @@ function isCursorOverCharacter(character) {
   return locationCursor.x === character.x && locationCursor.y === character.y;
 }
 
-// Function to show miss text
-function showMissText(isEnemyAttacking, now) {
-  // If this is the first frame showing the text, record the start time
-  if (battleAnimationState.missTextStartTime === 0) {
-    battleAnimationState.missTextStartTime = now;
-  }
-  
-  // Only show text if less than 400ms has passed
-  if (now - battleAnimationState.missTextStartTime <= 400) {
-    // If enemy is attacking, show miss text on the left, otherwise show it on the right
-    const missX = isEnemyAttacking ? width * 0.3 : width * 0.57;
-    const missY = height * 0.4;
-    image(UIImages.missText, missX, missY);
-  }
-}
-
-// Function to show critical hit text
-function showCritText(isEnemyAttacking, now, attackerName, defenderName) {
-  // Get the delay based on attacker and defender
-  const key = `${attackerName.toLowerCase()}_${defenderName.toLowerCase()}`;
-  const delayMap = {
-    // Player attacking fighter
-    'roy_fighter': 1850,
-    'bors_fighter': 1425,
-    'allen_fighter': 2250,
-    'lance_fighter': 1350,
-    'wolt_fighter': 2750,
-    'lugh_fighter': 2100,
-    
-    // Fighter attacking players
-    'fighter_roy': 900,
-    'fighter_bors': 650,
-    'fighter_allen': 775,
-    'fighter_lance': 775,
-    'fighter_wolt': 925,
-    'fighter_lugh': 800
-  };
-  const critDelay = delayMap[key] || 0;
-
-  // If this is the first frame showing the text, record the start time
-  if (battleAnimationState.critTextStartTime === 0) {
-    battleAnimationState.critTextStartTime = now;
-  }
-  
-  // Only show text if we're past the delay and less than 400ms after that
-  const timeSinceStart = now - battleAnimationState.critTextStartTime;
-  if (timeSinceStart >= critDelay && timeSinceStart <= critDelay + 400) {
-    // If enemy is attacking, show crit text on the left, otherwise show it on the right
-    const critX = isEnemyAttacking ? width * 0.26 : width * 0.52;
-    const critY = height * 0.4;
-    // Scale down the image by 30%
-    const critWidth = UIImages.criticalText.width * 0.7;
-    const critHeight = UIImages.criticalText.height * 0.7;
-    image(UIImages.criticalText, critX, critY, critWidth, critHeight);
-  }
-}
-
-// Helper function to handle dodge animations
-function handleDodgeAnimation(dodgerName, dodgerX, dodgerY, width, height, now, attacker, defender, isSecondDodge = false) {
-  const dodgeAnim = attackingAnimationPaths[dodgerName + "Dodge"];
-  if (dodgeAnim) {
-    // Start tracking dodge timing if we haven't started yet
-    if (battleAnimationState.dodgeStartTime === 0) {
-      battleAnimationState.dodgeStartTime = now;
-    }
-    
-    // Get the appropriate delay based on attacker, defender and if the attack is critical
-    const isCrit = isSecondDodge ? 
-      attacker.isEnemy ? battleAnimationState.willEnemySecondCrit : battleAnimationState.willPlayerSecondCrit :
-      attacker.isEnemy ? battleAnimationState.willEnemyCrit : battleAnimationState.willPlayerCrit;
-    
-    // For both attacker and defender, use class type for enemies and name for players
-    const attackerKey = attacker.isEnemy ? attacker.classType : attacker.name;
-    const defenderKey = defender.isEnemy ? defender.classType : defender.name;
-    
-    const dodgeDelay = getDodgeDelay(attackerKey, defenderKey, isCrit);
-    
-    // Only start dodge animation after character-specific delay
-    if (now - battleAnimationState.dodgeStartTime >= dodgeDelay) {
-      const dodgeFlag = isSecondDodge ? 
-        dodgerName.includes("enemy") ? "enemySecondDodgePlayed" : "playerSecondDodgePlayed" :
-        dodgerName.includes("enemy") ? "enemyDodgePlayed" : "playerDodgePlayed";
-
-      if (!battleAnimationState[dodgeFlag]) {
-        dodgeAnim.reset();
-        dodgeAnim.play();
-        battleAnimationState[dodgeFlag] = true;
-        battleAnimationState.missTextStartTime = 0; // Reset miss text timer when new dodge starts
-      }
-      image(dodgeAnim, dodgerX, dodgerY, width, height);
-
-      // Display miss text based on who is attacking
-      if (UIImages.missText) {
-        showMissText(attacker.isEnemy, now);
-      }
-
-      if (dodgeAnim.getCurrentFrame() === dodgeAnim.numFrames() - 1) {
-        dodgeAnim.pause();
-      }
-    } 
-    else {
-      // Show standing animation during the delay
-      image(attackingAnimationPaths[dodgerName + "Standing"], dodgerX, dodgerY, width, height);
-    }
-  }
-}
-
-// Helper function to get dodge animation delay based on attacker, defender and crit
-function getDodgeDelay(attackerName, defenderName, isCrit = false) {
-  // Create a key for the combination of attacker and defender
-  const key = `${attackerName.toLowerCase()}_${defenderName.toLowerCase()}`;
-
-  // Delay map for specific character combinations
-  const delayMap = {
-    // Roy's attacks
-    'roy_fighter': isCrit ? 1850 : 700,
-    'fighter_roy': isCrit ? 900 : 1000,
-
-    // Bor's attacks
-    'bors_fighter': isCrit ? 1425 : 1475,
-    'fighter_bors': isCrit ? 650 : 825,
-
-    // Allen's attacks
-    'allen_fighter': isCrit ? 2250 : 800,
-    'fighter_allen': isCrit ? 775 : 950,
-
-    // Lance's attacks
-    'lance_fighter': isCrit ? 1350 : 850,
-    'fighter_lance': isCrit ? 775 : 1000,
-
-    // Wolt's attacks
-    'wolt_fighter': isCrit? 2750 : 1400,
-    'fighter_wolt': isCrit ? 925 : 1000,
-
-    // Lugh's attacks
-    'lugh_fighter': isCrit? 1850 : 1500,
-    'fighter_lugh': isCrit ? 800 : 900,  
-  };
-
-  const delay = delayMap[key];
-  return delay || 0;
-}
-
-// Helper function to handle hit effects
-function handleHitEffect(now, isEnemyAttacking, isCrit, hitDelay, hitEffectDuration, width, height, selectedCharacter, targetEnemy) {
-  // Get the appropriate hit effect based on whether it's a critical hit
-  const hitEffect = isEnemyAttacking ? 
-    (isCrit ? UIImages.criticalHitEffectLeft : UIImages.regularHitEffectLeft) :
-    (isCrit ? UIImages.criticalHitEffectRight : UIImages.regularHitEffectRight);
-  
-  // Get attacker and defender names/types
-  const attackerKey = isEnemyAttacking ? selectedCharacter.classType.toLowerCase() : selectedCharacter.name.toLowerCase();
-  const defenderKey = isEnemyAttacking ? targetEnemy.name.toLowerCase() : targetEnemy.classType.toLowerCase();
-  const comboKey = `${attackerKey}_${defenderKey}`;
-
-        // Hit effect x positions for specific attacker-defender combinations
-        const hitEffectXPositions = {
-          // Player attacking fighter
-          'roy_fighter': 50,
-          'bors_fighter': 50,
-          'allen_fighter': 50,
-          'lance_fighter': 50,
-          'wolt_fighter': 44,
-          'lugh_fighter': 50,
-          
-          // Fighter attacking players
-          'fighter_roy': 77,
-          'fighter_bors': 72,
-          'fighter_allen': 90,
-          'fighter_lance': 90,
-          'fighter_wolt': 90,
-          'fighter_lugh': 85
-        };
-
-        // Hit effect y positions for specific attacker-defender combinations
-        const hitEffectYPositions = {
-          // Player attacking fighter
-          'roy_fighter': 60,
-          'bors_fighter': 107,
-          'allen_fighter': 80,
-          'lance_fighter': 70,
-          'wolt_fighter': 84,
-          'lugh_fighter': 85,
-          
-          // Fighter attacking players
-          'fighter_roy': 50,
-          'fighter_bors': 33,
-          'fighter_allen': 26,
-          'fighter_lance': 26,
-          'fighter_wolt': 50,
-          'fighter_lugh': 50
-        };
-
-  // Get x and y offsets based on attacker-defender combination
-  const xPos = hitEffectXPositions[comboKey] || 0;  // Character-specific x offset
-  const yPos = hitEffectYPositions[comboKey] || 0;  // Character-specific y offset
-  
-  // If we haven't started the hit effect yet
-  if (!battleAnimationState.hitEffectStarted) {
-    if (hitEffect) {
-      hitEffect.reset();
-      hitEffect.play();
-      battleAnimationState.hitEffectStarted = true;
-      battleAnimationState.whiteFlashFrame = 0; // Initialize white flash counter
-    }
-  }
-
-  // Draw the hit effect
-  if (hitEffect) {
-    const currentHitFrame = hitEffect.getCurrentFrame();
-    // Only draw if we haven't reached the last frame
-    if (currentHitFrame < hitEffect.numFrames() - 1) {
-      // Show white flash for first 3 frames
-      if (battleAnimationState.whiteFlashFrame < 3) {
-        // Draw white rectangle over entire screen
-        fill(255);
-        noStroke();
-        rect(0, 0, width, height);
-        battleAnimationState.whiteFlashFrame++;
-      }
-      else {
-        // If it's a critical hit, use critical hit effect
-        if (isCrit) {
-          if (!isEnemyAttacking) {
-            // Player hitting enemy
-            image(hitEffect, -500, -150, width * 2, height * 2);
-          } 
-          else {
-            // Enemy hitting player
-            image(hitEffect, -350, -150, width * 2, height * 2);
-          }
-        }
-        else {
-          // If it's a regular hit, use regular hit effect
-          image(hitEffect, xPos, yPos, width, height);
-        }
-      }
-    }
-  }
-
-  // Mark as played after duration has passed
-  if (now - battleAnimationState.hitEffectStartTime >= hitDelay + hitEffectDuration) {
-    battleAnimationState.hitEffectPlayed = true;
-    if (hitEffect) {
-      hitEffect.pause();
-    }
-  }
-}
-
-// Helper function to handle hit timing and state
-function handleHitTiming(attackerName, isSecondAttack, currentFrame, isCrit, width, height, selectedCharacter, targetEnemy) {
-  const now = millis();
-  const isEnemyAttacking = attackerName.includes("fighter") || attackerName.includes("brigand");
-  const willHit = isSecondAttack ? 
-    isEnemyAttacking ? battleAnimationState.willEnemySecondHit : battleAnimationState.willPlayerHit :
-    isEnemyAttacking ? battleAnimationState.willEnemyHit : battleAnimationState.willPlayerHit;
-
-  const hitDelay = getHitDelay(attackerName, isCrit);
-  const hitEffectDuration = 500; // Duration to show hit effect in milliseconds
-
-  // Handle Lugh's fire effect separately from hit effect
-  if (!isEnemyAttacking && attackerName === "lugh" && currentFrame > 0 && !battleAnimationState.fireEffectPlayed) {
-    // If this is the first frame we're checking for fire effect
-    if (battleAnimationState.hitEffectStartTime === 0) {
-      battleAnimationState.hitEffectStartTime = now;
-    }
-
-    // Only start fire effect after the delay
-    if (now - battleAnimationState.hitEffectStartTime >= hitDelay) {
-      if (!battleAnimationState.fireEffectStarted) {
-        UIImages.fireHitEffect.reset();
-        UIImages.fireHitEffect.play();
-        battleAnimationState.fireEffectStarted = true;
-      }
-      // Use the same positioning as before
-      const xPos = 50; // Default x position for Lugh attacking fighter
-      const yPos = 85; // Default y position for Lugh attacking fighter
-      image(UIImages.fireHitEffect, xPos-120, yPos, width, height);
-
-      // Mark fire effect as played after duration
-      if (now - battleAnimationState.hitEffectStartTime >= hitDelay + hitEffectDuration) {
-        battleAnimationState.fireEffectPlayed = true;
-      }
-    }
-  }
-
-  // If this is a hit and we haven't finished playing the effect
-  if (willHit && !battleAnimationState.hitEffectPlayed && currentFrame > 0) {
-    // If this is the first frame we're checking for hit effect
-    if (battleAnimationState.hitEffectStartTime === 0) {
-      battleAnimationState.hitEffectStartTime = now;
-    }
-
-    // Only start hit effect after the delay
-    if (now - battleAnimationState.hitEffectStartTime >= hitDelay + 50) {
-      handleHitEffect(now, isEnemyAttacking, isCrit, hitDelay, hitEffectDuration, width, height, selectedCharacter, targetEnemy);
-    }
-  }
-}
-
-// Helper function to get hit delay based on attacker and crit
-function getHitDelay(attackerName, isCrit = false) {
-  // Get base name for delay lookup
-  let baseName = attackerName.toLowerCase();
-  if (baseName.includes('fighter')) {
-    baseName = 'fighter';
-  }
-
-  // Delay map for specific characters
-  const hitDelayMap = {
-    'roy': isCrit ? 1350 : 265,
-    'bors': isCrit ? 1300 : 975,
-    'allen': isCrit ? 2200 : 350,
-    'lance': isCrit ? 1150 : 400,
-    'wolt': isCrit ? 2275 : 800,
-    'lugh': isCrit ? 1800 : 1000,
-    'fighter': isCrit ? 850 : 490
-  };
-  
-  return hitDelayMap[baseName] || 1000;
-}
-
-// Helper function to handle attack animations
-function handleAttackAnimation(attackerName, attackerX, attackerY, width, height, isCrit, isSecondAttack = false, selectedCharacter, targetEnemy) {
-  const attackType = isCrit ? "Critical" : "Attack";
-  const attackAnim = attackingAnimationPaths[attackerName + attackType];
-  const currentFrame = attackAnim.getCurrentFrame();
-  const totalFrames = attackAnim.numFrames();  
-  // Draw the current frame
-  image(attackAnim, attackerX, attackerY, width, height);
-
-  // Handle hit timing and effects
-  handleHitTiming(attackerName, isSecondAttack, currentFrame, isCrit, width, height, selectedCharacter, targetEnemy);
-  
-  // Return animation state for phase transitions
-  return {
-    currentFrame,
-    totalFrames,
-    isComplete: currentFrame === totalFrames - 1
-  };
-}
-
-// Helper function to show standing animations for both characters
-function showStandingAnimations(attackerName, enemyName, positions, dimensions) {
-  image(attackingAnimationPaths[attackerName + "Standing"], 
-    positions.attackerX, positions.attackerY, 
-    dimensions.attackerWidth, dimensions.attackerHeight);
-  image(attackingAnimationPaths[enemyName + "Standing"], 
-    positions.enemyX, positions.enemyY, 
-    dimensions.enemyWidth, dimensions.enemyHeight);
-}
-
-// Handle battle animation sequence
-function handleBattleAnimation(selectedCharacter, targetEnemy) {
-  // Initialize battle animation sequence if not started
-  if (!battleAnimationState.isPlaying) {
-    battleAnimationState.isPlaying = true;
-    battleAnimationState.startTime = millis();
-    battleAnimationState.currentPhase = "prepare";
-    
-    // Reset all dodge animation flags
-    battleAnimationState.playerDodgePlayed = false;
-    battleAnimationState.enemyDodgePlayed = false;
-    battleAnimationState.playerSecondDodgePlayed = false;
-    battleAnimationState.enemySecondDodgePlayed = false;
-    battleAnimationState.dodgeStartTime = 0;
-    battleAnimationState.missTextStartTime = 0;
-    battleAnimationState.critTextStartTime = 0;
-    battleAnimationState.hitEffectStartTime = 0;
-    battleAnimationState.hitEffectPlayed = false;
-    battleAnimationState.hitEffectStarted = false;
-    battleAnimationState.hitEffectFrame = -1;
-    battleAnimationState.whiteFlashFrame = 0;
-    battleAnimationState.fireEffectStarted = false;
-    battleAnimationState.fireEffectPlayed = false;
-    
-    // Determine if player first hit will crit
-    battleAnimationState.willPlayerCrit = random(100) < selectedCharacter.displayedCrit;
-    // Determine if enemy first hit will crit
-    battleAnimationState.willEnemyCrit = random(100) < targetEnemy.displayedCrit;
-
-    // Determine if player first hit will actually hit
-    battleAnimationState.willPlayerHit = random(100) < selectedCharacter.displayedHit;
-
-    // Determine if enemy first hit will actually hit
-    battleAnimationState.willEnemyHit = random(100) < targetEnemy.displayedHit;
-
-    // Determine if characters can double attack
-    battleAnimationState.hasPlayerDouble = selectedCharacter.speed - targetEnemy.speed >= 4;
-    battleAnimationState.hasEnemyDouble = targetEnemy.speed - selectedCharacter.speed >= 4;
-    
-    // Initialize second hit crit chances as null - will be determined if needed
-    battleAnimationState.willPlayerSecondCrit = null;
-    battleAnimationState.willEnemySecondCrit = null;
-
-    // Initialize second hit, hit chances as null - will be determined if needed
-    battleAnimationState.willPlayerSecondHit = null;
-    battleAnimationState.willEnemySecondHit = null;
-
-    battleAnimationState.lastFrame = -1;
-  }
-
-  const now = millis();
-  // Calculate the time since the animation started
-  const timeSinceStart = now - battleAnimationState.startTime;
-
-  // Position and size constants for battle animations
-  const baseAttackerX = width * 0.02;
-  // Adjust position if character is Bors, Roy, or Wolt
-  const attackerX = selectedCharacter.name.toLowerCase() === "bors" ? baseAttackerX + width * 0.08 
-  : selectedCharacter.name.toLowerCase() === "roy" ? baseAttackerX + width * 0.025 
-  : selectedCharacter.name.toLowerCase() === "wolt" ? baseAttackerX + width * 0.025 
-  : selectedCharacter.name.toLowerCase() === "lugh" ? baseAttackerX + width * 0.025 
-  : baseAttackerX;
-
-  const attackerY = height * 0.01 - 50;
-  const enemyX = width * 0.08;
-  const enemyY = height * 0.01 - 50;
-  const attackerWidth = width;
-  const attackerHeight = height * 0.7;
-  const enemyWidth = width;
-  const enemyHeight = height * 0.7;
-
-  // Get character identifiers for animation paths
-  const attackerName = selectedCharacter.name.toLowerCase();
-  const enemyClass = targetEnemy.classType.toLowerCase();
-
-  // Phase 1: Prepare - Show both units in standing position
-  if (battleAnimationState.currentPhase === "prepare") {
-    showStandingAnimations(attackerName, enemyClass, 
-      {attackerX, enemyX, attackerY, enemyY}, 
-      {attackerWidth, attackerHeight, enemyWidth, enemyHeight});
-    
-    // After 500ms, transition to player's attack
-    if (timeSinceStart > 500) {
-      battleAnimationState.currentPhase = "playerAttack";
-      battleAnimationState.startTime = now;
-      battleAnimationState.lastFrame = -1;
-      
-      // Preload player's attack animation
-      const playerAttackType = battleAnimationState.willPlayerCrit ? "Critical" : "Attack";
-      const nextAnim = attackingAnimationPaths[attackerName + playerAttackType];
-      if (nextAnim) {
-        nextAnim.reset();
-        nextAnim.play();
-      }
-    }
-  }
-  
-  // Phase 2: Player Attack - Show player's attack animation
-  else if (battleAnimationState.currentPhase === "playerAttack") {
-    // If player misses, show enemy dodge animation, otherwise show standing
-    if (!battleAnimationState.willPlayerHit) {
-      handleDodgeAnimation(enemyClass, enemyX, enemyY, enemyWidth, enemyHeight, now, selectedCharacter, targetEnemy);
-    } 
-    else {
-      image(attackingAnimationPaths[enemyClass + "Standing"], enemyX, enemyY, enemyWidth, enemyHeight);
-      // Show critical text if this is a critical hit
-      if (battleAnimationState.willPlayerCrit && UIImages.criticalText) {
-        showCritText(false, now, attackerName, enemyClass);
-      }
-    }
-    
-    // Play player's attack animation
-    const animState = handleAttackAnimation(attackerName, attackerX, attackerY, attackerWidth, attackerHeight, battleAnimationState.willPlayerCrit, false, selectedCharacter, targetEnemy);
-    
-    // Detect animation completion
-    if (animState.isComplete) {
-      battleAnimationState.currentPhase = "transitionToEnemy";
-      battleAnimationState.startTime = now;
-      battleAnimationState.lastFrame = -1;
-      battleAnimationState.missTextStartTime = 0;  // Reset miss text timer
-      battleAnimationState.critTextStartTime = 0;  // Reset crit text timer
-      battleAnimationState.dodgeStartTime = 0; // Reset dodge start time for next phase
-    }
-    
-    battleAnimationState.lastFrame = animState.currentFrame;
-  }
-  
-  // Phase 3: Transition to Enemy - Brief pause between attacks
-  else if (battleAnimationState.currentPhase === "transitionToEnemy") {
-    // Show standing animations
-    showStandingAnimations(attackerName, enemyClass, 
-      {attackerX, enemyX, attackerY, enemyY}, 
-      {attackerWidth, attackerHeight, enemyWidth, enemyHeight});
-    
-    // After 100ms, begin enemy's counter attack as long as within range
-    if (timeSinceStart > 100) {
-      // Calculate distance between attacker and target
-      const distance = Math.abs(selectedCharacter.x - targetEnemy.x) + Math.abs(selectedCharacter.y - targetEnemy.y);
-      
-      // If distance is 2 and enemy is not a ranged unit (not Archer or Mage), skip to checkDoubles
-      if (distance === 2 && targetEnemy.classType !== "Archer" && targetEnemy.classType !== "Mage") {
-        battleAnimationState.currentPhase = "checkDoubles";
-        battleAnimationState.startTime = now;
-        battleAnimationState.lastFrame = -1;
-      } 
-      else {
-        // Reset hit effect states before enemy attack
-        battleAnimationState.hitEffectStartTime = 0;
-        battleAnimationState.hitEffectPlayed = false;
-        battleAnimationState.hitEffectStarted = false;
-        
-        // Enemy can counterattack, proceed with enemy attack phase
-        battleAnimationState.currentPhase = "enemyAttack";
-        battleAnimationState.startTime = now;
-        battleAnimationState.lastFrame = -1;
-        
-        // Reset and start enemy attack animation
-        const enemyAttackType = battleAnimationState.willEnemyCrit ? "Critical" : "Attack";
-        const enemyAnim = attackingAnimationPaths[enemyClass + enemyAttackType];
-        enemyAnim.reset();
-        enemyAnim.play();
-      }
-    }
-  }
-  
-  // Phase 4: Enemy Attack - Show enemy's counterattack
-  else if (battleAnimationState.currentPhase === "enemyAttack") {
-    // If enemy misses, show player dodge animation, otherwise show standing
-    if (!battleAnimationState.willEnemyHit) {
-      handleDodgeAnimation(attackerName, attackerX, attackerY, attackerWidth, attackerHeight, now, targetEnemy, selectedCharacter);
-    } 
-    else {
-      image(attackingAnimationPaths[attackerName + "Standing"], attackerX, attackerY, attackerWidth, attackerHeight);
-      // Show critical text if this is a critical hit
-      if (battleAnimationState.willEnemyCrit && UIImages.criticalText) {
-        showCritText(true, now, enemyClass, attackerName);
-      }
-    }
-    
-    // Play enemy's attack animation
-    const animState = handleAttackAnimation(enemyClass, enemyX, enemyY, enemyWidth, enemyHeight, battleAnimationState.willEnemyCrit, false, targetEnemy, selectedCharacter);
-
-    // When animation reaches last frame, transition before it loops
-    if (animState.isComplete) {      
-      battleAnimationState.currentPhase = "checkDoubles";
-      battleAnimationState.startTime = now;
-      battleAnimationState.lastFrame = -1;
-      attackingAnimationPaths[enemyClass + (battleAnimationState.willEnemyCrit ? "Critical" : "Attack")].pause();
-    }
-    
-    battleAnimationState.lastFrame = animState.currentFrame;
-  }
-  
-  // Phase 5: Check for Double Attacks
-  else if (battleAnimationState.currentPhase === "checkDoubles") {
-    // Show standing animations
-    showStandingAnimations(attackerName, enemyClass, 
-      {attackerX, enemyX, attackerY, enemyY}, 
-      {attackerWidth, attackerHeight, enemyWidth, enemyHeight});
-      
-    battleAnimationState.dodgeStartTime = 0; // Reset dodge start time for next phase
-    battleAnimationState.hitEffectStartTime = 0; // Reset hit effect start time
-    battleAnimationState.hitEffectPlayed = false; // Reset hit effect played flag
-    battleAnimationState.hitEffectStarted = false; // Reset hit effect started flag
-    battleAnimationState.hitEffectFrame = -1; // Reset hit effect frame tracking
-
-    
-    // After 100ms, determine if there are double attacks
-    if (timeSinceStart > 100) {
-      // Check for double attacks based on speed
-      const playerSpeedDiff = selectedCharacter.speed - targetEnemy.speed;
-      const enemySpeedDiff = targetEnemy.speed - selectedCharacter.speed;
-      
-      if (playerSpeedDiff >= 4) {
-        // Player is fast enough for a second attack
-        battleAnimationState.currentPhase = "playerDouble";
-        // Roll for hit and crit on second hit
-        battleAnimationState.willPlayerSecondHit = random(100) < selectedCharacter.displayedHit;
-        battleAnimationState.willPlayerSecondCrit = random(100) < selectedCharacter.displayedCrit;
-        const playerAttackType = battleAnimationState.willPlayerSecondCrit ? "Critical" : "Attack";
-        const nextAnim = attackingAnimationPaths[attackerName + playerAttackType];
-        if (nextAnim) {
-          nextAnim.reset();
-          nextAnim.play();
-        }
-      } 
-      else if (enemySpeedDiff >= 4) {
-        // Enemy is fast enough for a second attack
-        battleAnimationState.currentPhase = "enemyDouble";
-        // Roll for hit and crit on second hit
-        battleAnimationState.willEnemySecondHit = random(100) < targetEnemy.displayedHit;
-        battleAnimationState.willEnemySecondCrit = random(100) < targetEnemy.displayedCrit;
-        const enemyAttackType = battleAnimationState.willEnemySecondCrit ? "Critical" : "Attack";
-        const nextAnim = attackingAnimationPaths[enemyClass + enemyAttackType];
-        if (nextAnim) {
-          nextAnim.reset();
-          nextAnim.play();
-        }
-        battleAnimationState.missTextStartTime = 0;  // Reset miss text timer
-        battleAnimationState.dodgeStartTime = 0; // Reset dodge start time for next phase
-        battleAnimationState.critTextStartTime = 0; // Reset crit text timer
-      } 
-      else {
-        // No double attacks, proceed to finish
-        battleAnimationState.currentPhase = "conclude";
-      }
-      battleAnimationState.startTime = now;
-      battleAnimationState.lastFrame = -1;
-    }
-  }
-  
-  // Phase 6a: Player Double Attack
-  else if (battleAnimationState.currentPhase === "playerDouble") {
-    // If player misses second hit, show enemy dodge animation, otherwise show standing
-    if (!battleAnimationState.willPlayerSecondHit) {
-      handleDodgeAnimation(enemyClass, enemyX, enemyY, enemyWidth, enemyHeight, now, selectedCharacter, targetEnemy, true);
-    } 
-    else {
-      image(attackingAnimationPaths[enemyClass + "Standing"], enemyX, enemyY, enemyWidth, enemyHeight);
-      // Show critical text if this is a critical hit
-      if (battleAnimationState.willPlayerSecondCrit && UIImages.criticalText) {
-        showCritText(false, now, attackerName, enemyClass);
-      }
-    }
-    
-    // Play player's second attack
-    const animState = handleAttackAnimation(attackerName, attackerX, attackerY, attackerWidth, attackerHeight, battleAnimationState.willPlayerSecondCrit, true, selectedCharacter, targetEnemy);
-
-    // When animation completes, move to conclusion
-    if (animState.isComplete) {
-      battleAnimationState.currentPhase = "conclude";
-      battleAnimationState.startTime = now;
-      battleAnimationState.lastFrame = -1;
-    }
-    
-    battleAnimationState.lastFrame = animState.currentFrame;
-  }
-  
-  // Phase 6b: Enemy Double Attack
-  else if (battleAnimationState.currentPhase === "enemyDouble") {
-    // Show dodge animation for player if they dodge, otherwise show standing
-    if (!battleAnimationState.willEnemySecondHit) {
-      handleDodgeAnimation(attackerName, attackerX, attackerY, attackerWidth, attackerHeight, now, targetEnemy, selectedCharacter, true);
-    } 
-    else {
-      image(attackingAnimationPaths[attackerName + "Standing"], attackerX, attackerY, attackerWidth, attackerHeight);
-      // Show critical text if this is a critical hit
-      if (battleAnimationState.willEnemySecondCrit && UIImages.criticalText) {
-        showCritText(true, now, enemyClass, attackerName);
-      }
-    }
-    
-    // Play enemy's second attack
-    const animState = handleAttackAnimation(enemyClass, enemyX, enemyY, enemyWidth, enemyHeight, battleAnimationState.willEnemySecondCrit, true, targetEnemy, selectedCharacter);
-
-    // When animation reaches last frame, transition before it loops
-    if (animState.isComplete) {
-      battleAnimationState.currentPhase = "conclude";
-      battleAnimationState.startTime = now;
-      battleAnimationState.lastFrame = -1;
-      attackingAnimationPaths[enemyClass + (battleAnimationState.willEnemySecondCrit ? "Critical" : "Attack")].pause();
-    }
-    
-    battleAnimationState.lastFrame = animState.currentFrame;
-  }
-  
-  // Phase 7: Conclude - Show final standing poses and reset up
-  else if (battleAnimationState.currentPhase === "conclude") {
-    // Show standing animations
-    showStandingAnimations(attackerName, enemyClass, 
-      {attackerX, enemyX, attackerY, enemyY}, 
-      {attackerWidth, attackerHeight, enemyWidth, enemyHeight});
-    
-    if (timeSinceStart > 1000) {
-      // Reset all battle states
-      battleAnimationState.isPlaying = false;
-      battleAnimationState.hitEffectStartTime = 0;
-      battleAnimationState.hitEffectPlayed = false;
-      battleAnimationState.hitEffectStarted = false;
-      battleAnimationState.hitEffectFrame = -1;
-      battleAnimationState.lastFrame = -1;
-      selectedCharacter.attackInterfaceConfirmed = false;
-      selectedCharacter.action = null;
-      selectedCharacter.isSelected = false;
-      selectedCharacter.canMove = false;
-      selectedCharacter.isGreyedOut = true;
-      enemySelectedForAttack = false;
-      
-      // Restore music volume and character animation
-      sounds.battleMusic.amp(0.5);
-      animationManager(selectedCharacter, "standing");
-    }
-  }
-}
-
-// Draw battle interface with background and attack interface image
-function drawBattleInterface(selectedCharacter, targetEnemy) {
-  // Lower the music volume
-  sounds.battleMusic.amp(0.3);
-
-  // Draw the battle background first
-  image(UIImages.battleBackground, 0, 0, width, height);
-  
-  // Draw the attack interface image centered on screen
-  const interfaceWidth = width * 1.05;
-  const interfaceHeight = height;
-  const x = (width - interfaceWidth) / 2;
-  const y = (height - interfaceHeight) / 2;
-  image(UIImages.attackInterface, x, y, interfaceWidth, interfaceHeight);
-
-  // Setup text style for character names at top
-  textSize(50);
-  textFont("DMT Shuei MGo Std Bold");
-  textAlign(CENTER, CENTER);
-  stroke(0);
-  strokeWeight(7);
-  fill(255);
-
-  // Draw player character name at top left
-  text(selectedCharacter.name, width * 0.13, height * 0.11);
-
-  // Draw enemy character class at top right
-  text(targetEnemy.classType, width * 0.88, height * 0.11);
-
-  // Draw weapon text and images
-  textSize(35);
-  strokeWeight(4);
-
-  // Get weapon text and image based on character
-  let playerWeaponText, playerWeaponImage;
-  let enemyWeaponText, enemyWeaponImage;
-
-  // Set player weapon text and image
-  if (selectedCharacter.name === "Roy") {
-    playerWeaponText = "Steel Sword";
-    playerWeaponImage = UIImages.sword;
-  }
-  else if (selectedCharacter.name === "Wolt") {
-    playerWeaponText = "Steel Bow";
-    playerWeaponImage = UIImages.bow;
-  }
-  else if (selectedCharacter.name === "Bors") {
-    playerWeaponText = "Steel Lance";
-    playerWeaponImage = UIImages.lance;
-  }
-  else if (selectedCharacter.name === "Lance" || selectedCharacter.name === "Allen") {
-    playerWeaponText = "Steel Spear";
-    playerWeaponImage = UIImages.spear;
-  }
-  else if (selectedCharacter.name === "Lugh") {
-    playerWeaponText = "Fire Tome";
-    playerWeaponImage = UIImages.tome;
-  }
-
-  // Set enemy weapon text and image
-  if (targetEnemy.classType === "Fighter" || targetEnemy.classType === "Brigand") {
-    enemyWeaponText = "Iron Axe";
-    enemyWeaponImage = UIImages.axe;
-  }
-
-  // Draw player weapon text and image
-  text(playerWeaponText, width * 0.32, height * 0.8);
-  if (playerWeaponImage) {
-    const weaponSize = 45;
-    image(playerWeaponImage, width * 0.45 - weaponSize/2, height * 0.76, weaponSize, weaponSize);
-  }
-
-  // Draw enemy weapon text and image
-  text(enemyWeaponText, width * 0.63, height * 0.8);
-  if (enemyWeaponImage) {
-    const weaponSize = 45;
-    image(enemyWeaponImage, width * 0.76 - weaponSize/2, height * 0.76, weaponSize, weaponSize);
-  }
-
-  // Calculate positions for bottom stats
-  const playerStatsX = width * 0.1;
-  const enemyStatsX = width * 0.92;
-  const baseStatsY = height * 0.745;
-
-  // Setup text style for stats labels
-  textSize(25);
-  textFont("DMT Shuei MGo Std Bold");
-  textAlign(LEFT, BOTTOM);
-  stroke(0);
-  strokeWeight(3);  // Reduced from 5 to 3 to make text cleaner
-  fill(244, 235, 215);
-
-  // Draw DMG, HIT, and CRIT text for player side
-  text("DMG", playerStatsX - 85, baseStatsY);
-  text("HIT", playerStatsX - 85, baseStatsY + 36);
-  text("CRIT", playerStatsX - 85, baseStatsY + 73);
-
-  // Draw DMG, HIT, and CRIT text for enemy side
-  text("DMG", enemyStatsX - 85, baseStatsY);
-  text("HIT", enemyStatsX - 85, baseStatsY + 36);
-  text("CRIT", enemyStatsX - 85, baseStatsY + 73);
-
-  // Calculate if it's a ranged attack
-  const distance = Math.abs(selectedCharacter.x - targetEnemy.x) + Math.abs(selectedCharacter.y - targetEnemy.y);
-  const isRangedAttack = distance === 2;
-
-  // Calculate speed differences for double attacks
-  const playerSpeedDiff = selectedCharacter.speed - targetEnemy.speed;
-  const enemySpeedDiff = targetEnemy.speed - selectedCharacter.speed;
-
-  // Calculate attacking values
-  selectedCharacter.attack(targetEnemy);
-  targetEnemy.attack(selectedCharacter);
-
-  // Double damage if speed difference is 4 or more
-  if (playerSpeedDiff >= 4) {
-    selectedCharacter.displayedDamage *= 2;
-  }
-  if (enemySpeedDiff >= 4) {
-    targetEnemy.displayedDamage *= 2;
-  }
-
-  // Draw values
-  fill(255);
-  textAlign(RIGHT, BOTTOM);
-
-  // Display player values
-  text(selectedCharacter.displayedDamage, playerStatsX + 50, baseStatsY);
-  text(Math.floor(selectedCharacter.displayedHit) + "%", playerStatsX + 50, baseStatsY + 36);
-  text(Math.floor(selectedCharacter.displayedCrit) + "%", playerStatsX + 50, baseStatsY + 72);
-
-  // Display enemy values if it's a ranged attack set to -
-  if (isRangedAttack) {
-    text("-", enemyStatsX + 50, baseStatsY);
-    text("-", enemyStatsX + 50, baseStatsY + 35);
-    text("-", enemyStatsX + 50, baseStatsY + 70);
-  } 
-  else {
-    text(targetEnemy.displayedDamage, enemyStatsX + 50, baseStatsY);
-    text(Math.floor(targetEnemy.displayedHit) + "%", enemyStatsX + 50, baseStatsY + 36);
-    text(Math.floor(targetEnemy.displayedCrit) + "%", enemyStatsX + 50, baseStatsY + 72);
-  }
-}
-
 // Main game loop for rendering everything on the screen
 function draw() {
   // Only run if the game state is gameplay
@@ -3192,13 +3366,12 @@ function draw() {
     // Display battle info preview if in attack mode and enemy is selected
     if (selectedCharacter && selectedCharacter.action === "attack" && enemySelectedForAttack) {
       if (selectedCharacter.attackInterfaceConfirmed) { 
-
-        // Draw the battle interface
-        drawBattleInterface(selectedCharacter, targetEnemy);
+        // Draw the battle interface using battleManager
+        battleManager.drawBattleInterface(selectedCharacter, targetEnemy);
 
         // Only proceed if we have both characters
         if (selectedCharacter && targetEnemy) {
-          handleBattleAnimation(selectedCharacter, targetEnemy);
+          battleManager.handleBattleAnimation(selectedCharacter, targetEnemy);
         }
       } 
       else {
