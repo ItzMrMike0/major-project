@@ -172,6 +172,15 @@ class Character {
     this.animation = null; // Character visual sprite
     this.reachableTiles = []; // Character reachable movement tiles
     this.attackableTiles = []; // Characters attackable movement tiles
+
+    this.baseDefense = defense;
+    this.baseResistance = resistance;
+    this.baseDexterity = dexterity;
+    this.tileBuffs = {
+      defenseBonus: 0,
+      resistanceBonus: 0,
+      dexterityBonus: 0
+    };
   }
 
   // Helper function to create new characters based on provided data in character JSON
@@ -514,7 +523,7 @@ class Character {
 
   // Move the character to a new location gradually
   moveTo(newX, newY, isEnemy = false) {
-    // Save the previous position
+    // Store previous position
     this.previousX = this.x;
     this.previousY = this.y;
 
@@ -540,6 +549,9 @@ class Character {
         this.y = newY;
         this.renderX = newX;
         this.renderY = newY;
+
+        // Update tile buffs for new position
+        this.updateTileBuffs();
 
         // Different end behavior for enemy vs player
         if (isEnemy) {
@@ -930,6 +942,12 @@ class Character {
 
   // Attack logic for the character
   attack(opponent) {
+    // Both attacker and defender should update their tile buffs before combat
+    this.updateTileBuffs();
+    if (opponent) {
+      opponent.updateTileBuffs();
+    }
+
     // Attack formula - use magic for mages
     let attack;
     if (this.classType === "Mage") {
@@ -942,12 +960,12 @@ class Character {
     // Protection and resistance formula
     let protection, resistance;
     if (opponent) {
-      protection = opponent.defense;
-      resistance = opponent.resistance;
+      protection = opponent.baseDefense + opponent.tileBuffs.defenseBonus;
+      resistance = opponent.baseResistance + opponent.tileBuffs.resistanceBonus;
     } 
     else {
-      protection = this.defense;
-      resistance = this.resistance;
+      protection = this.baseDefense + this.tileBuffs.defenseBonus;
+      resistance = this.baseResistance + this.tileBuffs.resistanceBonus;
     }
 
     // Damage Per Attack formula - use resistance for mage
@@ -963,26 +981,28 @@ class Character {
 
     // Hit Chance Formula
     let hit;
+    const buffedDexterity = this.baseDexterity + this.tileBuffs.dexterityBonus;
     if (this.classType === "Mage") {
-      hit = this.hit + (this.dexterity + this.luck)/2;
+      hit = this.hit + (buffedDexterity + this.luck)/2;
     } 
     else {
-      hit = this.hit + this.dexterity;
+      hit = this.hit + buffedDexterity;
     }
 
     // Avoid Formula
     let avoid;
     if (opponent) {
       const opponentSpeed = opponent.speed - (6 - opponent.strength/5);
+      const opponentDex = opponent.baseDexterity + opponent.tileBuffs.dexterityBonus;
       if (opponent.classType === "Mage") {
         avoid = (opponent.speed + opponent.luck)/2;
-      } 
-      else {
+    } 
+    else {
         avoid = opponentSpeed;
       }
     } 
-    // If mage use different avoid formula
     else {
+      // If mage use different avoid formula
       if (this.classType === "Mage") {
         avoid = (this.speed + this.luck)/2;
       } 
@@ -995,7 +1015,7 @@ class Character {
     this.displayedHit = Math.max(0, hit - avoid);
 
     // Crit Chance Formula
-    const crit = this.dexterity + this.luck;
+    const crit = buffedDexterity + this.luck;
 
     // Crit Avoidance Formula
     let critAvoid;
@@ -1011,6 +1031,45 @@ class Character {
 
     // Critical Damage Formula
     const critDamage = this.displayedDamage * 3;
+  }
+
+  // Update tile buffs based on current tile
+  updateTileBuffs() {
+    // Reset buffs first
+    const oldDefBonus = this.tileBuffs.defenseBonus;
+    const oldResBonus = this.tileBuffs.resistanceBonus;
+    const oldDexBonus = this.tileBuffs.dexterityBonus;
+    
+    this.tileBuffs.defenseBonus = 0;
+    this.tileBuffs.resistanceBonus = 0;
+    this.tileBuffs.dexterityBonus = 0;
+
+    // Get current tile type
+    const currentTile = tiles[this.y][this.x].type;
+
+    // Apply stat changes based on tile
+     // House tile
+    if (currentTile === 'H') { 
+      // Increase defense and resistance by 1
+      this.tileBuffs.defenseBonus = 1;
+      this.tileBuffs.resistanceBonus = 1;
+    } 
+    // Forest/tree tile
+    else if (currentTile === 'T') { 
+      // Increase dexterity by 30% of base dexterity
+      this.tileBuffs.dexterityBonus = Math.floor(this.baseDexterity * 0.3);
+    } 
+    // Stronghold tile
+    else if (currentTile === '5') {  
+      // Increase defense and resistance by 2
+      this.tileBuffs.defenseBonus = 2;
+      this.tileBuffs.resistanceBonus = 2;
+    }
+
+    // Update stats with new buffs
+    this.defense = this.baseDefense - oldDefBonus + this.tileBuffs.defenseBonus;
+    this.resistance = this.baseResistance - oldResBonus + this.tileBuffs.resistanceBonus;
+    this.dexterity = this.baseDexterity - oldDexBonus + this.tileBuffs.dexterityBonus;
   }
 }
 
