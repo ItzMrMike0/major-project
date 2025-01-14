@@ -15,7 +15,7 @@
       "defense": 6,
       "resistance": 6,
       "might": 5,
-      "hit": 90,
+      "hit": 85,
       "isSelected": false,
       "isEnemy": false
     },
@@ -112,7 +112,7 @@
       "defense": 1,
       "resistance": 7,
       "might": 5,
-      "hit": 90,
+      "hit": 85,
       "isSelected": false,
       "isEnemy": false
     },

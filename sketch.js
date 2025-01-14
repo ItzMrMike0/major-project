@@ -143,7 +143,8 @@ class Character {
     this.x = x; // X position on the tile grid
     this.y = y; // Y position on the tile grid
     this.level = level; // Character's level
-    this.hp = hp; // HP stat (Health points)
+    this.maxHP = hp; // Maximum HP stat
+    this.currentHP = hp; // Current HP stat (Start at the max HP)
     this.strength = strength; // Strength stat (Attack for physical attacks)
     this.magic = magic; // Magic stat (Attack for magical attacks)
     this.dexterity = dexterity; // Dexterity stat (Affects hit chance, critical hit chance, and evasion)
@@ -996,8 +997,8 @@ class Character {
       const opponentDex = opponent.baseDexterity + opponent.tileBuffs.dexterityBonus;
       if (opponent.classType === "Mage") {
         avoid = (opponent.speed + opponent.luck)/2;
-    } 
-    else {
+      } 
+      else {
         avoid = opponentSpeed;
       }
     } 
@@ -1048,7 +1049,7 @@ class Character {
     const currentTile = tiles[this.y][this.x].type;
 
     // Apply stat changes based on tile
-     // House tile
+    // House tile
     if (currentTile === 'H') { 
       // Increase defense and resistance by 1
       this.tileBuffs.defenseBonus = 1;
@@ -1057,7 +1058,7 @@ class Character {
     // Forest/tree tile
     else if (currentTile === 'T') { 
       // Increase dexterity by 30% of base dexterity
-      this.tileBuffs.dexterityBonus = Math.floor(this.baseDexterity * 0.3);
+      this.tileBuffs.dexterityBonus = Math.floor(this.baseDexterity * 0.8);
     } 
     // Stronghold tile
     else if (currentTile === '5') {  
@@ -1071,6 +1072,27 @@ class Character {
     this.resistance = this.baseResistance - oldResBonus + this.tileBuffs.resistanceBonus;
     this.dexterity = this.baseDexterity - oldDexBonus + this.tileBuffs.dexterityBonus;
   }
+
+  // // HP Management Methods
+  // setCurrentHP(value) {
+  //   this.currentHP = Math.max(0, Math.min(value, this.maxHP));
+  // }
+
+  // takeDamage(amount) {
+  //   this.setCurrentHP(this.currentHP - amount);
+  // }
+
+  // heal(amount) {
+  //   this.setCurrentHP(this.currentHP + amount);
+  // }
+
+  // isDead() {
+  //   return this.currentHP <= 0;
+  // }
+
+  // getCurrentHPRatio() {
+  //   return this.currentHP / this.maxHP;
+  // }
 }
 
 // EnemyCharacter Class: Extends Character with enemy-specific behavior
@@ -1498,8 +1520,8 @@ class UIManager {
     // Draw current HP number for player and enemy
     textSize(40);
     fill(255);
-    text(selectedCharacter.hp, 90, yPosition + scaledHeight + 15);
-    text(targetEnemy.hp, width/2 + 90, yPosition + scaledHeight + 15);
+    text(selectedCharacter.currentHP, 90, yPosition + scaledHeight + 15);
+    text(targetEnemy.currentHP, width/2 + 90, yPosition + scaledHeight + 15);
 
     // HP bar constants
     const barWidth = 300;
@@ -1509,7 +1531,7 @@ class UIManager {
     // Draw player HP bar
     const playerBarX = 150;
     const playerBarY = yPosition + scaledHeight + 23;
-    const playerHPRatio = selectedCharacter.hp / selectedCharacter.hp;
+    const playerHPRatio = selectedCharacter.currentHP / selectedCharacter.maxHP;
 
     // Draw bar fill - top half (player)
     noStroke();
@@ -1529,7 +1551,7 @@ class UIManager {
     // Draw enemy HP bar
     const enemyBarX = width/2 + 150;
     const enemyBarY = yPosition + scaledHeight + 23;
-    const enemyHPRatio = targetEnemy.hp / targetEnemy.hp;
+    const enemyHPRatio = targetEnemy.currentHP / targetEnemy.maxHP;
 
     // Draw bar fill - top half (enemy)
     noStroke();
@@ -1688,14 +1710,14 @@ class UIManager {
       stroke(255); 
       strokeWeight(1); 
       fill(0); 
-      text(character.hp + "/" + character.hp, hpFractionX, hpY);
+      text(character.currentHP + "/" + character.maxHP, hpFractionX, hpY);
 
       // Draw HP bar
       const barWidth = 220;
       const barHeight = 20;
       const barX = hpX - 30; 
       const barY = hpY + 35;
-      const hpRatio = character.hp / character.hp;
+      const hpRatio = character.currentHP / character.maxHP;
       const cornerRadius = 10;
 
       // Draw bar fill - top half
@@ -1830,10 +1852,68 @@ class UIManager {
   
     // Draw enemy character class at top right
     text(targetEnemy.classType, width * 0.88, height * 0.11);
-  
-    // Draw weapon text and images
+
+    // Draw HP bars at bottom of screen
+    const barWidth = 10; // Width of HP Bar
+    const barHeight = 18; //  Height of HP bar
+    const barSpacing = 1;  // Space between rectangles
+    const barY = height * 0.92; // Y position
+
+    // Draw "HP" text for both bars
+    textSize(40);
+    textFont("DMT Shuei MGo Std Bold");
+    textAlign(LEFT, TOP);
+    stroke(0);
+    strokeWeight(5);
+    fill(244, 235, 215);
+
+    // Player side HP text
+    text("HP", width * 0.02, barY - 10);
+
+    // Enemy side HP text
+    text("HP", width * 0.54, barY - 10);
+
+    // Draw player HP bar (left side)
+    const playerBarStartX = width * 0.08;
+    // Draw empty/background bars first
+    for (let i = 0; i < selectedCharacter.maxHP; i++) {
+      stroke(90, 0, 0);
+      strokeWeight(3);
+      fill(100, 0, 0);
+      rect(playerBarStartX + i * (barWidth + barSpacing), barY, barWidth, barHeight);
+    }
+    // Draw filled bars up to currentHP
+    for (let i = 0; i < selectedCharacter.currentHP; i++) {
+      stroke(0, 90, 0);
+      strokeWeight(3);
+      fill(156, 255, 0);
+      rect(playerBarStartX + i * (barWidth + barSpacing), barY, barWidth, barHeight);
+    }
+
+    // Draw enemy HP bar (right side)
+    const enemyBarStartX = width * 0.60;
+    // Draw empty/background bars first
+    for (let i = 0; i < targetEnemy.maxHP; i++) {
+      stroke(90, 0, 0);
+      strokeWeight(3);
+      fill(100, 0, 0);
+      rect(enemyBarStartX + i * (barWidth + barSpacing), barY, barWidth, barHeight);
+    }
+    // Draw filled bars up to currentHP
+    for (let i = 0; i < targetEnemy.currentHP; i++) {
+      stroke(0, 90, 0);
+      strokeWeight(3);
+      fill(156, 255, 0);
+      rect(enemyBarStartX + i * (barWidth + barSpacing), barY, barWidth, barHeight);
+    }
+
+    // Reset text style for weapon names
+    textAlign(CENTER, CENTER);
+    textFont("DMT Shuei MGo Std Bold");
     textSize(35);
+    stroke(0);
     strokeWeight(4);
+    fill(255);
   
     // Get weapon text and image based on character
     let playerWeaponText, playerWeaponImage;
@@ -2256,7 +2336,7 @@ class BattleManager {
     // Map of hit delays for each character, with different timings for critical hits
     const hitDelayMap = {
       'roy': isCrit ? 1350 : 265, // Roy's attack timing
-      'bors': isCrit ? 1300 : 925,  // Bors's attack timing
+      'bors': isCrit ? 1300 : 800,  // Bors's attack timing
       'allen': isCrit ? 2200 : 350, // Allen's attack timing
       'lance': isCrit ? 1150 : 400, // Lance's attack timing
       'wolt': isCrit ? 2275 : 800,  // Wolt's attack timing
