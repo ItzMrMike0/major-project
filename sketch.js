@@ -1743,6 +1743,149 @@ class UIManager {
       noSmooth();
     }
   }
+
+  drawBattleInterface(selectedCharacter, targetEnemy) {
+    // Lower the music volume
+    sounds.battleMusic.amp(0.3);
+  
+    // Draw the battle background first
+    image(UIImages.battleBackground, 0, 0, width, height);
+    
+    // Draw the attack interface image centered on screen
+    const interfaceWidth = width * 1.05;
+    const interfaceHeight = height;
+    const x = (width - interfaceWidth) / 2;
+    const y = (height - interfaceHeight) / 2;
+    image(UIImages.attackInterface, x, y, interfaceWidth, interfaceHeight);
+  
+    // Setup text style for character names at top
+    textSize(50);
+    textFont("DMT Shuei MGo Std Bold");
+    textAlign(CENTER, CENTER);
+    stroke(0);
+    strokeWeight(7);
+    fill(255);
+  
+    // Draw player character name at top left
+    text(selectedCharacter.name, width * 0.13, height * 0.11);
+  
+    // Draw enemy character class at top right
+    text(targetEnemy.classType, width * 0.88, height * 0.11);
+  
+    // Draw weapon text and images
+    textSize(35);
+    strokeWeight(4);
+  
+    // Get weapon text and image based on character
+    let playerWeaponText, playerWeaponImage;
+    let enemyWeaponText, enemyWeaponImage;
+  
+    // Set player weapon text and image
+    if (selectedCharacter.name === "Roy") {
+      playerWeaponText = "Steel Sword";
+      playerWeaponImage = UIImages.sword;
+    }
+    else if (selectedCharacter.name === "Wolt") {
+      playerWeaponText = "Steel Bow";
+      playerWeaponImage = UIImages.bow;
+    }
+    else if (selectedCharacter.name === "Bors") {
+      playerWeaponText = "Steel Lance";
+      playerWeaponImage = UIImages.lance;
+    }
+    else if (selectedCharacter.name === "Lance" || selectedCharacter.name === "Allen") {
+      playerWeaponText = "Steel Spear";
+      playerWeaponImage = UIImages.spear;
+    }
+    else if (selectedCharacter.name === "Lugh") {
+      playerWeaponText = "Fire Tome";
+      playerWeaponImage = UIImages.fireTome;
+    }
+  
+    // Set enemy weapon text and image
+    if (targetEnemy.classType === "Fighter" || targetEnemy.classType === "Brigand") {
+      enemyWeaponText = "Iron Axe";
+      enemyWeaponImage = UIImages.axe;
+    }
+  
+    // Draw player weapon text and image
+    text(playerWeaponText, width * 0.32, height * 0.8);
+    if (playerWeaponImage) {
+      const weaponSize = 45;
+      image(playerWeaponImage, width * 0.45 - weaponSize/2, height * 0.76, weaponSize, weaponSize);
+    }
+  
+    // Draw enemy weapon text and image
+    text(enemyWeaponText, width * 0.63, height * 0.8);
+    if (enemyWeaponImage) {
+      const weaponSize = 45;
+      image(enemyWeaponImage, width * 0.76 - weaponSize/2, height * 0.76, weaponSize, weaponSize);
+    }
+  
+    // Calculate positions for bottom stats
+    const playerStatsX = width * 0.1;
+    const enemyStatsX = width * 0.92;
+    const baseStatsY = height * 0.745;
+  
+    // Setup text style for stats labels
+    textSize(25);
+    textFont("DMT Shuei MGo Std Bold");
+    textAlign(LEFT, BOTTOM);
+    stroke(0);
+    strokeWeight(3);  // Reduced from 5 to 3 to make text cleaner
+    fill(244, 235, 215);
+  
+    // Draw DMG, HIT, and CRIT text for player side
+    text("DMG", playerStatsX - 85, baseStatsY);
+    text("HIT", playerStatsX - 85, baseStatsY + 36);
+    text("CRIT", playerStatsX - 85, baseStatsY + 73);
+  
+    // Draw DMG, HIT, and CRIT text for enemy 
+    text("DMG", enemyStatsX - 85, baseStatsY);
+    text("HIT", enemyStatsX - 85, baseStatsY + 36);
+    text("CRIT", enemyStatsX - 85, baseStatsY + 73);
+  
+    // Calculate if it's a ranged attack
+    const distance = Math.abs(selectedCharacter.x - targetEnemy.x) + Math.abs(selectedCharacter.y - targetEnemy.y);
+    const isRangedAttack = distance === 2;
+  
+    // Calculate speed differences for double attacks
+    const playerSpeedDiff = selectedCharacter.speed - targetEnemy.speed;
+    const enemySpeedDiff = targetEnemy.speed - selectedCharacter.speed;
+  
+    // Calculate attacking values
+    selectedCharacter.attack(targetEnemy);
+    targetEnemy.attack(selectedCharacter);
+  
+    // Double damage if speed difference is 4 or more
+    if (playerSpeedDiff >= 4) {
+      selectedCharacter.displayedDamage *= 2;
+    }
+    if (enemySpeedDiff >= 4) {
+      targetEnemy.displayedDamage *= 2;
+    }
+  
+    // Draw values
+    fill(255);
+    textAlign(RIGHT, BOTTOM);
+  
+    // Display player values
+    text(selectedCharacter.displayedDamage, playerStatsX + 50, baseStatsY);
+    text(Math.floor(selectedCharacter.displayedHit) + "%", playerStatsX + 50, baseStatsY + 36);
+    text(Math.floor(selectedCharacter.displayedCrit) + "%", playerStatsX + 50, baseStatsY + 72);
+  
+    // Display enemy values if it's a ranged attack set to -
+    if (isRangedAttack) {
+      text("-", enemyStatsX + 50, baseStatsY);
+      text("-", enemyStatsX + 50, baseStatsY + 35);
+      text("-", enemyStatsX + 50, baseStatsY + 70);
+    } 
+    else {
+      text(targetEnemy.displayedDamage, enemyStatsX + 50, baseStatsY);
+      text(Math.floor(targetEnemy.displayedHit) + "%", enemyStatsX + 50, baseStatsY + 36);
+      text(Math.floor(targetEnemy.displayedCrit) + "%", enemyStatsX + 50, baseStatsY + 72);
+    }
+  }
 }
 
 // BattleManager class: Handles all battle animations and effects
@@ -1819,11 +1962,22 @@ class BattleManager {
     // Map of delay timings for each possible attacker-defender combination
     const critDelayMap = {
       'roy_fighter': 1850,  // Roy attacking Fighter
+      'roy_brigand': 1850,  // Roy attacking Brigand 
+
       'bors_fighter': 1425, // Bors attacking Fighter
+      'bors_brigand': 1425, // Bors attacking Brigand
+
       'allen_fighter': 2250,  // Allen attacking Fighter
+      'allen_brigand': 2250,  // Allen attacking Brigand
+
       'lance_fighter': 1350,  // Lance attacking Fighter
+      'lance_brigand': 1350,  // Lance attacking Brigand
+
       'wolt_fighter': 2750, // Wolt attacking Fighter
+      'wolt_brigand': 2750, // Wolt attacking Brigand 
+      
       'lugh_fighter': 2100, // Lugh attacking Fighter
+      'lugh_brigand': 2100, // Lugh attacking Brigand
       
       'fighter_roy': 900, // Fighter attacking Roy
       'fighter_bors': 650,  // Fighter attacking Bors
@@ -1871,23 +2025,37 @@ class BattleManager {
     // Map of delay timings for each attacker-defender combination
     // Different delays for critical hits vs normal attacks
     const dodgeDelayMap = {
-      'roy_fighter': isCrit ? 1850 : 700,     // Roy attacking Fighter
-      'fighter_roy': isCrit ? 900 : 1000,     // Fighter attacking Roy
+      'roy_fighter': isCrit ? 1850 : 700, // Roy attacking Fighter
+      'roy_brigand': isCrit ? 1900 : 700, // Roy attacking Brigand
 
-      'bors_fighter': isCrit ? 1425 : 1475,   // Bors attacking Fighter
-      'fighter_bors': isCrit ? 650 : 825,     // Fighter attacking Bors
+      'bors_fighter': isCrit ? 1425 : 1475, // Bors attacking Fighter
+      'bors_brigand': isCrit ? 1425 : 1425, // Bors attacking Brigand 
 
-      'allen_fighter': isCrit ? 2250 : 800,   // Allen attacking Fighter
-      'fighter_allen': isCrit ? 775 : 950,    // Fighter attacking Allen
+      'allen_fighter': isCrit ? 2250 : 800, // Allen attacking Fighter
+      'allen_brigand': isCrit ? 2390 : 910, // Allen attacking Brigand
 
-      'lance_fighter': isCrit ? 1350 : 850,   // Lance attacking Fighter
-      'fighter_lance': isCrit ? 775 : 1000,   // Fighter attacking Lance
+      'lance_fighter': isCrit ? 1350 : 850, // Lance attacking Fighter
+      'lance_brigand': isCrit ? 1460 : 875, // Lance attacking Brigand
 
-      'wolt_fighter': isCrit? 2750 : 1400,    // Wolt attacking Fighter
-      'fighter_wolt': isCrit ? 925 : 1000,    // Fighter attacking Wolt
+      'wolt_fighter': isCrit? 2750 : 1400,  // Wolt attacking Fighter
+      'wolt_brigand': isCrit? 2750 : 1375,  // Wolt attacking Brigand
 
-      'lugh_fighter': isCrit? 1850 : 1500,    // Lugh attacking Fighter
-      'fighter_lugh': isCrit ? 800 : 900,     // Fighter attacking Lugh
+      'lugh_fighter': isCrit? 1850 : 1500,  // Lugh attacking Fighter
+      'lugh_brigand': isCrit? 1675 : 1400,  // Lugh attacking Brigand
+
+      'fighter_roy': isCrit ? 900 : 1000, // Fighter attacking Roy
+      'fighter_bors': isCrit ? 650 : 825, // Fighter attacking Bors
+      'fighter_allen': isCrit ? 775 : 950,  // Fighter attacking Allen
+      'fighter_lance': isCrit ? 775 : 1000, // Fighter attacking Lance
+      'fighter_wolt': isCrit ? 925 : 1000,  // Fighter attacking Wolt
+      'fighter_lugh': isCrit ? 800 : 900, // Fighter attacking Lugh
+
+      'brigand_roy': isCrit ? 2150 : 1100,  // Brigand attacking Roy
+      'brigand_bors': isCrit ? 2050 : 950,  // Brigand attacking Bors
+      'brigand_allen': isCrit ? 2080 : 975, // Brigand attacking Allen
+      'brigand_lance': isCrit ? 2080 : 975, // Brigand attacking Lance
+      'brigand_wolt': isCrit ? 2250 : 1125, // Brigand attacking Wolt
+      'brigand_lugh': isCrit ? 2100 : 1000  // Brigand attacking Lugh
     };
     // Return the appropriate delay
     return dodgeDelayMap[key];
@@ -1993,8 +2161,9 @@ class BattleManager {
         const yPos = 85;
         image(UIImages.fireHitEffect, xPos-120, yPos, width, height);
 
-        // Mark fire effect as complete after duration
-        if (now - this.state.hitEffectStartTime >= hitDelay + hitEffectDuration) {
+        // Check if fire effect has completed one full cycle
+        if (UIImages.fireHitEffect.getCurrentFrame() === UIImages.fireHitEffect.numFrames() - 1) {
+          UIImages.fireHitEffect.pause();
           this.state.fireEffectPlayed = true;
         }
       }
@@ -2020,17 +2189,21 @@ class BattleManager {
     let baseName = attackerName.toLowerCase();
     if (baseName.includes('fighter')) {
       baseName = 'fighter';
+    } 
+    else if (baseName.includes('brigand')) {
+      baseName = 'brigand';
     }
 
     // Map of hit delays for each character, with different timings for critical hits
     const hitDelayMap = {
-      'roy': isCrit ? 1350 : 265,     // Roy's attack timing
-      'bors': isCrit ? 1300 : 925,    // Bors's attack timing
-      'allen': isCrit ? 2200 : 350,   // Allen's attack timing
-      'lance': isCrit ? 1150 : 400,   // Lance's attack timing
-      'wolt': isCrit ? 2275 : 800,    // Wolt's attack timing
-      'lugh': isCrit ? 1800 : 1000,   // Lugh's attack timing
-      'fighter': isCrit ? 850 : 490   // Fighter's attack timing
+      'roy': isCrit ? 1350 : 265, // Roy's attack timing
+      'bors': isCrit ? 1300 : 925,  // Bors's attack timing
+      'allen': isCrit ? 2200 : 350, // Allen's attack timing
+      'lance': isCrit ? 1150 : 400, // Lance's attack timing
+      'wolt': isCrit ? 2275 : 800,  // Wolt's attack timing
+      'lugh': isCrit ? 1800 : 1000, // Lugh's attack timing
+      'fighter': isCrit ? 850 : 490, // Fighter's attack timing
+      'brigand': isCrit ? 1600 : 490 // Brigand's attack timing
     };
     
     // Return the character's specific delay timing
@@ -2049,41 +2222,49 @@ class BattleManager {
     const defenderKey = isEnemyAttacking ? targetEnemy.name.toLowerCase() : targetEnemy.classType.toLowerCase();
     const comboKey = `${attackerKey}_${defenderKey}`;
 
+    // Helper function to normalize enemy type (treats Fighter and Brigand as same)
+    const normalizeEnemyType = (type) => {
+      return type.toLowerCase().includes('fighter') || type.toLowerCase().includes('brigand') ? 'enemy' : type.toLowerCase();
+    };
+
+    // Create lookup key using normalized enemy type
+    const lookupKey = `${normalizeEnemyType(attackerKey)}_${normalizeEnemyType(defenderKey)}`;
+
     // Map of x-positions for hit effects based on attacker-defender combinations
     const hitEffectXPositions = {
-      'roy_fighter': 50,  // Roy attacking Fighter
-      'bors_fighter': 50, // Bors attacking Fighter
-      'allen_fighter': 50,  // Allen attacking Fighter
-      'lance_fighter': 50,  // Lance attacking Fighter
-      'wolt_fighter': 44, // Wolt attacking Fighter
-      'lugh_fighter': 50, // Lugh attacking Fighter
-      'fighter_roy': 77,  // Fighter attacking Roy
-      'fighter_bors': 72, // Fighter attacking Bors
-      'fighter_allen': 90,  // Fighter attacking Allen
-      'fighter_lance': 90,  // Fighter attacking Lance
-      'fighter_wolt': 90, // Fighter attacking Wolt
-      'fighter_lugh': 85  // Fighter attacking Lugh
+      'roy_enemy': 50,    // Roy attacking Fighter/Brigand
+      'bors_enemy': 50,   // Bors attacking Fighter/Brigand
+      'allen_enemy': 50,  // Allen attacking Fighter/Brigand
+      'lance_enemy': 50,  // Lance attacking Fighter/Brigand
+      'wolt_enemy': 44,   // Wolt attacking Fighter/Brigand
+      'lugh_enemy': 50,   // Lugh attacking Fighter/Brigand
+      'enemy_roy': 77,    // Fighter/Brigand attacking Roy
+      'enemy_bors': 72,   // Fighter/Brigand attacking Bors
+      'enemy_allen': 90,  // Fighter/Brigand attacking Allen
+      'enemy_lance': 90,  // Fighter/Brigand attacking Lance
+      'enemy_wolt': 90,   // Fighter/Brigand attacking Wolt
+      'enemy_lugh': 85    // Fighter/Brigand attacking Lugh
     };
 
     // Map of y-positions for hit effects based on attacker-defender combinations
     const hitEffectYPositions = {
-      'roy_fighter': 60,  // Roy attacking Fighter
-      'bors_fighter': 107,  // Bors attacking Fighter
-      'allen_fighter': 80,  // Allen attacking Fighter
-      'lance_fighter': 70,  // Lance attacking Fighter
-      'wolt_fighter': 84, // Wolt attacking Fighter
-      'lugh_fighter': 85, // Lugh attacking Fighter
-      'fighter_roy': 50,  // Fighter attacking Roy
-      'fighter_bors': 33, // Fighter attacking Bors
-      'fighter_allen': 26,  // Fighter attacking Allen
-      'fighter_lance': 26,  // Fighter attacking Lance
-      'fighter_wolt': 50, // Fighter attacking Wolt
-      'fighter_lugh': 50  // Fighter attacking Lugh
+      'roy_enemy': 60,    // Roy attacking Fighter/Brigand
+      'bors_enemy': 107,  // Bors attacking Fighter/Brigand
+      'allen_enemy': 80,  // Allen attacking Fighter/Brigand
+      'lance_enemy': 70,  // Lance attacking Fighter/Brigand
+      'wolt_enemy': 84,   // Wolt attacking Fighter/Brigand
+      'lugh_enemy': 85,   // Lugh attacking Fighter/Brigand
+      'enemy_roy': 50,    // Fighter/Brigand attacking Roy
+      'enemy_bors': 33,   // Fighter/Brigand attacking Bors
+      'enemy_allen': 26,  // Fighter/Brigand attacking Allen
+      'enemy_lance': 26,  // Fighter/Brigand attacking Lance
+      'enemy_wolt': 50,   // Fighter/Brigand attacking Wolt
+      'enemy_lugh': 50    // Fighter/Brigand attacking Lugh
     };
 
     // Get the appropriate x and y positions for this combination
-    const xPos = hitEffectXPositions[comboKey];
-    const yPos = hitEffectYPositions[comboKey];
+    const xPos = hitEffectXPositions[lookupKey];
+    const yPos = hitEffectYPositions[lookupKey];
     
     // If this is the first frame of the hit effect
     if (!this.state.hitEffectStarted) {
@@ -2214,7 +2395,7 @@ class BattleManager {
     }
     else if (this.state.currentPhase === "playerAttack") {
       // Player's attack phase
-      this.handlePlayerAttackPhase(attackerName, enemyClass, positions, dimensions, now, selectedCharacter, targetEnemy);
+      this.handleAttackPhase(attackerName, enemyClass, positions, dimensions, now, selectedCharacter, targetEnemy, false);
     }
     else if (this.state.currentPhase === "transitionToEnemy") {
       // Transition phase between player and enemy attacks
@@ -2222,7 +2403,7 @@ class BattleManager {
     }
     else if (this.state.currentPhase === "enemyAttack") {
       // Enemy's attack phase
-      this.handleEnemyAttackPhase(attackerName, enemyClass, positions, dimensions, now, selectedCharacter, targetEnemy);
+      this.handleAttackPhase(enemyClass, attackerName, positions, dimensions, now, targetEnemy, selectedCharacter, true);
     }
     else if (this.state.currentPhase === "checkDoubles") {
       // Check if either character gets a second attack
@@ -2230,11 +2411,11 @@ class BattleManager {
     }
     else if (this.state.currentPhase === "playerDouble") {
       // Player's second attack phase
-      this.handlePlayerDoublePhase(attackerName, enemyClass, positions, dimensions, now, selectedCharacter, targetEnemy);
+      this.handleDoublePhase(attackerName, enemyClass, positions, dimensions, now, selectedCharacter, targetEnemy, false);
     }
     else if (this.state.currentPhase === "enemyDouble") {
       // Enemy's second attack phase
-      this.handleEnemyDoublePhase(attackerName, enemyClass, positions, dimensions, now, selectedCharacter, targetEnemy);
+      this.handleDoublePhase(enemyClass, attackerName, positions, dimensions, now, targetEnemy, selectedCharacter, true);
     }
     else if (this.state.currentPhase === "conclude") {
       // Conclude the battle animation
@@ -2314,47 +2495,70 @@ class BattleManager {
     }
   }
 
-  // Handles the player's attack phase of the battle animation
-  handlePlayerAttackPhase(attackerName, enemyClass, positions, dimensions, now, selectedCharacter, targetEnemy) {
-    // If the attack will miss, show dodge animation for the enemy
-    if (!this.state.willPlayerHit) {
-      this.handleDodgeAnimation(enemyClass, positions.enemyX, positions.enemyY, dimensions.enemyWidth, dimensions.enemyHeight, now, selectedCharacter, targetEnemy);
-    } 
-    // If the attack will hit, show enemy standing and potentially critical text
+  handleAttackPhase(attackerName, defenderName, positions, dimensions, now, attacker, defender, isEnemyAttacking) {
+    // Get the appropriate hit and crit flags based on who is attacking
+    const willHit = isEnemyAttacking ? this.state.willEnemyHit : this.state.willPlayerHit;
+    const willCrit = isEnemyAttacking ? this.state.willEnemyCrit : this.state.willPlayerCrit;
+
+    // If the attack will miss, show dodge animation for the defender
+    if (!willHit) {
+      this.handleDodgeAnimation(
+        defenderName,
+        isEnemyAttacking ? positions.attackerX : positions.enemyX,
+        isEnemyAttacking ? positions.attackerY : positions.enemyY,
+        isEnemyAttacking ? dimensions.attackerWidth : dimensions.enemyWidth,
+        isEnemyAttacking ? dimensions.attackerHeight : dimensions.enemyHeight,
+        now,
+        attacker,
+        defender
+      );
+    }
+    // If the attack will hit, show defender standing and potentially critical text
     else {
-      // Display enemy in standing position
-      image(attackingAnimationPaths[enemyClass + "Standing"], positions.enemyX, positions.enemyY, dimensions.enemyWidth, dimensions.enemyHeight);
-      
-      // Show critical hit text if applicable
-      if (this.state.willPlayerCrit && UIImages.criticalText) {
-        this.showCritText(false, now, attackerName, enemyClass);
+      // Display defender in standing position
+      image(
+        attackingAnimationPaths[defenderName + "Standing"],
+        isEnemyAttacking ? positions.attackerX : positions.enemyX,
+        isEnemyAttacking ? positions.attackerY : positions.enemyY,
+        isEnemyAttacking ? dimensions.attackerWidth : dimensions.enemyWidth,
+        isEnemyAttacking ? dimensions.attackerHeight : dimensions.enemyHeight
+      );
+
+      // Show critical text if this will be a critical hit
+      if (willCrit && UIImages.criticalText) {
+        this.showCritText(isEnemyAttacking, now, attackerName, defenderName);
       }
     }
-    
-    // Handle the player's attack animation and get its state
+
+    // Handle the attack animation and get its state
     const animState = this.handleAttackAnimation(
-      attackerName, 
-      positions.attackerX, 
-      positions.attackerY, 
-      dimensions.attackerWidth, 
-      dimensions.attackerHeight, 
-      this.state.willPlayerCrit, 
-      false, 
-      selectedCharacter, 
-      targetEnemy
+      attackerName,
+      isEnemyAttacking ? positions.enemyX : positions.attackerX,
+      isEnemyAttacking ? positions.enemyY : positions.attackerY,
+      isEnemyAttacking ? dimensions.enemyWidth : dimensions.attackerWidth,
+      isEnemyAttacking ? dimensions.enemyHeight : dimensions.attackerHeight,
+      willCrit,
+      false,  // This is not a second attack
+      attacker,
+      defender
     );
-    
+
     // If attack animation is complete, transition to next phase
     if (animState.isComplete) {
       // Reset state variables for next phase
-      this.state.currentPhase = "transitionToEnemy";
+      this.state.currentPhase = isEnemyAttacking ? "checkDoubles" : "transitionToEnemy";
       this.state.startTime = now;
       this.state.lastFrame = -1;
       this.state.missTextStartTime = 0;
       this.state.critTextStartTime = 0;
       this.state.dodgeStartTime = 0;
+
+      // If this was an enemy attack, pause their animation
+      if (isEnemyAttacking) {
+        attackingAnimationPaths[attackerName + (willCrit ? "Critical" : "Attack")].pause();
+      }
     }
-    
+
     // Update the last frame for animation tracking
     this.state.lastFrame = animState.currentFrame;
   }
@@ -2395,51 +2599,6 @@ class BattleManager {
         enemyAnim.play();
       }
     }
-  }
-
-  // Handles the enemy's attack phase of the battle animation
-  handleEnemyAttackPhase(attackerName, enemyClass, positions, dimensions, now, selectedCharacter, targetEnemy) {
-    // If the enemy's attack will miss, show dodge animation for the player
-    if (!this.state.willEnemyHit) {
-      this.handleDodgeAnimation(attackerName, positions.attackerX, positions.attackerY, dimensions.attackerWidth, dimensions.attackerHeight, now, targetEnemy, selectedCharacter);
-    } 
-    // If the attack will hit, show player standing and potentially critical text
-    else {
-      // Display player character in standing position
-      image(attackingAnimationPaths[attackerName + "Standing"], positions.attackerX, positions.attackerY, dimensions.attackerWidth, dimensions.attackerHeight);
-      
-      // Show critical hit text if applicable
-      if (this.state.willEnemyCrit && UIImages.criticalText) {
-        this.showCritText(true, now, enemyClass, attackerName);
-      }
-    }
-    
-    // Handle the enemy's attack animation and get its state
-    const animState = this.handleAttackAnimation(
-      enemyClass, 
-      positions.enemyX, 
-      positions.enemyY, 
-      dimensions.enemyWidth, 
-      dimensions.enemyHeight, 
-      this.state.willEnemyCrit, 
-      false, 
-      targetEnemy, 
-      selectedCharacter
-    );
-
-    // If attack animation is complete, transition to next phase
-    if (animState.isComplete) {      
-      // Move to check doubles phase
-      this.state.currentPhase = "checkDoubles";
-      this.state.startTime = now;
-      this.state.lastFrame = -1;
-      
-      // Pause the enemy's attack animation
-      attackingAnimationPaths[enemyClass + (this.state.willEnemyCrit ? "Critical" : "Attack")].pause();
-    }
-    
-    // Update the last frame for animation tracking
-    this.state.lastFrame = animState.currentFrame;
   }
 
   // Handles the phase that checks if either character gets a second attack based on speed difference
@@ -2508,109 +2667,69 @@ class BattleManager {
     }
   }
 
-  handlePlayerDoublePhase(attackerName, enemyClass, positions, dimensions, now, selectedCharacter, targetEnemy) {
-    // If the second attack will miss, show dodge animation for the enemy
-    if (!this.state.willPlayerSecondHit) {
+  handleDoublePhase(attackerName, defenderName, positions, dimensions, now, attacker, defender, isEnemyDouble) {
+    // Get the appropriate hit and crit flags based on who is doing the double attack
+    const willHit = isEnemyDouble ? this.state.willEnemySecondHit : this.state.willPlayerSecondHit;
+    const willCrit = isEnemyDouble ? this.state.willEnemySecondCrit : this.state.willPlayerSecondCrit;
+
+    // If the second attack will miss, show dodge animation for the defender
+    if (!willHit) {
       this.handleDodgeAnimation(
-        enemyClass, 
-        positions.enemyX, 
-        positions.enemyY, 
-        dimensions.enemyWidth, 
-        dimensions.enemyHeight, 
+        defenderName, 
+        isEnemyDouble ? positions.attackerX : positions.enemyX, 
+        isEnemyDouble ? positions.attackerY : positions.enemyY, 
+        isEnemyDouble ? dimensions.attackerWidth : dimensions.enemyWidth, 
+        isEnemyDouble ? dimensions.attackerHeight : dimensions.enemyHeight, 
         now, 
-        selectedCharacter, 
-        targetEnemy, 
+        attacker, 
+        defender, 
         true  // Indicates this is a second attack
       );
     } 
-    // If the attack will hit, show enemy standing and potentially critical text
+    // If the attack will hit, show defender standing and potentially critical text
     else {
-      // Display enemy in standing position
-      image(attackingAnimationPaths[enemyClass + "Standing"], positions.enemyX, positions.enemyY, dimensions.enemyWidth, dimensions.enemyHeight);
+      // Display defender in standing position
+      image(
+        attackingAnimationPaths[defenderName + "Standing"], 
+        isEnemyDouble ? positions.attackerX : positions.enemyX, 
+        isEnemyDouble ? positions.attackerY : positions.enemyY, 
+        isEnemyDouble ? dimensions.attackerWidth : dimensions.enemyWidth, 
+        isEnemyDouble ? dimensions.attackerHeight : dimensions.enemyHeight
+      );
       
-      // Show critical hit text if applicable for second attack
-      if (this.state.willPlayerSecondCrit && UIImages.criticalText) {
-        this.showCritText(false, now, attackerName, enemyClass);
+      // Show critical text if this will be a critical hit
+      if (willCrit) {
+        this.showCritText(isEnemyDouble, now, attackerName, defenderName);
       }
     }
-    
-    // Handle the player's second attack animation and get its state
+
+    // Handle the attack animation and get its state
     const animState = this.handleAttackAnimation(
-      attackerName, 
-      positions.attackerX, 
-      positions.attackerY, 
-      dimensions.attackerWidth, 
-      dimensions.attackerHeight, 
-      this.state.willPlayerSecondCrit, 
-      true,  // Indicates this is a second attack
-      selectedCharacter, 
-      targetEnemy
+      attackerName,
+      isEnemyDouble ? positions.enemyX : positions.attackerX,
+      isEnemyDouble ? positions.enemyY : positions.attackerY,
+      isEnemyDouble ? dimensions.enemyWidth : dimensions.attackerWidth,
+      isEnemyDouble ? dimensions.enemyHeight : dimensions.attackerHeight,
+      willCrit,
+      true,  // This is a second attack
+      attacker,
+      defender
     );
 
-    // If second attack animation is complete, transition to conclude phase
+    // If attack animation is complete, transition to conclude phase
     if (animState.isComplete) {
       this.state.currentPhase = "conclude";
       this.state.startTime = now;
       this.state.lastFrame = -1;
+      this.state.missTextStartTime = 0;
+      this.state.critTextStartTime = 0;
+      this.state.dodgeStartTime = 0;
     }
     
     // Update the last frame for animation tracking
     this.state.lastFrame = animState.currentFrame;
   }
 
-  // Handles the enemy's second attack phase when they are fast enough for a double attack
-  handleEnemyDoublePhase(attackerName, enemyClass, positions, dimensions, now, selectedCharacter, targetEnemy) {
-    // If the second attack will miss, show dodge animation for the player
-    if (!this.state.willEnemySecondHit) {
-      this.handleDodgeAnimation(
-        attackerName, 
-        positions.attackerX, 
-        positions.attackerY, 
-        dimensions.attackerWidth, 
-        dimensions.attackerHeight, 
-        now, 
-        targetEnemy, 
-        selectedCharacter, 
-        true  // Indicates this is a second attack
-      );
-    } 
-    // If the attack will hit, show player standing and potentially critical text
-    else {
-      // Display player character in standing position
-      image(attackingAnimationPaths[attackerName + "Standing"], positions.attackerX, positions.attackerY, dimensions.attackerWidth, dimensions.attackerHeight);
-      
-      // Show critical hit text if applicable for second attack
-      if (this.state.willEnemySecondCrit && UIImages.criticalText) {
-        this.showCritText(true, now, enemyClass, attackerName);
-      }
-    }
-    
-    // Handle the enemy's second attack animation and get its state
-    const animState = this.handleAttackAnimation(
-      enemyClass, 
-      positions.enemyX, 
-      positions.enemyY, 
-      dimensions.enemyWidth, 
-      dimensions.enemyHeight, 
-      this.state.willEnemySecondCrit, 
-      true,  // Indicates this is a second attack
-      targetEnemy, 
-      selectedCharacter
-    );
-
-    // If second attack animation is complete, transition to conclude phase
-    if (animState.isComplete) {
-      this.state.currentPhase = "conclude";
-      this.state.startTime = now;
-      this.state.lastFrame = -1;
-      
-      // Pause the enemy's attack animation
-      attackingAnimationPaths[enemyClass + (this.state.willEnemySecondCrit ? "Critical" : "Attack")].pause();
-    }
-    
-    // Update the last frame for animation tracking
-    this.state.lastFrame = animState.currentFrame;
-  }
 
   // Handles the conclusion phase of the battle animation sequence
   handleConcludePhase(attackerName, enemyClass, positions, dimensions, timeSinceStart, selectedCharacter) {
@@ -2642,149 +2761,6 @@ class BattleManager {
       
       // Reset character animation to standing
       animationManager(selectedCharacter, "standing");
-    }
-  }
-
-  drawBattleInterface(selectedCharacter, targetEnemy) {
-    // Lower the music volume
-    sounds.battleMusic.amp(0.3);
-  
-    // Draw the battle background first
-    image(UIImages.battleBackground, 0, 0, width, height);
-    
-    // Draw the attack interface image centered on screen
-    const interfaceWidth = width * 1.05;
-    const interfaceHeight = height;
-    const x = (width - interfaceWidth) / 2;
-    const y = (height - interfaceHeight) / 2;
-    image(UIImages.attackInterface, x, y, interfaceWidth, interfaceHeight);
-  
-    // Setup text style for character names at top
-    textSize(50);
-    textFont("DMT Shuei MGo Std Bold");
-    textAlign(CENTER, CENTER);
-    stroke(0);
-    strokeWeight(7);
-    fill(255);
-  
-    // Draw player character name at top left
-    text(selectedCharacter.name, width * 0.13, height * 0.11);
-  
-    // Draw enemy character class at top right
-    text(targetEnemy.classType, width * 0.88, height * 0.11);
-  
-    // Draw weapon text and images
-    textSize(35);
-    strokeWeight(4);
-  
-    // Get weapon text and image based on character
-    let playerWeaponText, playerWeaponImage;
-    let enemyWeaponText, enemyWeaponImage;
-  
-    // Set player weapon text and image
-    if (selectedCharacter.name === "Roy") {
-      playerWeaponText = "Steel Sword";
-      playerWeaponImage = UIImages.sword;
-    }
-    else if (selectedCharacter.name === "Wolt") {
-      playerWeaponText = "Steel Bow";
-      playerWeaponImage = UIImages.bow;
-    }
-    else if (selectedCharacter.name === "Bors") {
-      playerWeaponText = "Steel Lance";
-      playerWeaponImage = UIImages.lance;
-    }
-    else if (selectedCharacter.name === "Lance" || selectedCharacter.name === "Allen") {
-      playerWeaponText = "Steel Spear";
-      playerWeaponImage = UIImages.spear;
-    }
-    else if (selectedCharacter.name === "Lugh") {
-      playerWeaponText = "Fire Tome";
-      playerWeaponImage = UIImages.tome;
-    }
-  
-    // Set enemy weapon text and image
-    if (targetEnemy.classType === "Fighter" || targetEnemy.classType === "Brigand") {
-      enemyWeaponText = "Iron Axe";
-      enemyWeaponImage = UIImages.axe;
-    }
-  
-    // Draw player weapon text and image
-    text(playerWeaponText, width * 0.32, height * 0.8);
-    if (playerWeaponImage) {
-      const weaponSize = 45;
-      image(playerWeaponImage, width * 0.45 - weaponSize/2, height * 0.76, weaponSize, weaponSize);
-    }
-  
-    // Draw enemy weapon text and image
-    text(enemyWeaponText, width * 0.63, height * 0.8);
-    if (enemyWeaponImage) {
-      const weaponSize = 45;
-      image(enemyWeaponImage, width * 0.76 - weaponSize/2, height * 0.76, weaponSize, weaponSize);
-    }
-  
-    // Calculate positions for bottom stats
-    const playerStatsX = width * 0.1;
-    const enemyStatsX = width * 0.92;
-    const baseStatsY = height * 0.745;
-  
-    // Setup text style for stats labels
-    textSize(25);
-    textFont("DMT Shuei MGo Std Bold");
-    textAlign(LEFT, BOTTOM);
-    stroke(0);
-    strokeWeight(3);  // Reduced from 5 to 3 to make text cleaner
-    fill(244, 235, 215);
-  
-    // Draw DMG, HIT, and CRIT text for player side
-    text("DMG", playerStatsX - 85, baseStatsY);
-    text("HIT", playerStatsX - 85, baseStatsY + 36);
-    text("CRIT", playerStatsX - 85, baseStatsY + 73);
-  
-    // Draw DMG, HIT, and CRIT text for enemy side
-    text("DMG", enemyStatsX - 85, baseStatsY);
-    text("HIT", enemyStatsX - 85, baseStatsY + 36);
-    text("CRIT", enemyStatsX - 85, baseStatsY + 73);
-  
-    // Calculate if it's a ranged attack
-    const distance = Math.abs(selectedCharacter.x - targetEnemy.x) + Math.abs(selectedCharacter.y - targetEnemy.y);
-    const isRangedAttack = distance === 2;
-  
-    // Calculate speed differences for double attacks
-    const playerSpeedDiff = selectedCharacter.speed - targetEnemy.speed;
-    const enemySpeedDiff = targetEnemy.speed - selectedCharacter.speed;
-  
-    // Calculate attacking values
-    selectedCharacter.attack(targetEnemy);
-    targetEnemy.attack(selectedCharacter);
-  
-    // Double damage if speed difference is 4 or more
-    if (playerSpeedDiff >= 4) {
-      selectedCharacter.displayedDamage *= 2;
-    }
-    if (enemySpeedDiff >= 4) {
-      targetEnemy.displayedDamage *= 2;
-    }
-  
-    // Draw values
-    fill(255);
-    textAlign(RIGHT, BOTTOM);
-  
-    // Display player values
-    text(selectedCharacter.displayedDamage, playerStatsX + 50, baseStatsY);
-    text(Math.floor(selectedCharacter.displayedHit) + "%", playerStatsX + 50, baseStatsY + 36);
-    text(Math.floor(selectedCharacter.displayedCrit) + "%", playerStatsX + 50, baseStatsY + 72);
-  
-    // Display enemy values if it's a ranged attack set to -
-    if (isRangedAttack) {
-      text("-", enemyStatsX + 50, baseStatsY);
-      text("-", enemyStatsX + 50, baseStatsY + 35);
-      text("-", enemyStatsX + 50, baseStatsY + 70);
-    } 
-    else {
-      text(targetEnemy.displayedDamage, enemyStatsX + 50, baseStatsY);
-      text(Math.floor(targetEnemy.displayedHit) + "%", enemyStatsX + 50, baseStatsY + 36);
-      text(Math.floor(targetEnemy.displayedCrit) + "%", enemyStatsX + 50, baseStatsY + 72);
     }
   }
 }
@@ -2990,26 +2966,6 @@ function animationManager(character, state) {
     // Update the current state
     character.currentState = state;
   }
-}
-
-// Check if all non-enemy characters have used their turn
-function checkAllPlayerCharactersUsed() {
-  for (let character of characters) {
-    if (!character.isEnemy && !character.isGreyedOut) {
-      return false;
-    }
-  }
-  return true;
-}
-
-// Check if all enemy characters have used their turn
-function checkAllEnemyCharactersUsed() {
-  for (let character of characters) {
-    if (character.isEnemy && !character.isGreyedOut) {
-      return false;
-    }
-  }
-  return true;
 }
 
 // Handle turn transitions
@@ -3318,11 +3274,6 @@ function keyPressed() {
   }
 }
 
-// Check if cursor is over a character
-function isCursorOverCharacter(character) {
-  return locationCursor.x === character.x && locationCursor.y === character.y;
-}
-
 // Main game loop for rendering everything on the screen
 function draw() {
   // Only run if the game state is gameplay
@@ -3363,7 +3314,7 @@ function draw() {
 
         // Check if cursor is over any character and display info
         for (let character of characters) {
-          if (isCursorOverCharacter(character)) {
+          if (character.x === locationCursor.x && character.y === locationCursor.y) {
             uiManager.displayCharacterInfo(character);
             break;
           }
@@ -3382,8 +3333,8 @@ function draw() {
     // Display battle info preview if in attack mode and enemy is selected
     if (selectedCharacter && selectedCharacter.action === "attack" && enemySelectedForAttack) {
       if (selectedCharacter.attackInterfaceConfirmed) { 
-        // Draw the battle interface using battleManager
-        battleManager.drawBattleInterface(selectedCharacter, targetEnemy);
+        // Draw the battle interface using uiManager instead of battleManager
+        uiManager.drawBattleInterface(selectedCharacter, targetEnemy);
 
         // Only proceed if we have both characters
         if (selectedCharacter && targetEnemy) {
