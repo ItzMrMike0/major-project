@@ -148,10 +148,13 @@ class Character {
     this.strength = strength; // Strength stat (Attack for physical attacks)
     this.magic = magic; // Magic stat (Attack for magical attacks)
     this.dexterity = dexterity; // Dexterity stat (Affects hit chance, critical hit chance, and evasion)
+    this.baseDexterity = dexterity; // Base dexterity stat 
     this.speed = speed; // Speed stat (Determine whether a unit can double attack)
     this.luck = luck; // Luck stat (Affects critical hit chance, avoiding critical hits, and hit chance)
     this.defense = defense; // Physical defense stat (Reduces damage from physical attacks)
+    this.baseDefense = defense; // Base defense stat
     this.resistance = resistance; // Magical defense stat (Reduces damage from magical attacks)
+    this.baseResistance = resistance; // Base resistance stat
     this.might = might; // Attack power (Base damage a weapon or spell)
     this.hit = hit; // Hit chance (Base accuracy of a weapon or spell)
     
@@ -174,9 +177,7 @@ class Character {
     this.reachableTiles = []; // Character reachable movement tiles
     this.attackableTiles = []; // Characters attackable movement tiles
 
-    this.baseDefense = defense;
-    this.baseResistance = resistance;
-    this.baseDexterity = dexterity;
+    // Check what buffs the tile the character is standing on gives
     this.tileBuffs = {
       defenseBonus: 0,
       resistanceBonus: 0,
@@ -994,7 +995,6 @@ class Character {
     let avoid;
     if (opponent) {
       const opponentSpeed = opponent.speed - (6 - opponent.strength/5);
-      const opponentDex = opponent.baseDexterity + opponent.tileBuffs.dexterityBonus;
       if (opponent.classType === "Mage") {
         avoid = (opponent.speed + opponent.luck)/2;
       } 
@@ -1029,9 +1029,6 @@ class Character {
 
     // Displayed Crit Chance
     this.displayedCrit = Math.max(0, crit - critAvoid);
-
-    // Critical Damage Formula
-    const critDamage = this.displayedDamage * 3;
   }
 
   // Update tile buffs based on current tile
@@ -1073,26 +1070,34 @@ class Character {
     this.dexterity = this.baseDexterity - oldDexBonus + this.tileBuffs.dexterityBonus;
   }
 
-  // // HP Management Methods
-  // setCurrentHP(value) {
-  //   this.currentHP = Math.max(0, Math.min(value, this.maxHP));
-  // }
+  // HP Management Methods
+  // Sets the character's current HP to a specific value, ensuring it stays between 0 and maxHP
+  setCurrentHP(value) {
+    // Math.max ensures HP doesn't go below 0 and Math.min ensures HP doesn't exceed maxHP
+    this.currentHP = Math.max(0, Math.min(value, this.maxHP));
+  }
 
-  // takeDamage(amount) {
-  //   this.setCurrentHP(this.currentHP - amount);
-  // }
+  // Reduces the character's current HP by the specified amount of damage
+  takeDamage(amount) {
+    // Uses setCurrentHP to ensure HP stays within valid range (0 to maxHP)
+    this.setCurrentHP(this.currentHP - amount);
+  }
 
-  // heal(amount) {
-  //   this.setCurrentHP(this.currentHP + amount);
-  // }
+  // Increases the character's current HP by the specified amount of healing
+  heal(amount) {
+    // Uses setCurrentHP to ensure HP stays within valid range (0 to maxHP)
+    this.setCurrentHP(this.currentHP + amount);
+  }
 
-  // isDead() {
-  //   return this.currentHP <= 0;
-  // }
+  // Checks if the character has been defeated (HP reduced to 0)
+  isDead() {
+    return this.currentHP <= 0;
+  }
 
-  // getCurrentHPRatio() {
-  //   return this.currentHP / this.maxHP;
-  // }
+  // Calculates what fraction of max HP the character currently has (Used for displaying HP bars and other UI elements)
+  getCurrentHPRatio() {
+    return this.currentHP / this.maxHP;
+  }
 }
 
 // EnemyCharacter Class: Extends Character with enemy-specific behavior
@@ -2074,7 +2079,13 @@ class BattleManager {
       
       // Special effects for magic attacks
       fireEffectStarted: false, // Whether fire effect has started (for magic attacks)
-      fireEffectPlayed: false // Whether fire effect has completed
+      fireEffectPlayed: false, // Whether fire effect has completed
+      
+      // Track character to be removed after battle
+      characterToRemove: null,
+
+      // Add new flag for death handling
+      willTransitionToConclude: false,
     };
   }
   // Display "MISS" text when an attack doesn't land
@@ -2270,11 +2281,11 @@ class BattleManager {
     // Check if this is an enemy attack based on attacker name
     const isEnemyAttacking = attackerName.includes("fighter") || attackerName.includes("brigand");
     
-    // Determine if this attack will hit based on whether it's a second attack
-    const willHit = isSecondAttack ? 
-      isEnemyAttacking ? this.state.willEnemySecondHit : this.state.willPlayerHit : // Second attack hit checks
-      isEnemyAttacking ? this.state.willEnemyHit : this.state.willPlayerHit;  // First attack hit checks
-
+    // Get the appropriate hit flag based on attacker type and whether this is a second attack
+    const willHit = isEnemyAttacking ? 
+      isSecondAttack ? this.state.willEnemySecondHit : this.state.willEnemyHit : 
+      isSecondAttack ? this.state.willPlayerSecondHit : this.state.willPlayerHit;
+    
     // Get the appropriate delay before showing hit effect
     const hitDelay = this.getHitDelay(attackerName, isCrit);
     // Hit effects last 500ms
@@ -2317,7 +2328,7 @@ class BattleManager {
 
       // After appropriate delay plus small buffer, show hit effect
       if (now - this.state.hitEffectStartTime >= hitDelay + 50) {
-        this.handleHitEffect(now, isEnemyAttacking, isCrit, hitDelay, hitEffectDuration, width, height, selectedCharacter, targetEnemy);
+        this.handleHitEffect(now, isEnemyAttacking, isCrit, hitDelay, hitEffectDuration, width, height, selectedCharacter, targetEnemy, isSecondAttack);
       }
     }
   }
@@ -2350,7 +2361,7 @@ class BattleManager {
   }
 
   // Handle the visual hit effect when an attack lands
-  handleHitEffect(now, isEnemyAttacking, isCrit, hitDelay, hitEffectDuration, width, height, selectedCharacter, targetEnemy) {
+  handleHitEffect(now, isEnemyAttacking, isCrit, hitDelay, hitEffectDuration, width, height, selectedCharacter, targetEnemy, isSecondAttack = false) {
     // Choose the appropriate hit effect based on attacker and if it's a critical hit
     const hitEffect = isEnemyAttacking ? 
       isCrit ? UIImages.criticalHitEffectLeft : UIImages.regularHitEffectLeft :   // Enemy attacks come from left
@@ -2413,6 +2424,50 @@ class BattleManager {
         hitEffect.play();
         this.state.hitEffectStarted = true;
         this.state.whiteFlashFrame = 0;  // Reset white flash counter
+
+        // Get hit/miss and critical hit flags based on attacker type and whether this is a second attack
+        const willHit = isEnemyAttacking ? 
+          isSecondAttack ? this.state.willEnemySecondHit : this.state.willEnemyHit : 
+          isSecondAttack ? this.state.willPlayerSecondHit : this.state.willPlayerHit;
+
+        const willCrit = isEnemyAttacking ? 
+          isSecondAttack ? this.state.willEnemySecondCrit : this.state.willEnemyCrit : 
+          isSecondAttack ? this.state.willPlayerSecondCrit : this.state.willPlayerCrit;
+
+        // Only apply damage if the attack successfully hits (not dodged/missed)
+        if (willHit) {
+          // selectedCharacter is always the attacker (whether player or enemy)
+          const attacker = selectedCharacter;
+
+          // targetEnemy is always the defender (whether player or enemy)
+          const defender = targetEnemy;
+          
+          // Get base damage
+          let damage = attacker.displayedDamage;
+
+          // Check if it's a double attack
+          const isDoubleAttack = isEnemyAttacking ? this.state.hasEnemyDouble : this.state.hasPlayerDouble;
+
+          // For double attacks, always divide damage by 2 since each hit should do half damage
+          if (isDoubleAttack) {
+            damage = Math.floor(damage / 2);
+          }
+
+          // For critical hits, triple the damage
+          if (willCrit) {
+            damage *= 3;
+          }
+          
+          // Apply the calculated damage to the defender's HP
+          defender.takeDamage(damage);
+
+          // Check if the defender died from this hit
+          if (defender.isDead()) {
+            console.log(`${defender.name} has been defeated!`);
+            this.handleCharacterDeath(defender, attacker);
+          }
+        }
+        // If willHit is false, no damage is dealt (attack was dodged/missed)
       }
     }
 
@@ -2606,7 +2661,13 @@ class BattleManager {
       
       // Special effect states
       fireEffectStarted: false, // Has fire magic effect started (for Lugh)
-      fireEffectPlayed: false // Has fire magic effect completed
+      fireEffectPlayed: false, // Has fire magic effect completed
+      
+      // Track character to be removed after battle
+      characterToRemove: null,
+
+      // Add new flag for death handling
+      willTransitionToConclude: false,
     };
   }
 
@@ -2684,8 +2745,13 @@ class BattleManager {
 
     // If attack animation is complete, transition to next phase
     if (animState.isComplete) {
-      // Reset state variables for next phase
-      this.state.currentPhase = isEnemyAttacking ? "checkDoubles" : "transitionToEnemy";
+      // If a character died and we need to conclude
+      if (this.state.willTransitionToConclude) {
+        this.state.currentPhase = "conclude";
+      } 
+      else {
+        this.state.currentPhase = isEnemyAttacking ? "checkDoubles" : "transitionToEnemy";
+      }
       this.state.startTime = now;
       this.state.lastFrame = -1;
       this.state.missTextStartTime = 0;
@@ -2875,15 +2941,24 @@ class BattleManager {
     // Show both characters in their standing positions for the final frame
     this.showStandingAnimations(attackerName, enemyClass, positions, dimensions);
     
-    // Wait for 1 second before concluding the battle
+    // Wait for 1 second before concluding the battle and resetting battle animation stat
     if (timeSinceStart > 1000) {
-      // Reset battle animation state
+      // If there's a character marked for removal, remove them now
+      if (this.state.characterToRemove) {
+        const index = characters.findIndex(char => char === this.state.characterToRemove);
+        if (index !== -1) {
+          characters.splice(index, 1);
+        }
+      }
+
+      // Reset battle states
       this.state.isPlaying = false;
       this.state.hitEffectStartTime = 0;
       this.state.hitEffectPlayed = false;
       this.state.hitEffectStarted = false;
       this.state.hitEffectFrame = -1;
       this.state.lastFrame = -1;
+      this.state.characterToRemove = null;
       
       // Reset player character state
       selectedCharacter.attackInterfaceConfirmed = false;
@@ -2901,6 +2976,23 @@ class BattleManager {
       // Reset character animation to standing
       animationManager(selectedCharacter, "standing");
     }
+  }
+
+  // Handles the death of a character
+  handleCharacterDeath(defender, attacker) {
+    // Mark the character for removal after battle concludes
+    this.state.characterToRemove = defender;
+    // Skip any remaining attacks by setting appropriate flags
+    if (attacker.isEnemy) {
+      // If enemy killed player, skip any remaining player attacks
+      this.state.hasPlayerDouble = false;
+    }
+    else {
+      // If player killed enemy, skip any remaining enemy attacks
+      this.state.hasEnemyDouble = false;
+    }
+    // Force battle to conclude after current attack finishes
+    this.state.willTransitionToConclude = true;
   }
 }
 
@@ -2926,7 +3018,6 @@ let uiManager; // UI Manager instance
 let enemySelectedForAttack = false; // Track if an enemy has been selected for attack
 let attackingAnimationPaths = {}; // Attacking animation paths
 let battleManager; // Battle Manager instance
-
 // Define directions once as a constant
 const DIRECTIONS = [
   { x: 0, y: -1 }, // up

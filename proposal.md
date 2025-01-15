@@ -14,7 +14,7 @@ Winning will rely not only on combat prowess but also on strategic planning and 
 - Grid-based map system. 🟢
 - Load maps using external .txt files. 🟢
 - Some tiles are impassable (e.g., walls, water). 🟢
-- Certain tiles provide bonuses (e.g., increased defense or evasion). 🔴
+- Certain tiles provide bonuses (e.g., increased defense or evasion). 🟢
 - Highlight movement range and attack range tiles when character selected. 🟢
 
 ### 2: Turn-Based Actions
@@ -53,7 +53,7 @@ Winning will rely not only on combat prowess but also on strategic planning and 
 
 ## Nice to Have List
 - Options Menu which contains settings including (End Turn: Manually end the player's turn.) 🔴
-- Difficulty levels (e.g., aggressive, defensive, balanced). 🔴
+- Difficulty levels (e.g., easy, normal, hard). 🔴
 - Adaptive AI that evaluates tile advantages or target vulnerabilities. 🔴
 - Different enemy types with varying priorities (e.g., targeting low-health units). 🔴
 - Weather systems such as rain, fog, or snow. 🔴
