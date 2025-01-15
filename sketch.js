@@ -2935,13 +2935,49 @@ class BattleManager {
     this.state.lastFrame = animState.currentFrame;
   }
 
+  // Show final battle animations - either standing or death animation
+  showFinalBattleAnimations(attackerName, enemyName, positions, dimensions) {
+    // Determine which character is dead (if any)
+    const isAttackerDead = this.state.characterToRemove && this.state.characterToRemove.name.toLowerCase() === attackerName;
+    const isDefenderDead = this.state.characterToRemove && this.state.characterToRemove.classType.toLowerCase() === enemyName;
+
+    // Show attacker's animation (death or standing)
+    const attackerAnim = isAttackerDead ? 
+      attackingAnimationPaths[attackerName + "Death"] : 
+      attackingAnimationPaths[attackerName + "Standing"];
+    
+    if (attackerAnim) {
+      // If it's a death animation and hasn't been started yet, start it
+      if (isAttackerDead && attackerAnim.getCurrentFrame() === 0) {
+        attackerAnim.play();
+      }
+      image(attackerAnim, 
+        positions.attackerX, positions.attackerY, 
+        dimensions.attackerWidth, dimensions.attackerHeight);
+    }
+
+    // Show defender's animation (death or standing)
+    const defenderAnim = isDefenderDead ? 
+      attackingAnimationPaths[enemyName + "Death"] : 
+      attackingAnimationPaths[enemyName + "Standing"];
+    
+    if (defenderAnim) {
+      // If it's a death animation and hasn't been started yet, start it
+      if (isDefenderDead && defenderAnim.getCurrentFrame() === 0) {
+        defenderAnim.play();
+      }
+      image(defenderAnim,
+        positions.enemyX, positions.enemyY,
+        dimensions.enemyWidth, dimensions.enemyHeight);
+    }
+  }
 
   // Handles the conclusion phase of the battle animation sequence
   handleConcludePhase(attackerName, enemyClass, positions, dimensions, timeSinceStart, selectedCharacter) {
-    // Show both characters in their standing positions for the final frame
-    this.showStandingAnimations(attackerName, enemyClass, positions, dimensions);
+    // Show final animations - either standing or death animation based on battle outcome
+    this.showFinalBattleAnimations(attackerName, enemyClass, positions, dimensions);
     
-    // Wait for 1 second before concluding the battle and resetting battle animation stat
+    // Wait for 1 second before concluding the battle and resetting battle animation state
     if (timeSinceStart > 1000) {
       // If there's a character marked for removal, remove them now
       if (this.state.characterToRemove) {
@@ -3504,84 +3540,95 @@ function keyPressed() {
   }
 }
 
+// Helper function to handle player turn UI elements
+function handlePlayerTurnUI() {
+  locationCursor.renderCursor();
+
+  // If no enemy is selected for attack, display tile location image and character info
+  if (!enemySelectedForAttack) {
+    uiManager.displayTileLocationImage();
+
+    // Check if cursor is over any character and display info
+    for (let character of characters) {
+      if (character.x === locationCursor.x && character.y === locationCursor.y) {
+        uiManager.displayCharacterInfo(character);
+        break;
+      }
+    }
+  }
+}
+
+// Helper function to handle battle related UI and animations
+function handleBattleUI() {
+  // Find enemy character at cursor position
+  const targetEnemy = characters.find(
+    char => char.isEnemy && char.x === locationCursor.x && char.y === locationCursor.y
+  );
+  
+  // Display battle info preview if we have a selected character, they are in attack mode and an enemy has been selected
+  if (selectedCharacter && selectedCharacter.action === "attack" && enemySelectedForAttack) {
+    if (selectedCharacter.attackInterfaceConfirmed) {
+      // Battle has been confirmed - show full battle animation interface
+      uiManager.drawBattleInterface(selectedCharacter, targetEnemy);
+      // If both characters are valid, play the battle animation sequence
+      if (selectedCharacter && targetEnemy) {
+        battleManager.handleBattleAnimation(selectedCharacter, targetEnemy);
+      }
+    } 
+    else if (selectedCharacter && targetEnemy) {
+      // Battle not yet confirmed - show battle forecast
+      selectedCharacter.attack(targetEnemy);
+      targetEnemy.attack(selectedCharacter);
+      uiManager.battleInfoPreview();
+    }
+  }
+}
+
+// Helper function to render map elements
+function renderMapElements() {
+  // Display all map tiles
+  Tile.displayAll(tiles);
+  // Display actionable tiles
+  Tile.displayActionableTiles();
+
+  // If there is a selected character and it's not an enemy, draw movement preview
+  if (selectedCharacter && !selectedCharacter.isEnemy) {
+    selectedCharacter.drawMovementPreview();
+  }
+
+  // Display all characters on the map
+  for (let character of characters) {
+    character.displayOnMap();
+  }
+}
+
 // Main game loop for rendering everything on the screen
 function draw() {
-  // Only run if the game state is gameplay
-  if (gameState === GAME_STATES.GAMEPLAY) {
-    // Only handle game actions if turn image is not showing
-    if (!showTurnImage) {
-      // Handle cursor movement with WASD keys
-      holdCursorMovement();
-    }
+  // If game state is not gameplay, don't render anything
+  if (gameState !== GAME_STATES.GAMEPLAY) return;
 
-    // Display all maptiles
-    Tile.displayAll(tiles);
-
-    // Highlight reachable tiles in blue and attackable tiles in red
-    Tile.displayActionableTiles();
-
-    // Draw movement preview for selected character only if it's not an enemy
-    if (selectedCharacter && !selectedCharacter.isEnemy) {
-      selectedCharacter.drawMovementPreview();
-    }
-   
-    // Display all characters on the map
-    for (let character of characters) {
-      character.displayOnMap();
-    }
-
-    // Display turn phase image
-    uiManager.displayTurnImage();
-
-    // Only show cursor if turn image is not showing and is player turn
-    if (!showTurnImage && isPlayerTurn) {
-      locationCursor.renderCursor();
-
-      // Only show tile and character info if no enemy is selected for attack
-      if (!enemySelectedForAttack) {
-        // Display tile location image 
-        uiManager.displayTileLocationImage();
-
-        // Check if cursor is over any character and display info
-        for (let character of characters) {
-          if (character.x === locationCursor.x && character.y === locationCursor.y) {
-            uiManager.displayCharacterInfo(character);
-            break;
-          }
-        }
-      }
-    }
-   
-    // Display the action menu
-    actionMenu.display();
-
-    // Find target enemy before calling battleInfoPreview or attack animation
-    const targetEnemy = characters.find(
-      char => char.isEnemy && char.x === locationCursor.x && char.y === locationCursor.y
-    );
-   
-    // Display battle info preview if in attack mode and enemy is selected
-    if (selectedCharacter && selectedCharacter.action === "attack" && enemySelectedForAttack) {
-      if (selectedCharacter.attackInterfaceConfirmed) { 
-        // Draw the battle interface using uiManager instead of battleManager
-        uiManager.drawBattleInterface(selectedCharacter, targetEnemy);
-
-        // Only proceed if we have both characters
-        if (selectedCharacter && targetEnemy) {
-          battleManager.handleBattleAnimation(selectedCharacter, targetEnemy);
-        }
-      } 
-      else {
-        // Show battle info preview
-        if (selectedCharacter && targetEnemy) {
-          selectedCharacter.attack(targetEnemy);
-          targetEnemy.attack(selectedCharacter);
-          uiManager.battleInfoPreview();
-        }
-      }
-    }
-
-    // Check and handle turn system
-    handleTurnSystem();
+  // If turn image is not showing, allow cursor movement
+  if (!showTurnImage) {
+    holdCursorMovement();
   }
+
+  // Render map elements
+  renderMapElements();
+
+  // Render turn image
+  uiManager.displayTurnImage();
+
+  // If turn image is not showing and it's the player's turn, handle player turn UI
+  if (!showTurnImage && isPlayerTurn) {
+    handlePlayerTurnUI();
+  }
+
+  // Render action menu
+  actionMenu.display();
+
+  // Handle battle UI
+  handleBattleUI();
+
+  // Handle turn system
+  handleTurnSystem();
 }
