@@ -16,6 +16,15 @@
 // Other sounds acquired from Fire Emblem: Three Houses
 // Formulas for combat and stats taken from https://www.fe3h.com/calculations
 
+
+// Miss sound effect Awakening https://www.youtube.com/watch?v=GFbJNL26y3I
+// Hit sound effect Awakening or Valentia https://www.youtube.com/watch?v=ziCTyMB7U5o
+// Crit sound effect Awakening or Valentia https://www.youtube.com/watch?v=qy5Y0_qmbrc
+// Death sound effect Awakening https://www.youtube.com/watch?v=mISX89sfWvc
+// Music will be this when not in battle https://www.youtube.com/watch?v=ip66HSkmVZo
+// Music will be this when in battle https://www.youtube.com/watch?v=MqHlnJjCrbc
+
+
 // Tile Class: Represents individual tiles on the map, including their type, position, and dimensions
 class Tile {
   constructor(type, x, y, width, height) {
@@ -3605,7 +3614,9 @@ function renderMapElements() {
 // Main game loop for rendering everything on the screen
 function draw() {
   // If game state is not gameplay, don't render anything
-  if (gameState !== GAME_STATES.GAMEPLAY) return;
+  if (gameState !== GAME_STATES.GAMEPLAY) {
+    return;
+  }
 
   // If turn image is not showing, allow cursor movement
   if (!showTurnImage) {
