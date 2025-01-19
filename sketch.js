@@ -12,14 +12,13 @@
 // Select character sound acquired from https://www.youtube.com/watch?v=7Z2sxm7CkPw
 // Deselect character sound acquired from https://www.youtube.com/watch?v=U8wAHIaW4S0
 // Formulas for combat and stats taken from https://www.fe3h.com/calculations
+// Miss sound effect  https://www.youtube.com/watch?v=GFbJNL26y3I
+// Hit sound effect https://www.youtube.com/watch?v=ziCTyMB7U5o
+// Crit sound effect https://www.youtube.com/watch?v=qy5Y0_qmbrc
+// Death sound effect https://www.youtube.com/watch?v=mISX89sfWvc
 // Tile name images, Other sounds taken from Fire Emblem: Three Houses
 // Game over and win images taken from Fire Emblem: Engage
 
-
-// Miss sound effect Awakening https://www.youtube.com/watch?v=GFbJNL26y3I
-// Hit sound effect Awakening or Valentia https://www.youtube.com/watch?v=ziCTyMB7U5o
-// Crit sound effect Awakening or Valentia https://www.youtube.com/watch?v=qy5Y0_qmbrc
-// Death sound effect Awakening https://www.youtube.com/watch?v=mISX89sfWvc
 // Music will be this when not in battle https://www.youtube.com/watch?v=ip66HSkmVZo
 // Music will be this when in battle https://www.youtube.com/watch?v=MqHlnJjCrbc
 
@@ -1908,8 +1907,9 @@ class UIManager {
 
   // Draw the battle interface
   drawBattleInterface(selectedCharacter, targetEnemy) {
-    // Lower the music volume
-    sounds.battleMusic.amp(0.3);
+    // Switch to battle music by adjusting volumes
+    sounds.outBattleMusic.amp(0.3);
+    sounds.inBattleMusic.amp(0.2);
   
     // Draw the battle background first
     image(UIImages.battleBackground, 0, 0, width, height);
@@ -2426,6 +2426,8 @@ class BattleManager {
           // Mark this dodge as played and reset miss text timing
           this.state[dodgeFlag] = true;
           this.state.missTextStartTime = 0;
+          // Play miss sound effect
+          sounds.miss.play();
         }
         
         // Draw the dodge animation at the specified position
@@ -2522,7 +2524,7 @@ class BattleManager {
     // Map of hit delays for each character, with different timings for critical hits
     const hitDelayMap = {
       'roy': isCrit ? 1350 : 265, // Roy's attack timing
-      'bors': isCrit ? 1300 : 800,  // Bors's attack timing
+      'bors': isCrit ? 1300 : 850,  // Bors's attack timing
       'allen': isCrit ? 2200 : 350, // Allen's attack timing
       'lance': isCrit ? 1150 : 400, // Lance's attack timing
       'wolt': isCrit ? 2275 : 800,  // Wolt's attack timing
@@ -2611,6 +2613,14 @@ class BattleManager {
 
         // Only apply damage if the attack successfully hits (not dodged/missed)
         if (willHit) {
+          // Play hit sound effect
+          if (willCrit) {
+            sounds.crit.play();
+          } 
+          else {
+            sounds.hit.play();
+          }
+
           // selectedCharacter is always the attacker (whether player or enemy)
           const attacker = selectedCharacter;
 
@@ -3205,8 +3215,9 @@ class BattleManager {
     
     // Wait for 1.75 second before concluding the battle and resetting battle animation state
     if (timeSinceStart > 1750) {
-      // If there's a character marked for removal, remove them now
+      // If there's a character marked for removal, play death sound and remove them
       if (this.state.characterToRemove) {
+        sounds.death.play();
         const index = characters.findIndex(char => char === this.state.characterToRemove);
         if (index !== -1) {
           characters.splice(index, 1);
@@ -3231,10 +3242,10 @@ class BattleManager {
       
       // Only grey out the enemy if it was an enemy-initiated battle
       if (isEnemyInitiated) {
-      for (let character of characters) {
-        if (character.isEnemy && character.x === locationCursor.x && character.y === locationCursor.y) {
-          character.isGreyedOut = true;
-          break;
+        for (let character of characters) {
+          if (character.isEnemy && character.x === locationCursor.x && character.y === locationCursor.y) {
+            character.isGreyedOut = true;
+            break;
           }
         }
       }
@@ -3244,8 +3255,9 @@ class BattleManager {
       isEnemyInitiated = false;  // Reset the enemy-initiated flag
       canEnemyMove = true;  // Allow next enemy to move after battle concludes
       
-      // Adjust battle music volume
-      sounds.battleMusic.amp(0.5);
+      // Switch back to out-battle music by adjusting volumes
+      sounds.inBattleMusic.amp(0);
+      sounds.outBattleMusic.amp(0.3);
       
       // Reset character animation to standing
       animationManager(selectedCharacter, "standing");
@@ -3254,6 +3266,9 @@ class BattleManager {
 
   // Handles the death of a character
   handleCharacterDeath(defender, attacker) {
+    // // Play death sound effect with a delay to let hit sound finish
+    // setTimeout(() => sounds.death.play(), 2850); 
+    
     // Mark the character for removal after battle concludes
     this.state.characterToRemove = defender;
     // Skip any remaining attacks by setting appropriate flags
@@ -3352,9 +3367,12 @@ function setup() {
   tilesWidth = width / tilesWide;
   tilesHeight = height / tilesHigh;
 
-  // Loop background music and set volume
-  sounds.battleMusic.loop(true);
-  sounds.battleMusic.amp(0.5);
+  // Start both music tracks looping one is in battle and the other is out of battle
+  sounds.outBattleMusic.loop();
+  sounds.outBattleMusic.amp(0.3);
+
+  sounds.inBattleMusic.loop();
+  sounds.inBattleMusic.amp(0); // Start muted
 
   // Disable right-click menu
   window.addEventListener('contextmenu', (e) => e.preventDefault());

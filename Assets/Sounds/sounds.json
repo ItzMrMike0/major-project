@@ -1,6 +1,6 @@
 {
-    "prebattleMusic": "Assets/Sounds/Music/prebattle_music.mp3",
-    "battleMusic": "Assets/Sounds/Music/battle_music.mp3",
+    "outBattleMusic": "Assets/Sounds/Music/out_battle_music.mp3",
+    "inBattleMusic": "Assets/Sounds/Music/in_battle_music.mp3",
     "cursorMoving": "Assets/Sounds/Effects/cursor_moving.mp3",
     "cursorSelection": "Assets/Sounds/Effects/cursor_selection.mp3",
     "selectOption": "Assets/Sounds/Effects/select_option.mp3",
@@ -16,5 +16,9 @@
     "horseWalking": "Assets/Sounds/Walking/horse_walking.mp3",
     "regularWalking": "Assets/Sounds/Walking/regular_walking.mp3",
     "playerPhase": "Assets/Sounds/Effects/player_phase.mp3",
-    "enemyPhase": "Assets/Sounds/Effects/enemy_phase.mp3"
+    "enemyPhase": "Assets/Sounds/Effects/enemy_phase.mp3",
+    "crit": "Assets/Sounds/Effects/crit.mp3",
+    "hit": "Assets/Sounds/Effects/hit.mp3",
+    "miss": "Assets/Sounds/Effects/miss.mp3",
+    "death": "Assets/Sounds/Effects/death.mp3"
 }
