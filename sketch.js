@@ -368,7 +368,6 @@ class Character {
     }
   }
 
-
   // Movement range values based on class type (How many tiles a character can walk in one turn)
   getMovementRange() {
     const movementRanges = {
@@ -1093,8 +1092,7 @@ class Character {
 
   // Increases the character's current HP by the specified amount of healing
   heal(amount) {
-    // Uses setCurrentHP to ensure HP stays within valid range (0 to maxHP)
-    this.setCurrentHP(this.currentHP + amount);
+    this.currentHP = Math.min(this.maxHP, this.currentHP + amount);
   }
 
   // Checks if the character has been defeated (HP reduced to 0)
@@ -1235,10 +1233,12 @@ class EnemyCharacter extends Character {
         this.previousX = this.x;
         this.previousY = this.y;
         this.moveTo(targetPos.x, targetPos.y);
-      } else {
+      } 
+      else {
         canEnemyMove = true;  // Allow next enemy to move if no valid position
       }
-    } else {
+    } 
+    else {
       canEnemyMove = true;  // Allow next enemy to move if no path
     }
   }
@@ -1440,6 +1440,14 @@ class UIManager {
     // Constants for turn image display
     this.turnImageWidth = 600;
     this.turnImageHeight = 125;
+    this.selectedItemIndex = 0;
+    this.itemConfirmationMode = false;
+    // List of items available to use
+    this.items = [
+      { name: "Vulnerary", image: "vulnerary" },
+      { name: "Vulnerary", image: "vulnerary" },
+      { name: "Vulnerary", image: "vulnerary" }
+    ];
   }
 
   // Battle info preview function to show combat forecast
@@ -1890,6 +1898,7 @@ class UIManager {
     }
   }
 
+  // Draw the battle interface
   drawBattleInterface(selectedCharacter, targetEnemy) {
     // Lower the music volume
     sounds.battleMusic.amp(0.3);
@@ -2089,6 +2098,82 @@ class UIManager {
       text(Math.floor(targetEnemy.displayedHit) + "%", enemyStatsX + 50, baseStatsY + 36);
       text(Math.floor(targetEnemy.displayedCrit) + "%", enemyStatsX + 50, baseStatsY + 72);
     }
+  }
+
+  // Draw the item interface
+  itemsInterface() {
+    const itemBoxWidth = width * 0.3;
+    const itemBoxHeight = height * 0.4;
+    
+    // Center vertically a little lower than half way down the screen
+    const yOffset = (height - itemBoxHeight) / 2 + 50;  
+    const xPos = width * 0.65;
+
+    // Draw item box
+    image(UIImages.itemBox, xPos, yOffset, itemBoxWidth, itemBoxHeight);
+
+    // Draw confirmation text if the item has been selected
+    if (this.itemConfirmationMode) {
+      textSize(25);
+      textFont("DMT Shuei MGo Std Bold");
+      textAlign(CENTER, CENTER);
+      stroke(0);
+      strokeWeight(3);
+      fill(255);
+      const selectedItem = this.items[this.selectedItemIndex];
+      text(`Use ${selectedItem.name}\nto heal 15 HP?`, xPos + itemBoxWidth/2, yOffset + itemBoxHeight/2);
+    } 
+    else {
+      // Draw item list
+      const itemSpacing = 60;
+      const startY = yOffset + 30;
+
+    this.items.forEach((item, index) => {
+      const currentY = startY + (index * itemSpacing);
+      
+    // Draw grey circle with white stroke
+    fill(128);
+    stroke(255);
+    strokeWeight(2);
+    const circleSize = 40;
+    const circleX = xPos + 50;
+    const circleY = currentY;
+      
+    if (index === this.selectedItemIndex) {
+      fill(180);
+      strokeWeight(3);
+    }
+      
+    circle(circleX, circleY, circleSize);
+
+    // Draw item image inside the circle
+    const itemSize = circleSize * 0.8;
+    image(UIImages[item.image], circleX - itemSize/2 - 1, currentY - itemSize/2, itemSize, itemSize);
+
+    // Draw item name text
+    textSize(30);
+    textFont("DMT Shuei MGo Std Bold");
+    textAlign(LEFT, BOTTOM);
+    stroke(0);
+    strokeWeight(3);
+    fill(255);
+      if (index === this.selectedItemIndex) {
+        fill(51, 102, 255);
+      }
+      text(item.name, circleX + circleSize/2 + 15, currentY + 15);
+    });
+    }
+  }
+
+  // Handle W and S keys for item selection
+  moveItemSelection(direction) {
+    if (direction === "up") {
+      this.selectedItemIndex = Math.max(0, this.selectedItemIndex - 1);
+    } 
+    else if (direction === "down") {
+      this.selectedItemIndex = Math.min(this.items.length - 1, this.selectedItemIndex + 1);
+    }
+    sounds.cursorSelection.play();
   }
 }
 
@@ -3405,7 +3490,7 @@ function handleTurnSystem() {
     // Check if any enemy is still moving or if a battle animation is playing
     let enemyMoving = characters.some(char => char.isEnemy && char.isMoving);
     let battlePlaying = battleManager && battleManager.state && battleManager.state.isPlaying;
-    if (enemyMoving || battlePlaying) {
+    if (enemyMoving || battlePlaying || isEnemyInitiated || !canEnemyMove) {
       return;
     }
 
@@ -3417,7 +3502,7 @@ function handleTurnSystem() {
       foundEnemy.executeAIMove();
     }
     // If no unmoved enemies are found and none are moving, switch back to player turn
-    else if (!enemyMoving) {
+    else if (!enemyMoving && canEnemyMove) {
       // Reset all characters for the new turn
       for (let character of characters) {
         character.canMove = true;
@@ -3451,8 +3536,8 @@ function handleTurnSystem() {
 
 // Allows user to hold down movement keys for continuous movement
 function holdCursorMovement() {
-  // Don't move cursor if action menu is open, character is moving, during enemy turn, or enemy is selected for attack
-  if (actionMenu.isVisible || selectedCharacter?.isMoving || !isPlayerTurn || enemySelectedForAttack) {
+  // Don't move cursor if action menu is open, character is moving, during enemy turn, enemy is selected for attack, or item is selected
+  if (actionMenu.isVisible || selectedCharacter?.isMoving || !isPlayerTurn || enemySelectedForAttack || (selectedCharacter && selectedCharacter.action === "item")) {
     return;
   }
 
@@ -3557,19 +3642,21 @@ function keyPressed() {
             // Play selection sound
             sounds.selectOption.play();
           }
-          // If the option was "Item"
-          else if (selectedOption === "Item") {
-            // Hide the action menu
-            actionMenu.hide();
-            // Set character's action to item
-            selectedCharacter.action = "item";
-            // Play selection sound
-            sounds.selectionOption.play();
-          }
           else {
             // Play error sound or some feedback that attack isn't possible
             sounds.unselectCharacter.play();
           }
+        }
+        // If the option was "Item"
+        else if (selectedOption === "Item") {
+          // Hide the action menu
+          actionMenu.hide();
+          // Set character's action to item
+          selectedCharacter.action = "item";
+          // Keep character selected
+          selectedCharacter.isSelected = true;
+          // Play selection sound
+          sounds.selectOption.play();
         }
       }
     }
@@ -3623,6 +3710,28 @@ function keyPressed() {
       }
       return;
     }
+    // If there is a selected character in item mode
+    else if (selectedCharacter && selectedCharacter.action === "item") {
+      if (!uiManager.itemConfirmationMode) {
+        // Enter confirmation mode
+        uiManager.itemConfirmationMode = true;
+        sounds.selectOption.play();
+      } 
+      else {
+        // Handle item use confirmation
+        sounds.selectOption.play();
+        // Heal character and remove item
+        selectedCharacter.heal(15);
+        uiManager.items.splice(uiManager.selectedItemIndex, 1);
+        // End turn
+        selectedCharacter.canMove = false;
+        selectedCharacter.isGreyedOut = true;
+        selectedCharacter.action = null;
+        uiManager.itemConfirmationMode = false;
+        Character.unselectCharacter(false);
+      }
+      return;
+    }
     // If there is a selected character and it's not an enemy, move the character
     else if (selectedCharacter && !selectedCharacter.isEnemy) {
       Character.moveSelectedCharacter(locationCursor, tiles);
@@ -3639,18 +3748,29 @@ function keyPressed() {
       return;
     }
     
-    // If in attack mode, cancel attack and return to original position
-    if (selectedCharacter.action === "attack") {
+    // If in item confirmation mode, exit back to item list
+    if (selectedCharacter.action === "item" && uiManager.itemConfirmationMode) {
+      uiManager.itemConfirmationMode = false;
+      sounds.unselectCharacter.play();
+      return;
+    }
+    
+    // If in attack mode or item mode, cancel and return to original position
+    if (selectedCharacter.action === "attack" || selectedCharacter.action === "item") {
       // Move character back to their original position
       selectedCharacter.x = selectedCharacter.previousX;
       selectedCharacter.y = selectedCharacter.previousY;
+
       // Reset properties
       selectedCharacter.action = null;
       selectedCharacter.isSelected = true;
       selectedCharacter.canMove = true;
       selectedCharacter.isGreyedOut = false;
-      // Reset enemy selection flag
+
+      // Reset enemy selection flag and item confirmation
       enemySelectedForAttack = false;
+      uiManager.itemConfirmationMode = false;
+      
       // Recalculate movement range from original position
       selectedCharacter.calculateActionableTiles();
       sounds.unselectCharacter.play();
@@ -3679,6 +3799,11 @@ function keyPressed() {
       }
     }
   }
+  // Handle W and S keys for item selection (only when not in confirmation mode)
+  else if ((keyCode === 87 || keyCode === 83) && selectedCharacter?.action === "item" && !uiManager.itemConfirmationMode) {
+    const direction = keyCode === 87 ? "up" : "down";
+    uiManager.moveItemSelection(direction);
+  }
 }
 
 // Helper function to handle player turn UI elements
@@ -3687,13 +3812,19 @@ function handlePlayerTurnUI() {
 
   // If no enemy is selected for attack, display tile location image and character info
   if (!enemySelectedForAttack) {
-    uiManager.displayTileLocationImage();
+    // If item is selected, display item box
+    if (selectedCharacter && selectedCharacter.action === "item") {
+      uiManager.itemsInterface();
+    } 
+    else {
+      uiManager.displayTileLocationImage();
 
-    // Check if cursor is over any character and display info
-    for (let character of characters) {
-      if (character.x === locationCursor.x && character.y === locationCursor.y) {
-        uiManager.displayCharacterInfo(character);
-        break;
+      // Check if cursor is over any character and display info
+      for (let character of characters) {
+        if (character.x === locationCursor.x && character.y === locationCursor.y) {
+          uiManager.displayCharacterInfo(character);
+          break;
+        }
       }
     }
   }

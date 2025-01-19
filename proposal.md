@@ -23,7 +23,7 @@ Winning will rely not only on combat prowess but also on strategic planning and 
 - Action options: 
   - Move: Select a tile to move to. 🟢
   - Attack: Choose a target within attack range. 🟢
-  - Items: Use or equip items during a turn. 🔴
+  - Items: Use items during a turn. 🟢
 - Undo move option (before confirming an action). 🟢
 - Win condition (Completely defeat all enemy characters) 🔴
 
@@ -43,9 +43,9 @@ Winning will rely not only on combat prowess but also on strategic planning and 
 
 ### 5: Enemy AI
 - Implement enemy AI to make tactical decisions. 🟢
-- AI actions: 🟡
+- AI actions: 🟢
   - Move toward player characters within range. 🟢
-  - Attack player characters within range. 🔴
+  - Attack player characters within range. 🟢
 
 ### 6: Sound Effects
 - Add background music with smooth transitions. 🟡
