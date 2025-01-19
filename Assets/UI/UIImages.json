@@ -29,5 +29,7 @@
     "criticalHitEffectRight": "Assets/UI/InBattleImages/critical_hit_effect_right.gif",
     "fireHitEffect": "Assets/UI/InBattleImages/fire_effect.gif",
     "itemBox": "Assets/UI/ItemsImages/item_box.png",
-    "vulnerary": "Assets/UI/ItemsImages/vulnerary.png"
+    "vulnerary": "Assets/UI/ItemsImages/vulnerary.png",
+    "gameOver": "Assets/UI/winLoseImages/game_over.png",
+    "gameWin": "Assets/UI/winLoseImages/game_win.png"
 }

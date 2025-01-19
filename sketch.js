@@ -1409,6 +1409,11 @@ class Cursor {
 
   // Render the cursor on the screen
   renderCursor() {
+    // Don't render cursor if game is over
+    if (isGameOver) {
+      return;
+    }
+    
     // Get the current image based on the key
     let currentImage = cursorImages[cursorImageKey];
  
@@ -1440,6 +1445,8 @@ class UIManager {
     // Constants for turn image display
     this.turnImageWidth = 600;
     this.turnImageHeight = 125;
+
+    // Properties for items
     this.selectedItemIndex = 0;
     this.itemConfirmationMode = false;
     // List of items available to use
@@ -1448,6 +1455,8 @@ class UIManager {
       { name: "Vulnerary", image: "vulnerary" },
       { name: "Vulnerary", image: "vulnerary" }
     ];
+    // Game over image alpha value
+    this.gameOverAlpha = 0;
   }
 
   // Battle info preview function to show combat forecast
@@ -2174,6 +2183,28 @@ class UIManager {
       this.selectedItemIndex = Math.min(this.items.length - 1, this.selectedItemIndex + 1);
     }
     sounds.cursorSelection.play();
+  }
+
+  // Display game over screen if game is over and no battle is in progress
+  displayGameOver() {
+    if (isGameOver && gameOverImage && (!battleManager.state || !battleManager.state.isPlaying)) {
+      // Add dark tint to the background with fade
+      fill(0, 0, 0, this.gameOverAlpha * 0.4); // 40% of the alpha for background
+      noStroke();
+      rect(0, 0, width, height);
+      
+      // Display the game over image centered with fade
+      imageMode(CENTER);
+      tint(255, this.gameOverAlpha);
+      image(gameOverImage, width/2, height/2);
+      noTint();
+      imageMode(CORNER);
+
+      // Increase alpha smoothly
+      if (this.gameOverAlpha < 255) {
+        this.gameOverAlpha += 10;
+      }
+    }
   }
 }
 
@@ -3264,6 +3295,7 @@ let attackingAnimationPaths = {}; // Attacking animation paths
 let battleManager; // Battle Manager instance
 let isEnemyInitiated = false; // Flag to track if enemy initiated battle
 let canEnemyMove = true;  // Controls whether enemies can start their movement
+let isGameOver = false; // Flag to track if game is over
 // Define directions once as a constant
 const DIRECTIONS = [
   { x: 0, y: -1 }, // up
@@ -3446,6 +3478,35 @@ function animationManager(character, state) {
 
 // Handle turn transitions
 function handleTurnSystem() {
+  // Don't process turns if game is over
+  if (isGameOver) {
+    return;
+  }
+
+  // Check for game over conditions first
+  if (!isGameOver) {
+    // Set flags to check if all players and enemies are dead
+    let allPlayersAlive = true;
+    let allEnemiesAlive = true;
+
+    // Check if all players and enemies are alive
+    for (let character of characters) {
+      if (!character.isEnemy && !character.isDead()) {
+        allPlayersAlive = false;
+      }
+      if (character.isEnemy && !character.isDead()) {
+        allEnemiesAlive = false;
+      }
+    }
+
+    // If all players and enemies are dead, set game over flag and load the appropriate image
+    if (allPlayersAlive || allEnemiesAlive) {
+      isGameOver = true;
+      gameOverImage = loadImage(allPlayersAlive ? 'Assets/UI/winLoseImages/game_over.png' : 'Assets/UI/winLoseImages/game_win.png');
+      return;
+    }
+  }
+
   if (isPlayerTurn) {
     enemyPhaseStarted = false; // Reset enemy phase flag
    
@@ -3536,8 +3597,8 @@ function handleTurnSystem() {
 
 // Allows user to hold down movement keys for continuous movement
 function holdCursorMovement() {
-  // Don't move cursor if action menu is open, character is moving, during enemy turn, enemy is selected for attack, or item is selected
-  if (actionMenu.isVisible || selectedCharacter?.isMoving || !isPlayerTurn || enemySelectedForAttack || (selectedCharacter && selectedCharacter.action === "item")) {
+  // Don't allow cursor movement if game is over, action menu is open, character is moving, during enemy turn, enemy is selected for attack, or item is selected
+  if (isGameOver || actionMenu.isVisible || selectedCharacter?.isMoving || !isPlayerTurn || enemySelectedForAttack || (selectedCharacter && selectedCharacter.action === "item")) {
     return;
   }
 
@@ -3582,8 +3643,8 @@ function holdCursorMovement() {
 
 // Handles all inputs
 function keyPressed() {
-  // Only handle keyboard input during gameplay
-  if (gameState !== GAME_STATES.GAMEPLAY) {
+  // Only handle keyboard input during gameplay and when game is not over
+  if (gameState !== GAME_STATES.GAMEPLAY || isGameOver) {
     return;
   }
 
@@ -3905,4 +3966,7 @@ function draw() {
 
   // Handle turn system
   handleTurnSystem();
+
+  // Display game over screen if win conditions are met
+  uiManager.displayGameOver();
 }
