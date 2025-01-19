@@ -6,15 +6,14 @@
 // Tileset acquired from https://forums.serenesforest.net/topic/24982-tileset-collection/
 // Background music acquired from https://www.youtube.com/watch?v=Cx4GQH2tHYQ
 // Sprites taken from https://github.com/Klokinator/FE-Repo/tree/main
-// Fire effect taken from https://www.spriters-resource.com/game_boy_advance/fireemblemthebindingblade/sheet/53728/
-// Weapon images taken from https://www.spriters-resource.com/nintendo_switch/fireemblemengage/sheet/209792/
-// Tile name images taken from Fire Emblem: Three Houses
-// In battle UI mostly taken from https://www.spriters-resource.com/nintendo_switch/fireemblemengage/sheet/216994/
+// Fire effect taken from https://www.spriters-resource.com/game_boy_advance/fireemblemthebindingblade
+// Weapon and items images, and most in battle UI taken from https://www.spriters-resource.com/nintendo_switch/fireemblemengage
 // Cursor moving sound acquired from https://www.youtube.com/watch?v=fkmp_YR9RXc
 // Select character sound acquired from https://www.youtube.com/watch?v=7Z2sxm7CkPw
 // Deselect character sound acquired from https://www.youtube.com/watch?v=U8wAHIaW4S0
-// Other sounds acquired from Fire Emblem: Three Houses
 // Formulas for combat and stats taken from https://www.fe3h.com/calculations
+// Tile name images, Other sounds taken from Fire Emblem: Three Houses
+// Game over and win images taken from Fire Emblem: Engage
 
 
 // Miss sound effect Awakening https://www.youtube.com/watch?v=GFbJNL26y3I

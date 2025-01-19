@@ -25,7 +25,7 @@ Winning will rely not only on combat prowess but also on strategic planning and 
   - Attack: Choose a target within attack range. 🟢
   - Items: Use items during a turn. 🟢
 - Undo move option (before confirming an action). 🟢
-- Win condition (Completely defeat all enemy characters) 🔴
+- Win condition (Completely defeat all enemy characters) 🟢
 
 ### 3: Characters
 - Characters with unique stats, animations, and attacks. 🟢
