@@ -568,7 +568,6 @@ class Character {
         if (isEnemy) {
           this.isMoving = false;
           this.canMove = false;
-          this.isGreyedOut = true;
           animationManager(this, "standing");
         }
         else {
@@ -1191,17 +1190,15 @@ class EnemyCharacter extends Character {
     return false;
   }
 
-  // Use moveTo for use enemy-specific behavior
-  moveTo(newX, newY) {
-    super.moveTo(newX, newY, true);
-  }
-
   // Execute AI movement
   executeAIMove() {
-    // Check if enemy can move
-    if (!this.canMove) {
+    // Check if enemy can move and if enemy movement is allowed
+    if (!this.canMove || !canEnemyMove) {
       return;
     }
+
+    // Reset enemy initiated flag at start of move
+    isEnemyInitiated = false;
 
     // Find nearest player character
     const nearestPlayer = this.findNearestPlayer();
@@ -1234,11 +1231,65 @@ class EnemyCharacter extends Character {
 
       // If we found a valid position, move there
       if (targetPos) {
+        canEnemyMove = false;  // Prevent other enemies from moving as soon as we find a valid move
         this.previousX = this.x;
         this.previousY = this.y;
         this.moveTo(targetPos.x, targetPos.y);
+      } else {
+        canEnemyMove = true;  // Allow next enemy to move if no valid position
       }
+    } else {
+      canEnemyMove = true;  // Allow next enemy to move if no path
     }
+  }
+
+  // Use moveTo for enemy-specific behavior
+  moveTo(newX, newY) {
+    super.moveTo(newX, newY, true);
+    
+    // Set up a check for when movement is complete
+    const checkMovement = () => {
+      if (!this.isMoving) {
+        // Movement is complete, check for possible attacks
+        this.calculateActionableTiles();
+        let hasTarget = false;
+        
+        for (let character of characters) {
+          if (!character.isEnemy) {
+            // Check if player character is in attack range
+            const distance = Math.abs(this.x - character.x) + Math.abs(this.y - character.y);
+            if (distance <= this.getAttackRange()) {
+              hasTarget = true;
+              
+              // Wait 500ms before setting up battle
+              setTimeout(() => {
+                // Set up for battle
+                isEnemyInitiated = true;
+                selectedCharacter = character;
+                locationCursor.x = this.x;
+                locationCursor.y = this.y;
+                enemySelectedForAttack = true;
+                selectedCharacter.attackInterfaceConfirmed = true;
+                selectedCharacter.action = "attack";
+              }, 500);
+              break;
+            }
+          }
+        }
+
+        // If no enemies to attack
+        if (!hasTarget) {
+          canEnemyMove = true;  // Allow next enemy to move
+          this.isGreyedOut = true;  // Grey out immediately
+        }
+        
+        // Stop the repeated movement check since we're done moving
+        clearInterval(moveCheckInterval);
+      }
+    };
+    
+    // Start checking every 300ms if the enemy has finished their movement animation (need this because movement happens gradually over time)
+    const moveCheckInterval = setInterval(checkMovement, 300);
   }
 }
 
@@ -2604,6 +2655,10 @@ class BattleManager {
       // Transition phase between player and enemy attacks
       this.handleTransitionToEnemyPhase(attackerName, enemyClass, positions, dimensions, timeSinceStart, selectedCharacter, targetEnemy, now);
     }
+    else if (this.state.currentPhase === "transitionToPlayer") {
+      // Transition phase between enemy and player attacks
+      this.handleTransitionToPlayerPhase(attackerName, enemyClass, positions, dimensions, timeSinceStart, selectedCharacter, targetEnemy, now);
+    }
     else if (this.state.currentPhase === "enemyAttack") {
       // Enemy's attack phase
       this.handleAttackPhase(enemyClass, attackerName, positions, dimensions, now, targetEnemy, selectedCharacter, true);
@@ -2685,16 +2740,21 @@ class BattleManager {
     // Display both characters in their standing positions
     this.showStandingAnimations(attackerName, enemyClass, positions, dimensions);
     
-    // After 500ms, transition to the player's attack phase
+    // After 500ms, transition to the appropriate attack phase
     if (timeSinceStart > 500) {
-      // Update battle state for player attack
-      this.state.currentPhase = "playerAttack";
+      // Transition to enemyAttack if enemy initiated, otherwise playerAttack
+      const nextPhase = isEnemyInitiated ? "enemyAttack" : "playerAttack";
+      this.state.currentPhase = nextPhase;
       this.state.startTime = now;
       this.state.lastFrame = -1;
       
       // Determine attack type (critical or normal) and prepare animation
-      const playerAttackType = this.state.willPlayerCrit ? "Critical" : "Attack";
-      const nextAnim = attackingAnimationPaths[attackerName + playerAttackType];
+        const attackType = isEnemyInitiated ? (this.state.willEnemyCrit ? "Critical" : "Attack") : (this.state.willPlayerCrit ? "Critical" : "Attack");
+            
+        // For enemy-initiated battles, use the enemy class name for the animation
+        const animationName = isEnemyInitiated ? enemyClass + attackType : attackerName + attackType;
+            
+        const nextAnim = attackingAnimationPaths[animationName];
       
       // Reset and start the attack animation if it exists
       if (nextAnim) {
@@ -2759,22 +2819,71 @@ class BattleManager {
         this.state.currentPhase = "conclude";
       } 
       else {
-        this.state.currentPhase = isEnemyAttacking ? "checkDoubles" : "transitionToEnemy";
+        const currentPhase = this.state.currentPhase;
+        let nextPhase;
+
+        if (isEnemyInitiated) {
+          // Enemy initiated battle sequence:
+          // enemyAttack -> transitionToPlayer -> playerAttack -> checkDoubles -> conclude
+          if (this.state.currentPhase === "enemyAttack") {
+              nextPhase = "transitionToPlayer";
+          } 
+          else if (this.state.currentPhase === "playerAttack") {
+              nextPhase = "checkDoubles";
+          }
+        } 
+        else {
+          // Player initiated battle sequence:
+          // playerAttack -> transitionToEnemy -> enemyAttack -> checkDoubles -> conclude
+          if (this.state.currentPhase === "playerAttack") {
+              nextPhase = "transitionToEnemy";
+          } 
+          else if (this.state.currentPhase === "enemyAttack") {
+              nextPhase = "checkDoubles";
+          }
+        }
+
+        if (nextPhase) {
+          console.log(`[Phase Transition] ${currentPhase} -> ${nextPhase} (Enemy Initiated: ${isEnemyInitiated})`);
+          this.state.currentPhase = nextPhase;
+        }
       }
       this.state.startTime = now;
       this.state.lastFrame = -1;
       this.state.missTextStartTime = 0;
       this.state.critTextStartTime = 0;
       this.state.dodgeStartTime = 0;
-
-      // If this was an enemy attack, pause their animation
-      if (isEnemyAttacking) {
-        attackingAnimationPaths[attackerName + (willCrit ? "Critical" : "Attack")].pause();
-      }
     }
 
     // Update the last frame for animation tracking
     this.state.lastFrame = animState.currentFrame;
+  }
+
+  // Handles the transition phase between enemy's attack and player's counter-attack
+  handleTransitionToPlayerPhase(attackerName, enemyClass, positions, dimensions, timeSinceStart, now) {
+    // Show both characters in their standing positions during transition
+    this.showStandingAnimations(attackerName, enemyClass, positions, dimensions);
+    
+    // Wait for 100 ms before proceeding
+    if (timeSinceStart > 100) {
+      // Reset hit effect state variables for player attack
+      this.state.hitEffectStartTime = 0;
+      this.state.hitEffectPlayed = false;
+      this.state.hitEffectStarted = false;
+      
+      // Prepare for player attack phase
+      this.state.currentPhase = "playerAttack";
+      this.state.startTime = now;
+      this.state.lastFrame = -1;
+      
+      // Set up player attack animation based on critical hit status
+      const playerAttackType = this.state.willPlayerCrit ? "Critical" : "Attack";
+      const playerAnim = attackingAnimationPaths[attackerName + playerAttackType];
+      if (playerAnim) {
+        playerAnim.reset();
+        playerAnim.play();
+      }
+    }
   }
 
   // Handles the transition phase between player's attack and enemy's counter-attack
@@ -2833,10 +2942,11 @@ class BattleManager {
       const playerSpeedDiff = selectedCharacter.speed - targetEnemy.speed;
       const enemySpeedDiff = targetEnemy.speed - selectedCharacter.speed;
       
+      let nextPhase = "conclude";
+      
       // If player is significantly faster (speed diff >= 4), they get a second attack
       if (playerSpeedDiff >= 4) {
-        // Set up player's second attack
-        this.state.currentPhase = "playerDouble";
+        nextPhase = "playerDouble";
         // Calculate hit and crit chances for second attack
         this.state.willPlayerSecondHit = random(100) < selectedCharacter.displayedHit;
         this.state.willPlayerSecondCrit = random(100) < selectedCharacter.displayedCrit;
@@ -2851,8 +2961,7 @@ class BattleManager {
       } 
       // If enemy is significantly faster, they get a second attack
       else if (enemySpeedDiff >= 4) {
-        // Set up enemy's second attack
-        this.state.currentPhase = "enemyDouble";
+        nextPhase = "enemyDouble";
         // Calculate hit and crit chances for second attack
         this.state.willEnemySecondHit = random(100) < targetEnemy.displayedHit;
         this.state.willEnemySecondCrit = random(100) < targetEnemy.displayedCrit;
@@ -2864,17 +2973,10 @@ class BattleManager {
           nextAnim.reset();
           nextAnim.play();
         }
-        
-        // Reset timing variables for the second attack
-        this.state.missTextStartTime = 0;
-        this.state.dodgeStartTime = 0;
-        this.state.critTextStartTime = 0;
-      } 
-      // If neither character is fast enough for a second attack, conclude the battle
-      else {
-        this.state.currentPhase = "conclude";
       }
-      
+
+     // Update phase
+      this.state.currentPhase = nextPhase;
       // Update timing variables for the next phase
       this.state.startTime = now;
       this.state.lastFrame = -1;
@@ -2986,8 +3088,8 @@ class BattleManager {
     // Show final animations - either standing or death animation based on battle outcome
     this.showFinalBattleAnimations(attackerName, enemyClass, positions, dimensions);
     
-    // Wait for 1 second before concluding the battle and resetting battle animation state
-    if (timeSinceStart > 1000) {
+    // Wait for 1.75 second before concluding the battle and resetting battle animation state
+    if (timeSinceStart > 1750) {
       // If there's a character marked for removal, remove them now
       if (this.state.characterToRemove) {
         const index = characters.findIndex(char => char === this.state.characterToRemove);
@@ -3012,8 +3114,20 @@ class BattleManager {
       selectedCharacter.canMove = false;
       selectedCharacter.isGreyedOut = true;
       
+      // Only grey out the enemy if it was an enemy-initiated battle
+      if (isEnemyInitiated) {
+      for (let character of characters) {
+        if (character.isEnemy && character.x === locationCursor.x && character.y === locationCursor.y) {
+          character.isGreyedOut = true;
+          break;
+          }
+        }
+      }
+      
       // Reset enemy selection state
       enemySelectedForAttack = false;
+      isEnemyInitiated = false;  // Reset the enemy-initiated flag
+      canEnemyMove = true;  // Allow next enemy to move after battle concludes
       
       // Adjust battle music volume
       sounds.battleMusic.amp(0.5);
@@ -3063,6 +3177,8 @@ let uiManager; // UI Manager instance
 let enemySelectedForAttack = false; // Track if an enemy has been selected for attack
 let attackingAnimationPaths = {}; // Attacking animation paths
 let battleManager; // Battle Manager instance
+let isEnemyInitiated = false; // Flag to track if enemy initiated battle
+let canEnemyMove = true;  // Controls whether enemies can start their movement
 // Define directions once as a constant
 const DIRECTIONS = [
   { x: 0, y: -1 }, // up
@@ -3286,9 +3402,10 @@ function handleTurnSystem() {
       enemyPhaseStarted = true;
     }
 
-    // Check if any enemy is still moving
+    // Check if any enemy is still moving or if a battle animation is playing
     let enemyMoving = characters.some(char => char.isEnemy && char.isMoving);
-    if (enemyMoving) {
+    let battlePlaying = battleManager && battleManager.state && battleManager.state.isPlaying;
+    if (enemyMoving || battlePlaying) {
       return;
     }
 
@@ -3313,6 +3430,21 @@ function handleTurnSystem() {
       turnImageTimer = millis();
       sounds.playerPhase.amp(2);
       sounds.playerPhase.play();
+
+      // Move cursor to Roy or first available player character
+      let roy = characters.find(char => char.name === "Roy" && !char.isEnemy);
+      if (roy) {
+        locationCursor.x = roy.x;
+        locationCursor.y = roy.y;
+      } 
+      else {
+        // If Roy isn't found, find the first player character
+        let firstPlayer = characters.find(char => !char.isEnemy);
+        if (firstPlayer) {
+          locationCursor.x = firstPlayer.x;
+          locationCursor.y = firstPlayer.y;
+        }
+      }
     }
   }
 }
