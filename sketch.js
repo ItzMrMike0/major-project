@@ -2115,7 +2115,15 @@ class UIManager {
     
     // Center vertically a little lower than half way down the screen
     const yOffset = (height - itemBoxHeight) / 2 + 50;  
-    const xPos = width * 0.65;
+
+    // Get selected character
+    const selectedCharacter = Character.getSelectedCharacter();
+    
+    // Calculate the half way point of the map (width-wise)
+    const mapWidthMidpoint = tilesWide / 2;
+    
+    // Position on left side if character is past midpoint, right side if before midpoint
+    const xPos = selectedCharacter.x >= mapWidthMidpoint ? itemBoxWidth * 0.2 : width - itemBoxWidth * 1.2;
 
     // Draw item box
     image(UIImages.itemBox, xPos, yOffset, itemBoxWidth, itemBoxHeight);
@@ -2136,40 +2144,40 @@ class UIManager {
       const itemSpacing = 60;
       const startY = yOffset + 30;
 
-    this.items.forEach((item, index) => {
-      const currentY = startY + (index * itemSpacing);
-      
-    // Draw grey circle with white stroke
-    fill(128);
-    stroke(255);
-    strokeWeight(2);
-    const circleSize = 40;
-    const circleX = xPos + 50;
-    const circleY = currentY;
-      
-    if (index === this.selectedItemIndex) {
-      fill(180);
-      strokeWeight(3);
-    }
-      
-    circle(circleX, circleY, circleSize);
+      this.items.forEach((item, index) => {
+        const currentY = startY + (index * itemSpacing);
+        
+        // Draw grey circle with white stroke
+        fill(128);
+        stroke(255);
+        strokeWeight(2);
+        const circleSize = 40;
+        const circleX = xPos + 50;
+        const circleY = currentY;
+        
+        if (index === this.selectedItemIndex) {
+          fill(180);
+          strokeWeight(3);
+        }
+        
+        circle(circleX, circleY, circleSize);
 
-    // Draw item image inside the circle
-    const itemSize = circleSize * 0.8;
-    image(UIImages[item.image], circleX - itemSize/2 - 1, currentY - itemSize/2, itemSize, itemSize);
+        // Draw item image inside the circle
+        const itemSize = circleSize * 0.8;
+        image(UIImages[item.image], circleX - itemSize/2 - 1, currentY - itemSize/2, itemSize, itemSize);
 
-    // Draw item name text
-    textSize(30);
-    textFont("DMT Shuei MGo Std Bold");
-    textAlign(LEFT, BOTTOM);
-    stroke(0);
-    strokeWeight(3);
-    fill(255);
-      if (index === this.selectedItemIndex) {
-        fill(51, 102, 255);
-      }
-      text(item.name, circleX + circleSize/2 + 15, currentY + 15);
-    });
+        // Draw item name text
+        textSize(30);
+        textFont("DMT Shuei MGo Std Bold");
+        textAlign(LEFT, BOTTOM);
+        stroke(0);
+        strokeWeight(3);
+        fill(255);
+        if (index === this.selectedItemIndex) {
+          fill(51, 102, 255);
+        }
+        text(item.name, circleX + circleSize/2 + 15, currentY + 15);
+      });
     }
   }
 
@@ -2261,6 +2269,15 @@ class BattleManager {
 
       // Add new flag for death handling
       willTransitionToConclude: false,
+
+      // Track if critical voice line has been played
+      critVoicePlayed: false,
+
+      // Track if kill voice line has been played
+      killVoicePlayed: false,
+
+      // Track if death voice line has been played
+      deathVoicePlayed: false,
     };
   }
   // Display "MISS" text when an attack doesn't land
@@ -2281,7 +2298,7 @@ class BattleManager {
 
   // Display "CRITICAL" text for critical hits
   showCritText(isEnemyAttacking, now, attackerName, defenderName) {
-    // Create a unique key for timing based on attacker and defender
+    // Convert names to lowercase for key lookup
     const key = `${attackerName.toLowerCase()}_${defenderName.toLowerCase()}`;
     
     // Map of delay timings for each possible attacker-defender combination
@@ -2318,6 +2335,7 @@ class BattleManager {
       'brigand_wolt': 2050,  // Brigand attacking Wolt
       'brigand_lugh': 2000 // Brigand attacking Lugh
     };
+
     // Get the appropriate delay for this combination
     const critDelay = critDelayMap[key];
 
@@ -2328,6 +2346,31 @@ class BattleManager {
     
     // Calculate how long the text has been showing
     const timeSinceStart = now - this.state.critTextStartTime;
+    
+    // Different voice line delays for different characters
+    let voiceLineDelay = 600; // Default delay
+
+    const attackerLower = attackerName.toLowerCase();
+    if (attackerLower === 'lugh') {
+      voiceLineDelay = 1800;
+    } 
+    else if (attackerLower === 'allen' || attackerLower === 'lance' ||  attackerLower === 'bors' || attackerLower === 'wolt') {
+      voiceLineDelay = 1100;
+    }
+    
+    // Play critical voice line before the crit text appears
+    if (timeSinceStart >= critDelay - voiceLineDelay && !this.state.critVoicePlayed) {
+      if (!isEnemyAttacking) {
+        const attackerBaseName = attackerName.toLowerCase();
+        const criticalVoiceLine = sounds[attackerBaseName + "Critical"];
+        if (criticalVoiceLine) {
+          criticalVoiceLine.setVolume(2.0); // Increase volume
+          criticalVoiceLine.play();
+        }
+      }
+      // Set critVoicePlayed to true when the voice line is played so it doesn't play again
+      this.state.critVoicePlayed = true;
+    }
     
     // Show the critical text for 400ms after the appropriate delay
     if (timeSinceStart >= critDelay && timeSinceStart <= critDelay + 400) {
@@ -2857,6 +2900,15 @@ class BattleManager {
 
       // Add new flag for death handling
       willTransitionToConclude: false,
+
+      // Track if critical voice line has been played
+      critVoicePlayed: false,
+
+      // Track if kill voice line has been played
+      killVoicePlayed: false,
+
+      // Track if death voice line has been played
+      deathVoicePlayed: false,
     };
   }
 
@@ -3186,6 +3238,15 @@ class BattleManager {
       // If it's a death animation and hasn't been started yet, start it
       if (isAttackerDead && attackerAnim.getCurrentFrame() === 0) {
         attackerAnim.play();
+        // Play death voice line when player character starts death animation
+        if (!this.state.deathVoicePlayed) {
+          const deathVoiceLine = sounds[attackerName.toLowerCase() + "Death"];
+          if (deathVoiceLine) {
+            deathVoiceLine.setVolume(2.0);
+            deathVoiceLine.play();
+          }
+          this.state.deathVoicePlayed = true;
+        }
       }
       image(attackerAnim, 
         positions.attackerX, positions.attackerY, 
@@ -3201,6 +3262,16 @@ class BattleManager {
       // If it's a death animation and hasn't been started yet, start it
       if (isDefenderDead && defenderAnim.getCurrentFrame() === 0) {
         defenderAnim.play();
+        // Play kill voice line when enemy death animation starts
+        if (this.state.characterToRemove && this.state.characterToRemove.isEnemy && !this.state.killVoicePlayed) {
+          const attackerBaseName = attackerName.toLowerCase();
+          const killVoiceLine = sounds[attackerBaseName + "Kill"];
+          if (killVoiceLine) {
+            killVoiceLine.setVolume(2.0);
+            killVoiceLine.play();
+          }
+          this.state.killVoicePlayed = true;
+        }
       }
       image(defenderAnim,
         positions.enemyX, positions.enemyY,
@@ -3266,11 +3337,9 @@ class BattleManager {
 
   // Handles the death of a character
   handleCharacterDeath(defender, attacker) {
-    // // Play death sound effect with a delay to let hit sound finish
-    // setTimeout(() => sounds.death.play(), 2850); 
-    
     // Mark the character for removal after battle concludes
     this.state.characterToRemove = defender;
+
     // Skip any remaining attacks by setting appropriate flags
     if (attacker.isEnemy) {
       // If enemy killed player, skip any remaining player attacks
@@ -3727,14 +3796,21 @@ function keyPressed() {
         }
         // If the option was "Item"
         else if (selectedOption === "Item") {
-          // Hide the action menu
-          actionMenu.hide();
-          // Set character's action to item
-          selectedCharacter.action = "item";
-          // Keep character selected
-          selectedCharacter.isSelected = true;
-          // Play selection sound
-          sounds.selectOption.play();
+          // Check if there are any items left
+          if (uiManager.items.length > 0) {
+            // Hide the action menu
+            actionMenu.hide();
+            // Set character's action to item
+            selectedCharacter.action = "item";
+            // Keep character selected
+            selectedCharacter.isSelected = true;
+            // Play selection sound
+            sounds.selectOption.play();
+          } 
+          else {
+            // Play error sound if no items left
+            sounds.unselectCharacter.play();
+          }
         }
       }
     }
@@ -3798,6 +3874,13 @@ function keyPressed() {
       else {
         // Handle item use confirmation
         sounds.selectOption.play();
+        // Play heal sound effect and voice line
+        sounds.heal.play(); 
+        const healVoiceLine = sounds[selectedCharacter.name.toLowerCase() + "Heal"];
+        if (healVoiceLine) {
+          healVoiceLine.setVolume(2.0);
+          healVoiceLine.play();
+        }
         // Heal character and remove item
         selectedCharacter.heal(15);
         uiManager.items.splice(uiManager.selectedItemIndex, 1);
