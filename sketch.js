@@ -4,7 +4,8 @@
 
 // Credits
 // Tileset acquired from https://forums.serenesforest.net/topic/24982-tileset-collection/
-// Background music acquired from https://www.youtube.com/watch?v=Cx4GQH2tHYQ
+// Music when not in battle https://www.youtube.com/watch?v=ip66HSkmVZo
+// Music when in battle https://www.youtube.com/watch?v=MqHlnJjCrbc
 // Sprites taken from https://github.com/Klokinator/FE-Repo/tree/main
 // Fire effect taken from https://www.spriters-resource.com/game_boy_advance/fireemblemthebindingblade
 // Weapon and items images, and most in battle UI taken from https://www.spriters-resource.com/nintendo_switch/fireemblemengage
@@ -19,18 +20,14 @@
 // Tile name images, Other sounds taken from Fire Emblem: Three Houses
 // Game over and win images taken from Fire Emblem: Engage
 
-// Music will be this when not in battle https://www.youtube.com/watch?v=ip66HSkmVZo
-// Music will be this when in battle https://www.youtube.com/watch?v=MqHlnJjCrbc
-
-
 // Tile Class: Represents individual tiles on the map, including their type, position, and dimensions
 class Tile {
   constructor(type, x, y, width, height) {
-    this.type = type;    // Tile type (G = ground, W = wall, M = mountain, etc)
-    this.x = x;          // Grid x position
-    this.y = y;          // Grid y position
-    this.width = width;  // Tile width in pixels
-    this.height = height;// Tile height in pixels
+    this.type = type; // Tile type (G = ground, W = wall, M = mountain, etc)
+    this.x = x; // Grid x position
+    this.y = y; // Grid y position
+    this.width = width; // Tile width in pixels
+    this.height = height; // Tile height in pixels
   }
 
   // Makes the map grid from level data
@@ -543,6 +540,7 @@ class Character {
       this.findPath({ x: this.x, y: this.y }, { x: newX, y: newY }) :
       Character.findPath({ x: this.x, y: this.y }, { x: newX, y: newY }, tiles);
 
+    // If no path is found, return
     if (!path) {
       return;
     }
@@ -624,7 +622,7 @@ class Character {
       // Schedule next step
       setTimeout(() => {
         moveStep(index + 1);
-      }, 200); // Adjust timing as needed
+      }, 200); // 200 ms delay between steps
     };
 
     // Begin the movement sequence
@@ -637,8 +635,6 @@ class Character {
     if (selectedCharacter && selectedCharacter.canMove) {
       // Check if the target tile is within movement range and reachable
       if (selectedCharacter.reachableTiles.some(tile => tile.x === cursor.x && tile.y === cursor.y)) {
-        const tile = tiles[cursor.y][cursor.x];
-
         // Check if we can move to this tile
         if (!Tile.isTileOccupied(cursor.x, cursor.y)) {
           // Only store previous position if actually moving
@@ -867,6 +863,7 @@ class Character {
         tiles
       );
 
+      // Draw arrow path to selected tile
       if (path) {
         // Draw continuous line for all segments except the last one
         stroke(41, 214, 255, 200);
@@ -1459,6 +1456,7 @@ class UIManager {
 
   // Battle info preview function to show combat forecast
   battleInfoPreview() {
+    
     // Enable smoothing for UI elements
     smooth();
     
