@@ -2145,7 +2145,7 @@ class UIManager {
       const startY = yOffset + 30;
 
       this.items.forEach((item, index) => {
-        const currentY = startY + (index * itemSpacing);
+        const currentY = startY + index * itemSpacing;
         
         // Draw grey circle with white stroke
         fill(128);
@@ -2926,12 +2926,12 @@ class BattleManager {
       this.state.lastFrame = -1;
       
       // Determine attack type (critical or normal) and prepare animation
-        const attackType = isEnemyInitiated ? (this.state.willEnemyCrit ? "Critical" : "Attack") : (this.state.willPlayerCrit ? "Critical" : "Attack");
+      const attackType = isEnemyInitiated ? this.state.willEnemyCrit ? "Critical" : "Attack" : this.state.willPlayerCrit ? "Critical" : "Attack";
             
-        // For enemy-initiated battles, use the enemy class name for the animation
-        const animationName = isEnemyInitiated ? enemyClass + attackType : attackerName + attackType;
+      // For enemy-initiated battles, use the enemy class name for the animation
+      const animationName = isEnemyInitiated ? enemyClass + attackType : attackerName + attackType;
             
-        const nextAnim = attackingAnimationPaths[animationName];
+      const nextAnim = attackingAnimationPaths[animationName];
       
       // Reset and start the attack animation if it exists
       if (nextAnim) {
@@ -3003,20 +3003,20 @@ class BattleManager {
           // Enemy initiated battle sequence:
           // enemyAttack -> transitionToPlayer -> playerAttack -> checkDoubles -> conclude
           if (this.state.currentPhase === "enemyAttack") {
-              nextPhase = "transitionToPlayer";
+            nextPhase = "transitionToPlayer";
           } 
           else if (this.state.currentPhase === "playerAttack") {
-              nextPhase = "checkDoubles";
+            nextPhase = "checkDoubles";
           }
         } 
         else {
           // Player initiated battle sequence:
           // playerAttack -> transitionToEnemy -> enemyAttack -> checkDoubles -> conclude
           if (this.state.currentPhase === "playerAttack") {
-              nextPhase = "transitionToEnemy";
+            nextPhase = "transitionToEnemy";
           } 
           else if (this.state.currentPhase === "enemyAttack") {
-              nextPhase = "checkDoubles";
+            nextPhase = "checkDoubles";
           }
         }
 
@@ -3152,7 +3152,7 @@ class BattleManager {
         }
       }
 
-     // Update phase
+      // Update phase
       this.state.currentPhase = nextPhase;
       // Update timing variables for the next phase
       this.state.startTime = now;
@@ -3684,7 +3684,7 @@ function handleTurnSystem() {
 // Allows user to hold down movement keys for continuous movement
 function holdCursorMovement() {
   // Don't allow cursor movement if game is over, action menu is open, character is moving, during enemy turn, enemy is selected for attack, or item is selected
-  if (isGameOver || actionMenu.isVisible || selectedCharacter?.isMoving || !isPlayerTurn || enemySelectedForAttack || (selectedCharacter && selectedCharacter.action === "item")) {
+  if (isGameOver || actionMenu.isVisible || selectedCharacter?.isMoving || !isPlayerTurn || enemySelectedForAttack || selectedCharacter && selectedCharacter.action === "item") {
     return;
   }
 
