@@ -30,59 +30,59 @@ class Tile {
     this.height = height; // Tile height in pixels
   }
 
-  // Makes the map grid from level data
+  // Creates the map grid from level data
   static createTiles(lines) {
     tiles = [];
     for (let y = 0; y < lines.length; y++) {
-      tiles.push([]);
+      tiles.push([]); // Initialize row array
       for (let x = 0; x < lines[y].length; x++) {
-        const tileType = lines[y][x];
-        tiles[y].push(new Tile(tileType, x, y, tilesWidth, tilesHeight));
+        const tileType = lines[y][x]; // Get tile type from level data
+        tiles[y].push(new Tile(tileType, x, y, tilesWidth, tilesHeight)); // Create new Tile object
       }
     }
-    return tiles;
+    return tiles; // Return the created tiles grid
   }
 
-  // Display all map tiles
+  // Displays all map tiles
   static displayAll(tiles) {
     for (let row of tiles) {
       for (let tile of row) {
-        tile.renderTile();
+        tile.renderTile(); // Render each tile
       }
     }
   }
  
-  // Draws tile using its type
+  // Draws the tile using its type
   renderTile() {
-    if (tileImages[this.type]) {
+    if (tileImages[this.type]) { // Check if there's an image for this tile type
       image(tileImages[this.type], this.x * this.width, this.y * this.height, this.width, this.height);
     }
   }
  
-  // Check if a tile is blocked by an enemy (for pathfinding and display)
+  // Checks if a tile is blocked by an enemy (useful for pathfinding and display)
   static isTileBlockedByEnemy(x, y) {
     const selectedChar = Character.getSelectedCharacter();
 
-    if (!selectedChar) {
+    if (!selectedChar) { // If no character is selected, consider the tile blocked
       return true;
     }
 
     // Check each character
     for (let character of characters) {
       if (character.x === x && character.y === y) {
-        // If it's an enemy, tile is blocked
+        // If it's an enemy, the tile is blocked
         if (character.isEnemy !== selectedChar.isEnemy) {
           return true;
         }
       }
     }
-    return false;
+    return false; // Tile is not blocked by an enemy
   }
 
-  // Check if a tile is occupied by any character
+  // Checks if a tile is occupied by any character
   static isTileOccupied(x, y) {
     const selectedChar = Character.getSelectedCharacter();
-    if (!selectedChar) {
+    if (!selectedChar) { // If no character is selected, consider the tile occupied
       return true;
     }
 
@@ -95,28 +95,28 @@ class Tile {
 
       // If any character is at the location
       if (character.x === x && character.y === y) {
-        return true;
+        return true; // Tile is occupied
       }
     }
-    return false;
+    return false; // Tile is not occupied
   }
 
-  // Check if a tile is walkable
+  // Checks if a tile is walkable
   isWalkable() {
-    return this.type !== 'W' && this.type !== 'M';
+    return this.type !== 'W' && this.type !== 'M'; // Tiles with 'W' (wall) or 'M' (mountain) are not walkable
   }
 
-  // Check if coordinates are within map bounds
+  // Checks if coordinates are within map bounds
   static isWithinMapBounds(x, y) {
-    return x >= 0 && x < tilesWide && y >= 0 && y < tilesHigh;
+    return x >= 0 && x < tilesWide && y >= 0 && y < tilesHigh; // Coordinates must be within defined map bounds
   }
 
-  // Display reachable and attackable tiles for the selected character
+  // Displays reachable and attackable tiles for the selected character
   static displayActionableTiles() {
-    // Iterate through all characters to find selected character
+    // Iterate through all characters to find the selected character
     for (let character of characters) {
       if (character.isSelected) {
-        // Draw blue squares to show character's reachable tiles
+        // Draw blue squares to show the character's reachable tiles
         for (let tile of character.reachableTiles) {
           let drawX = tile.x * tilesWidth;
           let drawY = tile.y * tilesHeight;
@@ -125,7 +125,7 @@ class Tile {
           rect(drawX, drawY, tilesWidth, tilesHeight);
         }
 
-        // Draw red squares to show character's attackable tiles
+        // Draw red squares to show the character's attackable tiles
         for (let tile of character.attackableTiles) {
           let drawX = tile.x * tilesWidth;
           let drawY = tile.y * tilesHeight;
@@ -135,6 +135,30 @@ class Tile {
         }
       }
     }
+  }
+
+  // Get the stat buffs provided by this tile type
+  getStatBuffs() {
+    const buffs = {
+      defenseBonus: 0, // Default defense bonus
+      resistanceBonus: 0, // Default resistance bonus
+      dexterityBonus: 0 // Default dexterity bonus
+    };
+
+    // Apply stat changes based on tile type
+    if (this.type === 'H') { // House tile increases defense and resistance
+        buffs.defenseBonus = 1;
+        buffs.resistanceBonus = 1;
+    } 
+    else if (this.type === 'T') { // Forest/tree tile
+        buffs.dexterityBonus = 0.8; // Store as multiplier for dexterity
+    } 
+    else if (this.type === '5') { // Stronghold tile increases defense and resistance
+        buffs.defenseBonus = 2;
+        buffs.resistanceBonus = 2;
+    }
+    
+    return buffs; // Return the calculated stat buffs
   }
 }
 
@@ -153,21 +177,21 @@ class Character {
     this.magic = magic; // Magic stat (Attack for magical attacks)
     this.dexterity = dexterity; // Dexterity stat (Affects hit chance, critical hit chance, and evasion)
     this.baseDexterity = dexterity; // Base dexterity stat 
-    this.speed = speed; // Speed stat (Determine whether a unit can double attack)
+    this.speed = speed; // Speed stat (Determines whether a unit can double attack)
     this.luck = luck; // Luck stat (Affects critical hit chance, avoiding critical hits, and hit chance)
     this.defense = defense; // Physical defense stat (Reduces damage from physical attacks)
     this.baseDefense = defense; // Base defense stat
     this.resistance = resistance; // Magical defense stat (Reduces damage from magical attacks)
     this.baseResistance = resistance; // Base resistance stat
-    this.might = might; // Attack power (Base damage a weapon or spell)
+    this.might = might; // Attack power (Base damage of a weapon or spell)
     this.hit = hit; // Hit chance (Base accuracy of a weapon or spell)
     
     // Visual and gameplay properties
-    this.isEnemy = isEnemy; // Is this character an enemy
+    this.isEnemy = isEnemy; // Indicates if this character is an enemy
     this.isSelected = false; // Whether the character is selected
     this.canMove = true; // Whether the character can move or not
     this.isGreyedOut = false; // Whether the character is greyed out or not
-    this.action = null; // The action the character is going to do (Attack, item, or wait)
+    this.action = null; // The action the character is going to perform (Attack, item, or wait)
     this.previousX = x; // X position of the character before movement
     this.previousY = y; // Y position of the character before movement
     this.width = width; // Width of character
@@ -178,14 +202,14 @@ class Character {
 
     // Movement and attack calculations
     this.animation = null; // Character visual sprite
-    this.reachableTiles = []; // Character reachable movement tiles
-    this.attackableTiles = []; // Characters attackable movement tiles
+    this.reachableTiles = []; // Character's reachable movement tiles
+    this.attackableTiles = []; // Character's attackable movement tiles
 
-    // Check what buffs the tile the character is standing on gives
+    // Buffs given by the tile the character is standing on
     this.tileBuffs = {
-      defenseBonus: 0,
-      resistanceBonus: 0,
-      dexterityBonus: 0
+      defenseBonus: 0, // Defense bonus
+      resistanceBonus: 0, // Resistance bonus
+      dexterityBonus: 0 // Dexterity bonus
     };
   }
 
@@ -199,7 +223,7 @@ class Character {
         data.strength, data.magic, data.dexterity, data.speed, data.luck, data.defense,
         data.resistance, data.might, data.hit, data.isEnemy, data.width, data.height
       );
-    }
+    } 
     else {
       character = new Character(
         data.name, data.classType, data.x, data.y, data.level, data.hp,
@@ -228,28 +252,26 @@ class Character {
     if (this.isEnemy && isWalkingAnimation) {
       drawWidth += 5;
       drawHeight += 7;
-    }
-   
-    // Only increase width for left/right walking animations for Lord and Cavalier
-    else if ((this.currentState === "walkleft" || this.currentState === "walkright") &&
-        (this.classType === "Lord" || this.classType === "Cavalier")) {
-      drawWidth = 65;  // Larger width for walking animations
+    } 
+    else if ((this.currentState === "walkleft" || this.currentState === "walkright") && (this.classType === "Lord" || this.classType === "Cavalier")) {
+      // Only increase width for left/right walking animations for Lord and Cavalier
+      drawWidth = 65;  
     }
 
     // If the character is selected and has the selected animation, increase the size slightly for visual effect
     if (this.isSelected && isSelectedAnimation) {
-      // Smaller width increase for Fighter class
       if (this.classType === "Fighter") {
+        // Smaller width increase for Fighter class
         drawWidth += 10;
-      }
+      } 
       else {
         drawWidth += 15;
       }
      
-      // Scale enemy characters much higher when selected
       if (this.isEnemy) {
+        // Scale enemy characters much higher when selected
         drawHeight += 35;
-      }
+      } 
       else {
         drawHeight += 15;
       }
@@ -259,22 +281,23 @@ class Character {
     let drawX = this.x * tilesWidth + (tilesWidth - drawWidth) / 2;
     let drawY = this.y * tilesHeight + (tilesHeight - drawHeight) / 2;
 
-    // Adjust Y-position for walking animations if enemy
     if (this.isEnemy && isWalkingAnimation) {
+      // Adjust Y-position for walking animations if enemy
       drawY -= 4;
     }
 
-    // Adjust Y-position if the character is selected and has isSelectedAnimation
     if (this.isSelected && isSelectedAnimation) {
-      // Adjust Y position more for enemy characters since they're scaled much higher
+      // Adjust Y-position if the character is selected and has isSelectedAnimation
       if (this.isEnemy) {
+        // Adjust Y position more for enemy characters since they're scaled much higher
         drawY -= 20;
-      }
+      } 
       else {
         drawY -= 7;
       }
-      // Further adjustment for Cavaliers if selected, as their base height is taller
+
       if (this.classType === "Cavalier") {
+        // Further adjustment for Cavaliers if selected, as their base height is taller
         drawY -= 7;
       }
 
@@ -283,15 +306,14 @@ class Character {
       stroke(255, 255, 0);
       strokeWeight(3);
       rect(drawX, drawY, drawWidth, drawHeight);
-    }
-
-    // If the character is not selected but is a Cavalier, adjust the Y-position as their base height is taller
+    } 
     else if (this.classType === "Cavalier") {
+      // If the character is not selected but is a Cavalier, adjust the Y-position as their base height is taller
       drawY -= 7;
     }
 
-    // If the character has already moved or acted, apply a grey tint to show it's inactive
     if (this.isGreyedOut) {
+      // If the character has already moved or acted, apply a grey tint to show it's inactive
       tint(100);
     }
 
@@ -321,10 +343,10 @@ class Character {
           return;
         }
      
-        // For non-enemy characters, proceed with normal selection if not greyed out
         if (!character.isGreyedOut) {
-          // Play selection sound effect
+          // For non-enemy characters, proceed with normal selection if not greyed out
           sounds.selectCharacter.amp(0.4);
+          // Play selection sound effect
           sounds.selectCharacter.play();
        
           // Update cursor to show selection state
@@ -355,8 +377,8 @@ class Character {
       selectedCharacter.isSelected = false;
       selectedCharacter = null;
  
-      // Play unselect sound effect
       if (playSound) {
+        // Play unselect sound effect
         sounds.unselectCharacter.amp(0.5);
         sounds.unselectCharacter.play();
       }
@@ -374,7 +396,7 @@ class Character {
       "Fighter": 3,
       "Brigand": 3
     };
-    return movementRanges[this.classType];
+    return movementRanges[this.classType]; // Return movement range based on character class type
   }
 
   // Attack range based on class type (How many tiles a unit can attack from)
@@ -389,17 +411,10 @@ class Character {
 
   // Helper function to calculate attackable tiles from a position
   calculateAttackTiles() {
-    // Get the attack range of the character
-    const attackRange = this.getAttackRange(); 
-
-    // Initialize a set to track visited tiles, starting with the current position
-    const attackVisited = new Set([`${this.x},${this.y}`]); 
-
-    // Initialize the queue for breadth-first search with the starting position and cost 0
-    const attackQueue = [{ x: this.x, y: this.y, cost: 0 }]; 
-
-    // Set to store coordinates of attackable tiles
-    const attackableTiles = new Set(); 
+    const attackRange = this.getAttackRange(); // Get the attack range of the character
+    const attackVisited = new Set([`${this.x},${this.y}`]); // Initialize a set to track visited tiles, starting with the current position
+    const attackQueue = [{ x: this.x, y: this.y, cost: 0 }]; // Initialize the queue for breadth-first search with the starting position and cost 0
+    const attackableTiles = new Set(); // Set to store coordinates of attackable tiles
 
     // Process the queue until it's empty
     while (attackQueue.length > 0) {
@@ -413,7 +428,7 @@ class Character {
 
       // Stop exploring further from this tile if the cost exceeds the attack range
       if (cost >= attackRange) {
-        continue; // Continue to the next iteration of the loop
+        continue;
       }
 
       // Loop through the four possible directions to explore adjacent tiles
@@ -426,7 +441,7 @@ class Character {
         if (!Tile.isWithinMapBounds(nextX, nextY) ||
             attackVisited.has(nextKey) ||
             !tiles[nextY][nextX].isWalkable()) {
-          continue; // Continue to the next iteration of the loop
+          continue;
         }
 
         // Add the adjacent tile to the queue for further exploration and mark it as visited
@@ -442,15 +457,15 @@ class Character {
     });
   }
 
-  // Calculate reachable and attackable tiles using Dijkstra's algorithm
+  // Calculate reachable and attackable tiles using breadth-first search
   calculateActionableTiles() {
     this.reachableTiles = []; // Initialize an empty array to store reachable tiles
     this.attackableTiles = []; // Initialize an empty array to store attackable tiles
 
     // If the character is in attack mode, only calculate attackable tiles from the current position
-    if (this.action === "attack") {
+    if (this.action === "attack") { 
       this.attackableTiles = this.calculateAttackTiles(); // Call the helper function to calculate attackable tiles
-      return; // Exit the function early
+      return;
     }
 
     // Calculate the movement range for the character
@@ -471,7 +486,7 @@ class Character {
 
       // Stop exploring further from this tile if the cost exceeds the movement range
       if (cost >= movementRange) {
-        continue; // Continue to the next iteration of the loop
+        continue;
       }
 
       // Loop through the four possible directions to explore adjacent tiles
@@ -485,7 +500,7 @@ class Character {
             visited.has(nextKey) ||
             !tiles[nextY][nextX].isWalkable() ||
             Tile.isTileBlockedByEnemy(nextX, nextY)) {
-          continue; // Continue to the next iteration of the loop
+          continue;
         }
 
         // Add the adjacent tile to the queue for further exploration and mark it as visited
@@ -508,6 +523,7 @@ class Character {
       // Loop through each attackable tile
       for (const tile of attackTiles) {
         const tileKey = `${tile.x},${tile.y}`; // Create a string key for the attackable tile's coordinates
+        
         // If the attackable tile is not in the reachable tiles array, add it to the attackable tiles set
         if (!this.reachableTiles.some(reachable => 
           reachable.x === tile.x && reachable.y === tile.y)) {
@@ -522,7 +538,7 @@ class Character {
     // Convert the set of attackable tiles to an array of coordinates
     this.attackableTiles = Array.from(attackableTilesSet).map(key => {
       const [x, y] = key.split(',').map(Number); // Split the key string into coordinates and convert them to numbers
-      return { x, y }; // Return the coordinates as an object
+      return { x, y };
     });
   }
 
@@ -564,7 +580,7 @@ class Character {
           this.isMoving = false;
           this.canMove = false;
           animationManager(this, "standing");
-        }
+        } 
         else {
           // Keep the character selected and show the action menu
           this.isSelected = true;
@@ -582,16 +598,15 @@ class Character {
 
       // Only play walking sound and set animation if character actually moving to a new final position
       if (isActuallyMoving) {
-        // Play walking sound effect depending on the character class
         let walkSound;
         if (this.classType === "Cavalier") {
           walkSound = sounds.horseWalking;
           walkSound.amp(0.6);
-        }
+        } 
         else if (this.classType === "Knight") {
           walkSound = sounds.armorWalking;
           walkSound.amp(0.6);
-        }
+        } 
         else {
           walkSound = sounds.regularWalking;
           walkSound.amp(1);
@@ -599,17 +614,17 @@ class Character {
         if (walkSound && walkSound.isLoaded()) {
           walkSound.play();
         }
-  
+
         // Set walking animation based on direction
         if (targetX > startX) {
           animationManager(this, "walkright");
-        }
+        } 
         else if (targetX < startX) {
           animationManager(this, "walkleft");
-        }
+        } 
         else if (targetY > startY) {
           animationManager(this, "walkdown");
-        }
+        } 
         else if (targetY < startY) {
           animationManager(this, "walkup");
         }
@@ -628,7 +643,7 @@ class Character {
     // Begin the movement sequence
     moveStep(0);
   }
- 
+
   // Move the selected character to a new location
   static moveSelectedCharacter(cursor, tiles) {
     const selectedCharacter = Character.getSelectedCharacter();
@@ -689,6 +704,7 @@ class Character {
     while (openSet.length > 0) {
       let current = openSet[0];
       let currentIndex = 0;
+
       // Find the node in the open set with the lowest f-score
       for (let i = 1; i < openSet.length; i++) {
         if (openSet[i].f < current.f) {
@@ -709,7 +725,7 @@ class Character {
         if (isEnemy) {
           path.unshift(start);
         }
-        return path;
+        return path; // Return the reconstructed path
       }
 
       // Remove the current node from the open set and add it to the closed set
@@ -729,7 +745,7 @@ class Character {
           continue;
         }
 
-        // Skip the neighbor if it is; out of bounds, not walkable, blocked by an enemy or has already been evaluted
+        // Skip the neighbor if it is; out of bounds, not walkable, blocked by an enemy or has already been evaluated
         if (!Tile.isWithinMapBounds(neighbor.x, neighbor.y) ||
             !tiles[neighbor.y][neighbor.x].isWalkable()) {
           continue;
@@ -739,7 +755,7 @@ class Character {
         if (isEnemy) {
           let isBlocked = false;
           let costModifier = 0;
-         
+        
           for (let character of characters) {
             if (character.x === neighbor.x && character.y === neighbor.y) {
               if (!character.isEnemy) {
@@ -749,16 +765,17 @@ class Character {
                 }
                 isBlocked = true;
                 break;
-              }
+              } 
               else if (character !== this) {
-                // Enemy characters add a movement penalty this allows for pathfinding around enemy characters
+                // Enemy characters add a movement penalty; this allows for pathfinding around enemy characters
                 costModifier = 5;
               }
             }
           }
 
+          // Skip if the path is blocked by a player character
           if (isBlocked) {
-            continue;
+            continue; 
           }
 
           // Calculate score with enemy-specific cost modifier (cost of the path from start to this neighbor)
@@ -775,26 +792,20 @@ class Character {
               g: tentativeGScore, // Set the g-score for this node
               f: tentativeGScore + Character.heuristic(neighbor, goal) // Calculate the f-score (g + heuristic)
             };
-            // Add the neighbor node to the open set
-            openSet.push(neighborNode); 
-
-            // Track the g-score for this node
-            gScore.set(neighborKey, tentativeGScore);
-          
-            // Set the current node as the previous node for this neighbor
-            cameFrom.set(neighborKey, current);
-          }
-
-          // If the tentative g-score is lower than the current g-score, update the neighbor's scores
+            openSet.push(neighborNode); // Add the neighbor node to the open set
+            gScore.set(neighborKey, tentativeGScore); // Track the g-score for this node
+            cameFrom.set(neighborKey, current); // Set the current node as the previous node for this neighbor
+          } 
           else if (tentativeGScore < gScore.get(neighborKey)) {
+            // If the tentative g-score is lower than the current g-score, update the neighbor's scores
             neighborNode.g = tentativeGScore;
             neighborNode.f = tentativeGScore + Character.heuristic(neighbor, goal);
             gScore.set(neighborKey, tentativeGScore);
             cameFrom.set(neighborKey, current);
           }
-        }
-        // Regular pathfinding for non-enemy characters
+        } 
         else {
+          // Enemy-specific collision handling
           if (Tile.isTileBlockedByEnemy(neighbor.x, neighbor.y) &&
               (neighbor.x !== goal.x || neighbor.y !== goal.y)) {
             continue;
@@ -814,9 +825,9 @@ class Character {
             openSet.push(neighborNode);
             gScore.set(neighborKey, tentativeGScore);
             cameFrom.set(neighborKey, current);
-          }
-          // If the tentative g-score is lower than the current g-score, update the neighbor's scores
+          } 
           else if (tentativeGScore < gScore.get(neighborKey)) {
+            // If the tentative g-score is lower than the current g-score, update the neighbor's scores
             neighborNode.g = tentativeGScore;
             neighborNode.f = tentativeGScore + Character.heuristic(neighbor, goal);
             gScore.set(neighborKey, tentativeGScore);
@@ -870,13 +881,13 @@ class Character {
         strokeWeight(10);
         noFill();
         strokeCap(PROJECT); // Use square end caps instead of round
-       
+        
         // Start drawing the shape from the character's current position
         beginShape();
         const startX = this.x * tilesWidth + tilesWidth / 2;
         const startY = this.y * tilesHeight + tilesHeight / 2;
         vertex(startX, startY);
-       
+        
         // Add vertices for each point in the path except the last one where the arrowhead is drawn
         for (let i = 0; i < path.length - 1; i++) {
           const x = path[i].x * tilesWidth + tilesWidth / 2;
@@ -888,16 +899,16 @@ class Character {
         if (path.length > 0) {
           const lastPoint = path[path.length - 1];
           const prevPoint = path.length > 1 ? path[path.length - 2] : { x: this.x, y: this.y };
-         
+          
           // Calculate direction vector
           const dx = lastPoint.x - prevPoint.x;
           const dy = lastPoint.y - prevPoint.y;
-         
+          
           // Calculate the endpoint to make sure line does not go into arrowhead
           const shortenAmount = Math.abs(dy) > 0 && dx === 0 ? 0.4 : 0.28; // Use 0.4 for vertical arrows, 0.28 for horizontal arrows
           const endX = lastPoint.x * tilesWidth + tilesWidth / 2 - dx * tilesWidth * shortenAmount;
           const endY = lastPoint.y * tilesHeight + tilesHeight / 2 - dy * tilesHeight * shortenAmount;
-         
+          
           vertex(endX, endY);
         }
         endShape();
@@ -909,7 +920,7 @@ class Character {
 
           // Determine the previous point in the path, or if there's only one point, use the character's position
           const prevPoint = path.length > 1 ? path[path.length - 2] : { x: this.x, y: this.y };
-         
+          
           // Calculate the difference in x and y coordinates between the last point and the previous point
           const dx = lastPoint.x - prevPoint.x;
           const dy = lastPoint.y - prevPoint.y;
@@ -920,13 +931,12 @@ class Character {
 
           // Align path to the map and move arrowhead further into the tile
           push();
-          // How many pixels to move the arrowhead forward
-          const arrowOffset = 15;
+          const arrowOffset = 15; // How many pixels to move the arrowhead forward
           translate(endX + dx * arrowOffset, endY + dy * arrowOffset);
           rotate(atan2(dy, dx));
 
           // Draw the arrowhead
-          fill(41, 214, 255, 200);  // Changed from (255, 255, 0, 200) to (41, 214, 255, 200)
+          fill(41, 214, 255, 200);
           noStroke();
           const arrowSize = 30;
           triangle(0, 0, -arrowSize, -arrowSize/2, -arrowSize, arrowSize/2);
@@ -1040,31 +1050,15 @@ class Character {
     const oldResBonus = this.tileBuffs.resistanceBonus;
     const oldDexBonus = this.tileBuffs.dexterityBonus;
     
-    this.tileBuffs.defenseBonus = 0;
-    this.tileBuffs.resistanceBonus = 0;
-    this.tileBuffs.dexterityBonus = 0;
-
-    // Get current tile type
-    const currentTile = tiles[this.y][this.x].type;
-
-    // Apply stat changes based on tile
-    // House tile
-    if (currentTile === 'H') { 
-      // Increase defense and resistance by 1
-      this.tileBuffs.defenseBonus = 1;
-      this.tileBuffs.resistanceBonus = 1;
-    } 
-    // Forest/tree tile
-    else if (currentTile === 'T') { 
-      // Increase dexterity by 30% of base dexterity
-      this.tileBuffs.dexterityBonus = Math.floor(this.baseDexterity * 0.8);
-    } 
-    // Stronghold tile
-    else if (currentTile === '5') {  
-      // Increase defense and resistance by 2
-      this.tileBuffs.defenseBonus = 2;
-      this.tileBuffs.resistanceBonus = 2;
-    }
+    // Get buffs from current tile
+    const currentTile = tiles[this.y][this.x];
+    const tileBuffs = currentTile.getStatBuffs();
+    
+    // Apply the buffs
+    this.tileBuffs.defenseBonus = tileBuffs.defenseBonus;
+    this.tileBuffs.resistanceBonus = tileBuffs.resistanceBonus;
+    // Handle dexterity specially since it's based on character's base stat
+    this.tileBuffs.dexterityBonus = tileBuffs.dexterityBonus ? Math.floor(this.baseDexterity * tileBuffs.dexterityBonus) : 0;
 
     // Update stats with new buffs
     this.defense = this.baseDefense - oldDefBonus + this.tileBuffs.defenseBonus;
@@ -1291,9 +1285,12 @@ class EnemyCharacter extends Character {
 // Action Menu class: Handles the menu that appears after moving a character
 class ActionMenu {
   constructor() {
+    // Available menu options for the selected character
     this.options = ["Attack", "Item", "Wait"];
     this.selectedOption = 0;
     this.isVisible = false;
+    
+    // Menu position and dimensions
     this.x = 0;
     this.y = 0;
     this.actionMenuWidth = 250;
@@ -3737,6 +3734,12 @@ function keyPressed() {
     return;
   }
 
+  // Check if any enemy is moving or if a battle animation is playing
+  let enemyMoving = characters.some(char => char.isEnemy && char.isMoving);
+  if (enemyMoving) {
+    return;
+  }
+
   // If attack interface is confirmed, block all key inputs
   if (selectedCharacter?.attackInterfaceConfirmed) {
     return;
@@ -3973,10 +3976,10 @@ function handlePlayerTurnUI() {
   if (!enemySelectedForAttack) {
     // If item is selected, display item box
     if (selectedCharacter && selectedCharacter.action === "item") {
-      uiManager.itemsInterface();
+      uiManager.itemsInterface(); // Show inventory management interface
     } 
     else {
-      uiManager.displayTileLocationImage();
+      uiManager.displayTileLocationImage(); // Show terrain info for cursor position
 
       // Check if cursor is over any character and display info
       for (let character of characters) {
@@ -3989,7 +3992,7 @@ function handlePlayerTurnUI() {
   }
 }
 
-// Helper function to handle battle related UI and animations
+// Manages combat-related UI elements and battle animations
 function handleBattleUI() {
   // Find enemy character at cursor position
   const targetEnemy = characters.find(
@@ -4017,17 +4020,18 @@ function handleBattleUI() {
 
 // Helper function to render map elements
 function renderMapElements() {
-  // Display all map tiles
+  // Render base map layer (terrain tiles)
   Tile.displayAll(tiles);
-  // Display actionable tiles
+  
+  // Show movement and attack range indicators for selected unit
   Tile.displayActionableTiles();
 
   // If there is a selected character and it's not an enemy, draw movement preview
   if (selectedCharacter && !selectedCharacter.isEnemy) {
-    selectedCharacter.drawMovementPreview();
+    selectedCharacter.drawMovementPreview();  // Highlight potential movement path
   }
 
-  // Display all characters on the map
+  // Render all character sprites on top of the map
   for (let character of characters) {
     character.displayOnMap();
   }
@@ -4035,12 +4039,12 @@ function renderMapElements() {
 
 // Main game loop for rendering everything on the screen
 function draw() {
-  // If game state is not gameplay, don't render anything
+  // Exit early if not in gameplay state
   if (gameState !== GAME_STATES.GAMEPLAY) {
     return;
   }
 
-  // If turn image is not showing, allow cursor movement
+  // Process cursor movement when turn transition is complete
   if (!showTurnImage) {
     holdCursorMovement();
   }
@@ -4053,7 +4057,7 @@ function draw() {
 
   // If turn image is not showing and it's the player's turn, handle player turn UI
   if (!showTurnImage && isPlayerTurn) {
-    handlePlayerTurnUI();
+    handlePlayerTurnUI();  // Process player input and show available actions
   }
 
   // Render action menu
@@ -4063,8 +4067,8 @@ function draw() {
   handleBattleUI();
 
   // Handle turn system
-  handleTurnSystem();
+  handleTurnSystem();  // Process turn transitions and AI moves
 
   // Display game over screen if win conditions are met
-  uiManager.displayGameOver();
+  uiManager.displayGameOver(); // Check and display victory/defeat conditions
 }
