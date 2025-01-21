@@ -147,15 +147,15 @@ class Tile {
 
     // Apply stat changes based on tile type
     if (this.type === 'H') { // House tile increases defense and resistance
-        buffs.defenseBonus = 1;
-        buffs.resistanceBonus = 1;
+      buffs.defenseBonus = 1;
+      buffs.resistanceBonus = 1;
     } 
     else if (this.type === 'T') { // Forest/tree tile
-        buffs.dexterityBonus = 0.8; // Store as multiplier for dexterity
+      buffs.dexterityBonus = 0.8; // Store as multiplier for dexterity
     } 
     else if (this.type === '5') { // Stronghold tile increases defense and resistance
-        buffs.defenseBonus = 2;
-        buffs.resistanceBonus = 2;
+      buffs.defenseBonus = 2;
+      buffs.resistanceBonus = 2;
     }
     
     return buffs; // Return the calculated stat buffs
@@ -1368,7 +1368,7 @@ class ActionMenu {
 
 // Cursor class: Renders the cursor used for selecting tiles and moving characters
 class Cursor {
-  constructor(x = 5, y = 8) {
+  constructor(x = 4, y = 12) {
     this.x = x;  // Horizontal position (in tile coordinates)
     this.y = y;  // Vertical position (in tile coordinates)
     this.width = tilesWidth;
@@ -3421,9 +3421,6 @@ function setup() {
 
   // Create a canvas that's 1000x750 pixels with a 4:3 ratio
   createCanvas(1000, 750);
-
-  // Turn off any smoothing for shapes and images in p5.js to match the sharp look
-  noSmooth();
 
   // Calculate tile sizes after canvas is created
   tilesWidth = width / tilesWide;
