@@ -1,7 +1,18 @@
 # Best Testing
 
 ## Non-programmer's notes
-- Woohoo.
+### Positives
+- The art is good 
+- The enemy AI is interesting and well made
+- If you are outside an opponent's attack range they can't hit you
+- Good map design some areas you can't traverse, stat buffs and other stuff
+- Wide range of animations 
+
+### Negatives
+- The music is quite loud, if there was a settings tab it would be better
+- Wish there was more diversity in attack options, block, backstep etc 
+- Wish there was a tutorial 
+- The advantage and disadvantage are hard to understand 
 
 ## Programmer's notes
 ### Positives
@@ -15,6 +26,5 @@
 ### Negatives
 - Would be nice if the UI elements matched the pixel art style
 - The keyboard controls do not make sense to someone who has not played this type of game before
-- Small visual glitch where players disappear while moving 
 - Character placement on top of complex tiles looks odd at times
 - An instructions or start screen would be a nice addition

@@ -2686,7 +2686,6 @@ class BattleManager {
 
           // Check if the defender died from this hit
           if (defender.isDead()) {
-            console.log(`${defender.name} has been defeated!`);
             this.handleCharacterDeath(defender, attacker);
           }
         }
@@ -3016,7 +3015,6 @@ class BattleManager {
         }
 
         if (nextPhase) {
-          console.log(`[Phase Transition] ${currentPhase} -> ${nextPhase} (Enemy Initiated: ${isEnemyInitiated})`);
           this.state.currentPhase = nextPhase;
         }
       }

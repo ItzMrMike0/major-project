@@ -48,8 +48,8 @@ Winning will rely not only on combat prowess but also on strategic planning and 
   - Attack player characters within range. 🟢
 
 ### 6: Sound Effects
-- Add background music with smooth transitions. 🟡
-- Include sound effects for movement, attacks, and menu interactions. 🟡
+- Add out battle music with smooth transitions to in battle music. 🟢
+- Include sound effects for movement, attacks, and menu interactions. 🟢
 
 ## Nice to Have List
 - Options Menu which contains settings including (End Turn: Manually end the player's turn.) 🔴
@@ -63,5 +63,5 @@ Winning will rely not only on combat prowess but also on strategic planning and 
 - Multiple maps or scenarios to increase replayability. 🔴
 - Inventory management system for equipping, using, and organizing items. 🔴
 - Save/load system with multiple slots. 🔴
-- Implement voiceovers for character actions like attacks or item use. 🟡
+- Implement voiceovers for character actions like attacks or item use. 🟢
 - Level-up system with randomized or semi-randomized stat increases. 🔴
